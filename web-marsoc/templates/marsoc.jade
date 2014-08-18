@@ -14,7 +14,7 @@ html(ng-app="app")
         script(src="js/lodash.min.js")
         script(src="js/moment.min.js")
     body(ng-controller="MarioRunCtrl")
-        header.navbar.navbar-inverse.navbar-fixed-top(ng-class="{admin:admin}")
+        header.navbar.navbar-inverse.navbar-fixed-top(ng-class="{admin: admin}")
             .navbar-header 
                 .navbar-brand
                     |10
@@ -94,5 +94,5 @@ html(ng-app="app")
                                 div(style="margin-top: 15px; font-weight: bold") {{samples[sampi].name}} by {{samples[sampi].user.username}}
                                 pre(style="margin-top: 15px") {{samples[sampi].callsrc}}
     script        
-        | admin = '[[.Admin]]'
+        | admin = [[.Admin]]
     script(src="marsoc.js")
