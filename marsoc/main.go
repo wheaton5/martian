@@ -64,7 +64,7 @@ func main() {
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
 		{"MARSOC_PIPELINES_PATH", "path/to/pipelines"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
-		{"LENA_API_URL", "url"},
+		{"LENA_DOWNLOAD_URL", "url"},
 		{"LENA_AUTH_TOKEN", "token"},
 	}, true)
 
@@ -89,7 +89,7 @@ func main() {
 	pipestancesPath := env["MARSOC_PIPESTANCES_PATH"]
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
 	lenaAuthToken := env["LENA_AUTH_TOKEN"]
-	lenaApiUrl := env["LENA_API_URL"]
+	lenaDownloadUrl := env["LENA_DOWNLOAD_URL"]
 	STEP_SECS := 5
 
 	// Setup Mario Runtime with pipelines path.
@@ -112,8 +112,9 @@ func main() {
 	pman.goRunListLoop()
 
 	// Setup Lena and load cache.
-	lena := NewLena(lenaApiUrl, lenaAuthToken, cachePath)
+	lena := NewLena(lenaDownloadUrl, lenaAuthToken, cachePath)
 	lena.loadDatabase()
+	lena.goDownloadLoop()
 
 	// Setup argshim.
 	argshim := NewArgShim(pipelinesPath)

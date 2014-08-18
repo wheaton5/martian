@@ -8,22 +8,22 @@ package main
 import (
 	"crypto/tls"
 	"encoding/json"
-	_ "fmt"
 	"io/ioutil"
 	"net/http"
 	"path"
+	"time"
 )
 
 type Lena struct {
-	apiUrl    string
-	authToken string
-	path      string
-	cache     map[string][]*Sample
+	downloadUrl string
+	authToken   string
+	path        string
+	cache       map[string][]*Sample
 }
 
-func NewLena(apiUrl string, authToken string, cachePath string) *Lena {
+func NewLena(downloadUrl string, authToken string, cachePath string) *Lena {
 	self := &Lena{}
-	self.apiUrl = apiUrl
+	self.downloadUrl = downloadUrl
 	self.authToken = authToken
 	self.path = path.Join(cachePath, "lena")
 	self.cache = map[string][]*Sample{}
@@ -67,14 +67,19 @@ type BarcodeSet struct {
 	Name string `json:"name"`
 }
 
+type SeqRunSample struct {
+	Id        int         `json:"id"`
+	Cell_line interface{} `json:"cell_line"`
+}
+
 type SequencingRun struct {
-	Id                    int     `json:"id"`
-	State                 string  `json:"state"`
-	Name                  string  `json:"name"`
-	Date                  string  `json:"date"`
-	Loading_concentration float32 `json:"loading_concentration"`
-	Failure_reason        string  `json:"failure_reason"`
-	Samples               []int   `json:"samples"`
+	Id                    int             `json:"id"`
+	State                 string          `json:"state"`
+	Name                  string          `json:"name"`
+	Date                  string          `json:"date"`
+	Loading_concentration float32         `json:"loading_concentration"`
+	Failure_reason        string          `json:"failure_reason"`
+	Samples               []*SeqRunSample `json:"samples"`
 }
 
 type User struct {
@@ -105,16 +110,21 @@ type Sample struct {
 
 func (self *Lena) loadDatabase() {
 	dbPath := "./nice.json"
-	bytes, err := ioutil.ReadFile(dbPath)
+	data, err := ioutil.ReadFile(dbPath)
 	if err != nil {
 		logError(err, "LENAAPI", "Could not read database file %s.", dbPath)
 		return
 	}
-
-	var samples []*Sample
-	if err := json.Unmarshal(bytes, &samples); err != nil {
+	err = self.ingestDatabase(data)
+	if err != nil {
 		logError(err, "LENAAPI", "Could not parse JSON in database file %s.", dbPath)
-		return
+	}
+}
+
+func (self *Lena) ingestDatabase(data []byte) error {
+	var samples []*Sample
+	if err := json.Unmarshal(data, &samples); err != nil {
+		return err
 	}
 	for _, sample := range samples {
 		if sample.Sequencing_run == nil {
@@ -130,9 +140,33 @@ func (self *Lena) loadDatabase() {
 		}
 	}
 	logInfo("LENAAPI", "%d Lena samples loaded from data.", len(samples))
+	return nil
 }
 
-func (self *Lena) lenaAPI(query string) (string, error) {
+// Start an infinite download loop.
+func (self *Lena) goDownloadLoop() {
+	go func() {
+		for {
+			logInfo("LENAAPI", "Starting download...")
+			data, err := self.lenaAPI()
+			if err != nil {
+				logError(err, "LENAAPI", "Download error.")
+			} else {
+				logInfo("LENAAPI", "Download complete. %d bytes.", len(data))
+				ioutil.WriteFile("./test.json", data, 0600)
+				err := self.ingestDatabase(data)
+				if err != nil {
+					logError(err, "LENAAPI", "Could not parse JSON from downloaded data.")
+				}
+			}
+
+			// Wait for a bit.
+			time.Sleep(time.Minute * time.Duration(10))
+		}
+	}()
+}
+
+func (self *Lena) lenaAPI() ([]byte, error) {
 	// Configure clienttransport to skip SSL certificate verification.
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -140,22 +174,22 @@ func (self *Lena) lenaAPI(query string) (string, error) {
 	client := &http.Client{Transport: tr}
 
 	// Build request and add API authorization token header.
-	req, err := http.NewRequest("GET", self.apiUrl+query, nil)
+	req, err := http.NewRequest("GET", self.downloadUrl, nil)
 	req.Header.Add("Authorization", "Token "+self.authToken)
 
 	// Execute the request.
 	res, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 	defer res.Body.Close()
 
 	// Return the response body.
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
-	return string(body), nil
+	return body, nil
 }
 
 func (self *Lena) getSamplesForFlowcell(fcid string) ([]*Sample, error) {
