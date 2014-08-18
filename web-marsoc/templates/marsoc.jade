@@ -1,0 +1,106 @@
+//- 
+    Copyright (c) 2014 10X Technologies, Inc. All rights reserved.
+    
+    Main UI for mario seqruns.
+
+doctype html
+html(ng-app="app")
+    head
+        title MARSOC / Sequencer Runs
+        link(rel="stylesheet" href="css/bootstrap.min.css")
+        link(rel="stylesheet" href="css/main.css")
+        script(src="js/angular.min.js")
+        script(src="js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="js/lodash.min.js")
+        script(src="js/moment.min.js")
+    body(ng-controller="MarioRunCtrl")
+        header.navbar.navbar-inverse.navbar-fixed-top
+            .navbar-header 
+                .navbar-brand
+                    |10
+                    span.logo-color X
+                    | &nbsp;MARSOC / Sequencer Runs
+        #runs.detail
+            #run-table-wrapper
+                table.table.table-striped#run-table
+                    thead
+                        tr
+                            th.col-date(style="padding-left: 20px") Date
+                            th Sequencer
+                            th.col-flowcell Flowcell ID
+                            th.align-center Sequencing
+                            th.align-center Preprocess
+                            th.align-center Analysis
+                    tbody
+                        tr(ng-repeat="run in runs" ng-click="selectRun(run)" ng-class="{tablehover:run.selected}")
+                            td.col-date(ng-if="run.fdate" style="padding-left: 20px") {{run.fdate | momentFormat:'MMM D'}}
+                            td.col-flowcell {{run.seqcerName}}
+                            td.col-flowcell 
+                                span(style="font-weight: bold") {{run.fcid | flowcellFront}}
+                                span(style="color:#aaa") {{run.fcid | flowcellBack}}
+                            td.align-center
+                                .minibox(ng-class="run.state") {{run.state}}
+                            td.align-center
+                                .minibox(ng-if="run.preprocess" ng-class="run.preprocess") {{run.preprocess}}
+                            td.align-center
+                                .minibox(ng-if="run.analysis" ng-class="run.analysis" style="width:75px") {{run.analysis}}
+
+        #one-run(ng-if="selrun")
+            table.table
+                thead
+                    tr
+                        th(colspan="2") Run Details
+                tbody
+                    tr
+                        td Flowcell
+                        td.param(style="font-weight:bold") {{selrun.fcid}}
+                    tr
+                        td Seqcer
+                        td.param {{selrun.seqcerName}} ({{selrun.instrId}})
+                    tr
+                        td Run Num
+                        td {{selrun.num}}
+                    tr
+                        td Duration
+                        td {{selrun | runDuration}} hours
+                    tr
+                        td Age
+                        td {{selrun.completeTime | momentTimeAgo}}
+                    tr
+                        td Path
+                        td.param {{selrun.path}}
+
+            table.table
+                thead
+                    tr
+                        th Preprocess
+                tbody
+                    tr
+                        td(ng-if="selrun.preprocess")
+                            div(style="margin-top: 5px; margin-bottom: 15px")
+                                .minibox(ng-class="selrun.preprocess" style="text-align:center; width: 85px") 
+                                    a(href="{{urlprefix}}/pipestance/{{selrun.fcid}}/PREPROCESS/{{selrun.fcid}}") {{selrun.fcid}}<br>{{selrun.preprocess}}
+
+                        td(ng-if="selrun.state == 'complete' && !selrun.preprocess && admin") 
+                            pre {{selrun.callsrc}}
+                            button.btn.btn-default(ng-click="invokePreprocess()") Invoke
+
+            table.table(ng-if="selrun.preprocess=='complete'")
+                thead
+                    tr
+                        th Samples
+                tbody
+                    tr
+                        td
+                            div(ng-if="!samples") Loading from Lena...
+                            div(ng-if="samples")
+                                button.btn.btn-default(ng-if="!samples[sampi].psstate && admin" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke All
+                                div(style="margin-top: 5px")
+                                    .minibox(ng-repeat="sample in samples" ng-class="sample.psstate" ng-mouseover="sampi=$index"
+                                        style="text-align:center; margin-right:2px; margin-bottom: 2px; width: 85px; ") 
+                                        a(href="{{urlprefix}}/pipestance/{{selrun.fcid}}/{{sample.pname}}/{{sample.id}}" style="" ng-mouseover="$parent.sampi=$index") {{sample.id}}<br>{{sample.psstate}}                                
+                                div(style="margin-top: 15px; font-weight: bold") {{samples[sampi].name}} by {{samples[sampi].user.username}}
+                                pre(style="margin-top: 15px") {{samples[sampi].callsrc}}
+    script        
+        | admin = '[[.Admin]]'
+    script(src="marsoc.js")
