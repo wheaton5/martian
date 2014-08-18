@@ -96,7 +96,7 @@ type Sample struct {
 type Lena struct {
 	downloadUrl string
 	authToken   string
-	path        string
+	dbPath      string
 	cache       map[string][]*Sample
 }
 
@@ -104,21 +104,20 @@ func NewLena(downloadUrl string, authToken string, cachePath string) *Lena {
 	self := &Lena{}
 	self.downloadUrl = downloadUrl
 	self.authToken = authToken
-	self.path = path.Join(cachePath, "lena")
+	self.dbPath = path.Join(cachePath, "lena.json")
 	self.cache = map[string][]*Sample{}
 	return self
 }
 
 func (self *Lena) loadDatabase() {
-	dbPath := "./nice.json"
-	data, err := ioutil.ReadFile(dbPath)
+	data, err := ioutil.ReadFile(self.dbPath)
 	if err != nil {
-		LogError(err, "LENAAPI", "Could not read database file %s.", dbPath)
+		LogError(err, "LENAAPI", "Could not read database file %s.", self.dbPath)
 		return
 	}
 	err = self.ingestDatabase(data)
 	if err != nil {
-		LogError(err, "LENAAPI", "Could not parse JSON in database file %s.", dbPath)
+		LogError(err, "LENAAPI", "Could not parse JSON in database file %s.", self.dbPath)
 	}
 }
 
@@ -154,9 +153,12 @@ func (self *Lena) goDownloadLoop() {
 				LogError(err, "LENAAPI", "Download error.")
 			} else {
 				LogInfo("LENAAPI", "Download complete. %d bytes.", len(data))
-				ioutil.WriteFile("./test.json", data, 0600)
 				err := self.ingestDatabase(data)
-				if err != nil {
+				if err == nil {
+					// If JSON parsed properly, save it.
+					ioutil.WriteFile(self.dbPath, data, 0600)
+					LogInfo("LENAAPI", "Database ingested and saved to %s.", self.dbPath)
+				} else {
 					LogError(err, "LENAAPI", "Could not parse JSON from downloaded data.")
 				}
 			}
