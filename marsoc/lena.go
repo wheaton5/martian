@@ -14,22 +14,6 @@ import (
 	"time"
 )
 
-type Lena struct {
-	downloadUrl string
-	authToken   string
-	path        string
-	cache       map[string][]*Sample
-}
-
-func NewLena(downloadUrl string, authToken string, cachePath string) *Lena {
-	self := &Lena{}
-	self.downloadUrl = downloadUrl
-	self.authToken = authToken
-	self.path = path.Join(cachePath, "lena")
-	self.cache = map[string][]*Sample{}
-	return self
-}
-
 type Oligo struct {
 	Id    int    `json:"id"`
 	State string `json:"state"`
@@ -106,6 +90,22 @@ type Sample struct {
 	Pname                    string         `json:"pname"`
 	Psstate                  string         `json:"psstate"`
 	Callsrc                  string         `json:"callsrc"`
+}
+
+type Lena struct {
+	downloadUrl string
+	authToken   string
+	path        string
+	cache       map[string][]*Sample
+}
+
+func NewLena(downloadUrl string, authToken string, cachePath string) *Lena {
+	self := &Lena{}
+	self.downloadUrl = downloadUrl
+	self.authToken = authToken
+	self.path = path.Join(cachePath, "lena")
+	self.cache = map[string][]*Sample{}
+	return self
 }
 
 func (self *Lena) loadDatabase() {
