@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"io/ioutil"
+	. "margo/core"
 	"net/http"
 	"path"
 	"time"
@@ -112,12 +113,12 @@ func (self *Lena) loadDatabase() {
 	dbPath := "./nice.json"
 	data, err := ioutil.ReadFile(dbPath)
 	if err != nil {
-		logError(err, "LENAAPI", "Could not read database file %s.", dbPath)
+		LogError(err, "LENAAPI", "Could not read database file %s.", dbPath)
 		return
 	}
 	err = self.ingestDatabase(data)
 	if err != nil {
-		logError(err, "LENAAPI", "Could not parse JSON in database file %s.", dbPath)
+		LogError(err, "LENAAPI", "Could not parse JSON in database file %s.", dbPath)
 	}
 }
 
@@ -139,7 +140,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 			self.cache[fcid] = []*Sample{sample}
 		}
 	}
-	logInfo("LENAAPI", "%d Lena samples loaded from data.", len(samples))
+	LogInfo("LENAAPI", "%d Lena samples loaded from data.", len(samples))
 	return nil
 }
 
@@ -147,16 +148,16 @@ func (self *Lena) ingestDatabase(data []byte) error {
 func (self *Lena) goDownloadLoop() {
 	go func() {
 		for {
-			logInfo("LENAAPI", "Starting download...")
+			LogInfo("LENAAPI", "Starting download...")
 			data, err := self.lenaAPI()
 			if err != nil {
-				logError(err, "LENAAPI", "Download error.")
+				LogError(err, "LENAAPI", "Download error.")
 			} else {
-				logInfo("LENAAPI", "Download complete. %d bytes.", len(data))
+				LogInfo("LENAAPI", "Download complete. %d bytes.", len(data))
 				ioutil.WriteFile("./test.json", data, 0600)
 				err := self.ingestDatabase(data)
 				if err != nil {
-					logError(err, "LENAAPI", "Could not parse JSON from downloaded data.")
+					LogError(err, "LENAAPI", "Could not parse JSON from downloaded data.")
 				}
 			}
 

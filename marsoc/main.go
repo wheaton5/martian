@@ -8,7 +8,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/docopt/docopt-go"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
@@ -46,7 +45,7 @@ func makeJSON(data interface{}) string {
 func main() {
 	runtime.GOMAXPROCS(2)
 
-	fmt.Println("[INIT]", core.Timestamp(), "MARSOC")
+	core.LogInfo("INIT", "MARSOC")
 
 	// Command-line arguments.
 	doc :=
@@ -58,6 +57,7 @@ func main() {
 	// Mario environment variables.
 	env := core.EnvRequire([][]string{
 		{"MARSOC_PORT", ">2000"},
+		{"MARSOC_INSTANCE_NAME", "displayed_in_ui"},
 		{"MARSOC_JOBMODE", "local|sge"},
 		{"MARSOC_SEQUENCERS", "miseq001;hiseq001"},
 		{"MARSOC_SEQRUNS_PATH", "path/to/sequencers"},
@@ -82,6 +82,7 @@ func main() {
 	u, _ := opts["--unfail"]
 	unfail := u.(bool)
 	uiport := env["MARSOC_PORT"]
+	instanceName := env["MARSOC_INSTANCE_NAME"]
 	pipelinesPath := env["MARSOC_PIPELINES_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQRUNS_PATH"]
@@ -95,7 +96,7 @@ func main() {
 	rt := core.NewRuntime(jobMode, pipelinesPath)
 	_, err := rt.CompileAll()
 	core.DieIf(err)
-	logInfoNoTime("CONFIG", "CODE_VERSION = %s", rt.CodeVersion)
+	core.LogInfoNoTime("CONFIG", "CODE_VERSION = %s", rt.CodeVersion)
 
 	// Setup SequencerPool, add sequencers, load cache, start inventory loop.
 	pool := NewSequencerPool(seqrunsPath, cachePath)
@@ -130,17 +131,21 @@ func main() {
 	app := &martini.ClassicMartini{m, r}
 
 	// Pages
+	type Page struct {
+		InstanceName string
+		Admin        bool
+	}
 	type Graph struct {
 		Container string
 		Pname     string
 		Psid      string
 		Admin     bool
 	}
-	app.Get("/", func() string { return render("marsoc.html", nil) })
+	app.Get("/", func() string { return render("marsoc.html", &Page{instanceName, false}) })
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
 		return render("graph.html", &Graph{p["container"], p["pname"], p["psid"], false})
 	})
-	app.Get("/admin", func() string { return render("marsoc.html", map[string]bool{"Admin": true}) })
+	app.Get("/admin", func() string { return render("marsoc.html", &Page{instanceName, true}) })
 	app.Get("/admin/pipestance/:container/:pname/:psid", func(p martini.Params) string {
 		return render("graph.html", &Graph{p["container"], p["pname"], p["psid"], true})
 	})
@@ -157,7 +162,7 @@ func main() {
 				if run.Preprocess == "complete" {
 					samples, err := lena.getSamplesForFlowcell(run.Fcid)
 					if err != nil {
-						fmt.Println(err.Error())
+						core.LogError(err, "WEBAPI", "Error getting samples for flowcell id %s.", run.Fcid)
 					}
 					if len(samples) > 0 {
 						states := []string{}

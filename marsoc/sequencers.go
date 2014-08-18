@@ -134,16 +134,16 @@ func NewSequencerPool(p string, cachePath string) *SequencerPool {
 func (self *SequencerPool) loadCache() {
 	bytes, err := ioutil.ReadFile(self.cachePath)
 	if err != nil {
-		logError(err, "SEQPOOL", "Could not read cache file %s.", self.cachePath)
+		core.LogError(err, "SEQPOOL", "Could not read cache file %s.", self.cachePath)
 		return
 	}
 	if err := json.Unmarshal(bytes, &self.folderCache); err != nil {
-		logError(err, "SEQPOOL", "Could not parse JSON in cache file %s.", self.cachePath)
+		core.LogError(err, "SEQPOOL", "Could not parse JSON in cache file %s.", self.cachePath)
 		return
 	}
 
 	self.indexCache()
-	logInfo("SEQPOOL", "%d runs loaded from cache.", len(self.runList))
+	core.LogInfo("SEQPOOL", "%d runs loaded from cache.", len(self.runList))
 }
 
 // Sort the runList from newest to oldest.
@@ -214,7 +214,7 @@ func (self *SequencerPool) inventorySequencers() {
 	if len(self.runList) > oldRunCount {
 		bytes, _ := json.MarshalIndent(self.folderCache, "", "    ")
 		ioutil.WriteFile(self.cachePath, bytes, 0600)
-		logInfo("SEQPOOL", "%d new runs written to cache. %d total.", len(self.runList)-oldRunCount, len(self.runList))
+		core.LogInfo("SEQPOOL", "%d new runs written to cache. %d total.", len(self.runList)-oldRunCount, len(self.runList))
 	}
 }
 
@@ -234,10 +234,10 @@ func (a ByRevFdate) Less(i, j int) bool {
 func (self *SequencerPool) add(name string) {
 	if strings.HasPrefix(name, "miseq") {
 		self.seqcers = append(self.seqcers, NewMiSeqSequencer(self, name))
-		logInfo("SEQPOOL", "Add MiSeq %s.", name)
+		core.LogInfo("SEQPOOL", "Add MiSeq %s.", name)
 	} else if strings.HasPrefix(name, "hiseq") {
 		self.seqcers = append(self.seqcers, NewHiSeqSequencer(self, name))
-		logInfo("SEQPOOL", "Add HiSeq %s.", name)
+		core.LogInfo("SEQPOOL", "Add HiSeq %s.", name)
 	}
 }
 

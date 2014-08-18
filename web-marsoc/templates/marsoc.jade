@@ -6,7 +6,7 @@
 doctype html
 html(ng-app="app")
     head
-        title MARSOC / Sequencer Runs
+        title [[.InstanceName]] / Sequencer Runs
         link(rel="stylesheet" href="css/bootstrap.min.css")
         link(rel="stylesheet" href="css/main.css")
         script(src="js/angular.min.js")
@@ -19,7 +19,7 @@ html(ng-app="app")
                 .navbar-brand
                     |10
                     span.logo-color X
-                    | &nbsp;MARSOC / Sequencer Runs
+                    | &nbsp;[[.InstanceName]] / Sequencer Runs
                     span(ng-if="admin") &nbsp;&nbsp;(admin mode)
         #runs.detail
             #run-table-wrapper

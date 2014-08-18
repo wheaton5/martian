@@ -13,10 +13,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	_ "regexp"
-	_ "sort"
-	_ "strconv"
-	_ "strings"
 	"sync"
 	"time"
 )
@@ -54,13 +50,13 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath st
 func (self *PipestanceManager) loadCache(unfail bool) {
 	bytes, err := ioutil.ReadFile(self.cachePath)
 	if err != nil {
-		logError(err, "PIPEMAN", "Could not read cache file %s.", self.cachePath)
+		core.LogError(err, "PIPEMAN", "Could not read cache file %s.", self.cachePath)
 		return
 	}
 
 	var cache map[string]map[string]bool
 	if err := json.Unmarshal(bytes, &cache); err != nil {
-		logError(err, "PIPEMAN", "Could not parse JSON in cache file %s.", self.cachePath)
+		core.LogError(err, "PIPEMAN", "Could not parse JSON in cache file %s.", self.cachePath)
 		return
 	}
 
@@ -69,12 +65,12 @@ func (self *PipestanceManager) loadCache(unfail bool) {
 	}
 	// If we got commandline flag 'unfail', ignore cached fail flags and re-evaluate all
 	// previously failed pipestances because we are probably trying to restart them.
-	logInfo("PIPEMAN", "Unfail flag is set to %t.", unfail)
+	core.LogInfo("PIPEMAN", "Unfail flag is set to %t.", unfail)
 	if failed, ok := cache["failed"]; !unfail && ok {
 		self.failed = failed
 	}
-	logInfo("PIPEMAN", "%d completed pipestance flags loaded from cache.", len(self.completed))
-	logInfo("PIPEMAN", "%d failed pipestance flags loaded from cache.", len(self.failed))
+	core.LogInfo("PIPEMAN", "%d completed pipestance flags loaded from cache.", len(self.completed))
+	core.LogInfo("PIPEMAN", "%d failed pipestance flags loaded from cache.", len(self.failed))
 }
 
 func (self *PipestanceManager) writeCache() {
@@ -106,11 +102,11 @@ func (self *PipestanceManager) inventoryPipestances() {
 				}
 				pipestance, _, err := self.rt.Reattach(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
 				if err != nil {
-					logError(err, "PIPEMAN", "%s was previously cached but no longer exists.", fqname)
+					core.LogError(err, "PIPEMAN", "%s was previously cached but no longer exists.", fqname)
 					self.writeCache()
 					continue
 				}
-				logInfo("PIPEMAN", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
+				core.LogInfo("PIPEMAN", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
 				self.runList = append(self.runList, pipestance)
 				self.runTable[fqname] = pipestance
 			}
@@ -154,15 +150,18 @@ func (self *PipestanceManager) processRunList() {
 			if state == "complete" {
 				// If pipestance is done, remove from runTable, mark it in the
 				// cache as completed, and flush the cache.
-				logInfo("PIPEMAN", "Complete and removing from runList: %s.", fqname)
+				core.LogInfo("PIPEMAN", "Complete and removing from runList: %s.", fqname)
 				mutex.Lock()
 				delete(self.runTable, fqname)
 				self.completed[fqname] = true
 				self.writeCache()
 				mutex.Unlock()
 				pipestance.Immortalize()
+				core.LogInfo("PIPEMAN", "Starting VDR kill for %s.", fqname)
+				killReport := pipestance.VDRKill()
+				core.LogInfo("PIPEMAN", "VDR killed %d files, %d bytes from %s.", killReport.Count, killReport.Size, fqname)
 			} else if state == "failed" {
-				logInfo("PIPEMAN", "Failed and removing from runList: %s.", fqname)
+				core.LogInfo("PIPEMAN", "Failed and removing from runList: %s.", fqname)
 				mutex.Lock()
 				delete(self.runTable, fqname)
 				self.failed[fqname] = true
@@ -195,7 +194,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		return err
 	}
 	fqname := pipestance.GetFQName()
-	logInfo("PIPEMAN", "Instantiating and pushing to runList: %s.", fqname)
+	core.LogInfo("PIPEMAN", "Instantiating and pushing to runList: %s.", fqname)
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
 	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
