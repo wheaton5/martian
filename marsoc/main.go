@@ -51,7 +51,7 @@ func main() {
 	// Command-line arguments.
 	doc :=
 		`Usage: 
-    marsoc [--unfail]
+    marsoc [--unfail] [--sge]
     marsoc -h | --help | --version`
 	opts, _ := docopt.Parse(doc, nil, true, "marsoc", false)
 
@@ -70,7 +70,7 @@ func main() {
 
 	// Job mode and SGE environment variables.
 	jobMode := "local"
-	if _, ok := opts["--sge"]; ok {
+	if sge, _ := opts["--sge"]; sge.(bool) {
 		jobMode = "sge"
 		core.EnvRequire([][]string{
 			{"SGE_ROOT", "path/to/sge/root"},
@@ -80,7 +80,8 @@ func main() {
 	}
 
 	// Process configuration vars.
-	_, unfail := opts["--unfail"]
+	u, _ := opts["--unfail"]
+	unfail := u.(bool)
 	uiport := env["MARSOC_PORT"]
 	pipelinesPath := env["MARSOC_PIPELINES_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
