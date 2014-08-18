@@ -190,9 +190,6 @@ func (self *PipestanceManager) processRunList() {
 
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
 	psPath := path.Join(self.path, container, pipeline, psid, self.rt.CodeVersion)
-	if err := os.MkdirAll(psPath, 0700); err != nil {
-		return err
-	}
 	pipestance, _, err := self.rt.InvokeWithSource(psid, src, psPath)
 	if err != nil {
 		return err
@@ -206,6 +203,23 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	os.Symlink(self.rt.CodeVersion, headPath)
 
 	return nil
+}
+
+func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, fqname string) {
+	pipestance, ok := self.GetPipestance(container, pipeline, psid)
+	if !ok {
+		return
+	}
+	node := pipestance.Node().Find(fqname)
+	done := make(chan bool)
+	count := node.RestartFailedMetadatas(done)
+	for i := 0; i < count; i++ {
+		<-done
+	}
+	pipestance.Unimmortalize()
+	delete(self.failed, pipestance.GetFQName())
+	self.runList = append(self.runList, pipestance)
+	self.runTable[pipestance.GetFQName()] = pipestance
 }
 
 func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (string, bool) {

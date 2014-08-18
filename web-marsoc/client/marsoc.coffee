@@ -32,13 +32,11 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
     )
 
     $scope.refreshRuns = () ->
-        console.log('refresh')
         $http.get('/api/get-runs').success((runs) ->
-            console.log(runs)
             for run in runs
                 $scope.runTable[run.fcid].preprocess = run.preprocess
                 $scope.runTable[run.fcid].state = run.state
-            $http.post('/api/get-samples', { fcid: $scope.selrun.fcid }).success((data) ->
+            $http.post('/api/get-samples', { fcid: $scope.selrun?.fcid }).success((data) ->
                 $scope.samples = data
             )
         )

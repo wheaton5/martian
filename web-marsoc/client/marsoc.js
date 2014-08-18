@@ -42,17 +42,15 @@
       return $scope.runTable = _.indexBy($scope.runs, 'fcid');
     });
     $scope.refreshRuns = function() {
-      console.log('refresh');
       return $http.get('/api/get-runs').success(function(runs) {
-        var run, _i, _len;
-        console.log(runs);
+        var run, _i, _len, _ref;
         for (_i = 0, _len = runs.length; _i < _len; _i++) {
           run = runs[_i];
           $scope.runTable[run.fcid].preprocess = run.preprocess;
           $scope.runTable[run.fcid].state = run.state;
         }
         return $http.post('/api/get-samples', {
-          fcid: $scope.selrun.fcid
+          fcid: (_ref = $scope.selrun) != null ? _ref.fcid : void 0
         }).success(function(data) {
           return $scope.samples = data;
         });

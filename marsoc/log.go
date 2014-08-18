@@ -19,5 +19,5 @@ func logInfoNoTime(component string, format string, v ...interface{}) {
 }
 
 func logError(err error, component string, format string, v ...interface{}) {
-	fmt.Printf("[%s] %s %s\n%s\n", component, core.Timestamp(), fmt.Sprintf(format, v...), err.Error())
+	fmt.Printf("[%s] %s %s\n          %s\n", component, core.Timestamp(), fmt.Sprintf(format, v...), err.Error())
 }

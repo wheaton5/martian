@@ -8,18 +8,17 @@ package main
 import (
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
+	_ "fmt"
 	"io/ioutil"
 	"net/http"
 	"path"
-	"path/filepath"
 )
 
 type Lena struct {
 	apiUrl    string
 	authToken string
 	path      string
-	cache     map[string][]interface{}
+	cache     map[string][]*Sample
 }
 
 func NewLena(apiUrl string, authToken string, cachePath string) *Lena {
@@ -27,7 +26,7 @@ func NewLena(apiUrl string, authToken string, cachePath string) *Lena {
 	self.apiUrl = apiUrl
 	self.authToken = authToken
 	self.path = path.Join(cachePath, "lena")
-	self.cache = map[string][]interface{}{}
+	self.cache = map[string][]*Sample{}
 	return self
 }
 
@@ -99,49 +98,38 @@ type Sample struct {
 	Template_input_mass      float32        `json:"template_input_mass"`
 	User                     *User          `json:"user"`
 	Lane                     interface{}    `json:"lane"`
+	Pname                    string         `json:"pname"`
+	Psstate                  string         `json:"psstate"`
+	Callsrc                  string         `json:"callsrc"`
 }
 
 func (self *Lena) loadDatabase() {
 	dbPath := "./nice.json"
 	bytes, err := ioutil.ReadFile(dbPath)
 	if err != nil {
-		logError(err, "LENAAPI", "Could not read cache file %s.", dbPath)
+		logError(err, "LENAAPI", "Could not read database file %s.", dbPath)
 		return
 	}
 
 	var samples []*Sample
 	if err := json.Unmarshal(bytes, &samples); err != nil {
-		logError(err, "LENAAPI", "Could not parse JSON in cache file %s.", dbPath)
+		logError(err, "LENAAPI", "Could not parse JSON in database file %s.", dbPath)
 		return
 	}
 	for _, sample := range samples {
-		fmt.Println(sample.Id, sample.User.Username)
-	}
-	fmt.Println(len(samples))
-}
-
-func (self *Lena) loadCache() {
-	// Iterate through files in the cache folder.
-	paths, _ := filepath.Glob(path.Join(self.path, "*"))
-	for _, p := range paths {
-		// Each one contains the Lena API response for a single flowcell.
-		// The response is a JSON list of sample objects.
-		bytes, err := ioutil.ReadFile(p)
-		if err != nil {
-			logError(err, "LENAAPI", "Could not read cache file %s.", p)
-			continue
-		}
-		var v interface{}
-		if err := json.Unmarshal(bytes, &v); err != nil {
-			logError(err, "LENAAPI", "Could not parse JSON in cache file %s.", p)
+		if sample.Sequencing_run == nil {
 			continue
 		}
 
-		// Put the JSON object into the cache by flowcell id.
-		fcid := path.Base(p)
-		self.cache[fcid] = v.([]interface{})
+		fcid := sample.Sequencing_run.Name
+		slist, ok := self.cache[fcid]
+		if ok {
+			self.cache[fcid] = append(slist, sample)
+		} else {
+			self.cache[fcid] = []*Sample{sample}
+		}
 	}
-	logInfo("LENAAPI", "%d Lena records loaded from cache.", len(paths))
+	logInfo("LENAAPI", "%d Lena samples loaded from data.", len(samples))
 }
 
 func (self *Lena) lenaAPI(query string) (string, error) {
@@ -170,22 +158,9 @@ func (self *Lena) lenaAPI(query string) (string, error) {
 	return string(body), nil
 }
 
-func (self *Lena) getSamplesForFlowcell(fcid string) ([]interface{}, error) {
-	// First look for the flowcell id in the cache.
-	if sample, ok := self.cache[fcid]; ok {
-		return sample, nil
+func (self *Lena) getSamplesForFlowcell(fcid string) ([]*Sample, error) {
+	if samples, ok := self.cache[fcid]; ok {
+		return samples, nil
 	}
-
-	// If not in the cache, hit the remote API.
-	body, err := self.lenaAPI("/Sample/?sequencing_run__name=" + fcid)
-	fmt.Println(body)
-	if err != nil {
-		return nil, err
-	}
-	var v interface{}
-	err = json.Unmarshal([]byte(body), &v)
-	if err != nil {
-		return nil, err
-	}
-	return v.([]interface{}), nil
+	return []*Sample{}, nil
 }

@@ -14,12 +14,13 @@ html(ng-app="app")
         script(src="js/lodash.min.js")
         script(src="js/moment.min.js")
     body(ng-controller="MarioRunCtrl")
-        header.navbar.navbar-inverse.navbar-fixed-top
+        header.navbar.navbar-inverse.navbar-fixed-top(ng-class="{admin:admin}")
             .navbar-header 
                 .navbar-brand
                     |10
                     span.logo-color X
                     | &nbsp;MARSOC / Sequencer Runs
+                    span(ng-if="admin") &nbsp;&nbsp;(admin mode)
         #runs.detail
             #run-table-wrapper
                 table.table.table-striped#run-table
@@ -55,17 +56,8 @@ html(ng-app="app")
                         td Flowcell
                         td.param(style="font-weight:bold") {{selrun.fcid}}
                     tr
-                        td Seqcer
-                        td.param {{selrun.seqcerName}} ({{selrun.instrId}})
-                    tr
-                        td Run Num
-                        td {{selrun.num}}
-                    tr
-                        td Duration
+                        td Runtime
                         td {{selrun | runDuration}} hours
-                    tr
-                        td Age
-                        td {{selrun.completeTime | momentTimeAgo}}
                     tr
                         td Path
                         td.param {{selrun.path}}

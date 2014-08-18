@@ -7,7 +7,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	_ "fmt"
 	"margo/core"
 	"os/exec"
 	"path"
@@ -43,20 +43,24 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 }
 
 func (self *ArgShim) getSamplePipelinesMap() map[string]string {
+	// Just capture the sample to pipeline map and do lookups locally.
+	// No sense in invoking Node.js each time.
 	v := self.invoke("getSamplePipelinesMap", []interface{}{})
-	if tv, ok := v.(map[string]string); ok {
-		return tv
+	if tv, ok := v.(map[string]interface{}); ok {
+		ntv := map[string]string{}
+		for k, v := range tv {
+			ntv[k] = v.(string)
+		}
+		return ntv
 	}
 	return map[string]string{}
 }
 
-func (self *ArgShim) getPipelineForSample(sample interface{}) string {
-	pipeline := self.samplePipelinesMap[sample.(map[string]interface{})["workflow"].(map[string]interface{})["name"].(string)]
-	fmt.Println(pipeline)
-	return pipeline
+func (self *ArgShim) getPipelineForSample(sample *Sample) string {
+	return self.samplePipelinesMap[sample.Workflow.Name]
 }
 
-func (self *ArgShim) buildArgsForRun(run interface{}) map[string]interface{} {
+func (self *ArgShim) buildArgsForRun(run *Run) map[string]interface{} {
 	v := self.invoke("buildArgsForRun", []interface{}{
 		run,
 	})
@@ -66,11 +70,11 @@ func (self *ArgShim) buildArgsForRun(run interface{}) map[string]interface{} {
 	return map[string]interface{}{}
 }
 
-func (self *ArgShim) buildArgsForSample(run interface{}, sample interface{}, preprocess_outs interface{}) map[string]interface{} {
+func (self *ArgShim) buildArgsForSample(run *Run, sample *Sample, preprocessOuts interface{}) map[string]interface{} {
 	v := self.invoke("buildArgsForSample", []interface{}{
 		run,
 		sample,
-		preprocess_outs,
+		preprocessOuts,
 	})
 	if tv, ok := v.(map[string]interface{}); ok {
 		return tv
@@ -78,7 +82,7 @@ func (self *ArgShim) buildArgsForSample(run interface{}, sample interface{}, pre
 	return map[string]interface{}{}
 }
 
-func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run interface{}) string {
+func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
 	shimout := self.buildArgsForRun(run)
 	pipeline, ok := shimout["pipeline"].(string)
 	if !ok {
@@ -89,4 +93,24 @@ func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run interface{}) st
 		return ""
 	}
 	return rt.BuildCallSource(pipeline, args)
+}
+
+func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, preprocPipestance *core.Pipestance, run *Run, sample *Sample) string {
+	var preprocessOuts interface{}
+	if preprocPipestance != nil {
+		preprocessOuts = preprocPipestance.GetOuts(0)
+	} else {
+		preprocessOuts = map[string]interface{}{}
+	}
+	shimout := self.buildArgsForSample(run, sample, preprocessOuts)
+	pipeline, ok := shimout["pipeline"].(string)
+	if !ok {
+		return ""
+	}
+	args, ok := shimout["args"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	return rt.BuildCallSource(pipeline, args)
+
 }

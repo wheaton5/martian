@@ -13,9 +13,12 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"html/template"
+	"io/ioutil"
 	"margo/core"
 	"net/http"
+	"path"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -30,6 +33,14 @@ func render(tname string, data interface{}) string {
 		return err.Error()
 	}
 	return doc.String()
+}
+
+func makeJSON(data interface{}) string {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return err.Error()
+	}
+	return string(bytes)
 }
 
 func main() {
@@ -101,7 +112,6 @@ func main() {
 
 	// Setup Lena and load cache.
 	lena := NewLena(lenaApiUrl, lenaAuthToken, cachePath)
-	lena.loadCache()
 	lena.loadDatabase()
 
 	// Setup argshim.
@@ -143,66 +153,136 @@ func main() {
 					run.Preprocess = state
 				}
 				run.Analysis = nil
-				/*
-					if run.Preprocess != "complete" {
-						samples, err := lena.getSamplesForFlowcell(run.Fcid)
-						if err != nil {
-							fmt.Println(err.Error())
-						}
-						if len(samples) > 0 {
-							states := []string{}
-							run.Analysis = "running"
-							for _, sample := range samples {
-								state, ok := pman.GetPipestanceState(run.Fcid, argshim.getPipelineForSample(sample), run.Fcid)
-								if ok {
-									states = append(states, state)
-								} else {
-									run.Analysis = nil
-								}
-							}
-							every := true
-							for _, state := range states {
-								if state != "complete" {
-									every = false
-									break
-								}
-							}
-							if every {
-								run.Analysis = "complete"
-							}
-							for _, state := range states {
-								if state == "failed" {
-									run.Analysis = "failed"
-									break
-								}
-							}
-						}
-
+				if run.Preprocess == "complete" {
+					samples, err := lena.getSamplesForFlowcell(run.Fcid)
+					if err != nil {
+						fmt.Println(err.Error())
 					}
-				*/
+					if len(samples) > 0 {
+						states := []string{}
+						run.Analysis = "running"
+						for _, sample := range samples {
+							state, ok := pman.GetPipestanceState(run.Fcid, argshim.getPipelineForSample(sample), run.Fcid)
+							if ok {
+								states = append(states, state)
+							} else {
+								run.Analysis = nil
+							}
+						}
+						every := true
+						for _, state := range states {
+							if state != "complete" {
+								every = false
+								break
+							}
+						}
+						if every && len(states) > 0 {
+							run.Analysis = "complete"
+						}
+						for _, state := range states {
+							if state == "failed" {
+								run.Analysis = "failed"
+								break
+							}
+						}
+					}
+
+				}
 				done <- true
 			}(run)
 		}
 		for i := 0; i < len(pool.runList); i++ {
 			<-done
 		}
-		bytes, err := json.Marshal(pool.runList)
-		if err != nil {
-			return err.Error()
-		}
-		return string(bytes)
+
+		return makeJSON(pool.runList)
 	})
 
 	// Get fcid post.
 	type FcidForm struct {
 		Fcid string
 	}
+	app.Post("/api/get-samples", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
+		fcid := body.Fcid
+		samples, err := lena.getSamplesForFlowcell(fcid)
+		if err != nil {
+			return makeJSON(err.Error())
+		}
+		run := pool.find(fcid)
+		preprocPipestance, _ := pman.GetPipestance(fcid, "PREPROCESS", fcid)
+
+		for _, sample := range samples {
+			pname := argshim.getPipelineForSample(sample)
+			sample.Pname = pname
+			sample.Psstate, _ = pman.GetPipestanceState(fcid, pname, fcid)
+			if preprocPipestance != nil {
+				sample.Callsrc = argshim.buildCallSourceForSample(rt, preprocPipestance, run, sample)
+			}
+		}
+		return makeJSON(samples)
+	})
+
 	app.Post("/api/get-callsrc", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
 		run, ok := pool.runTable[body.Fcid]
 		if ok {
 			return argshim.buildCallSourceForRun(rt, run)
 		}
 		return "could not build call source"
+	})
+
+	app.Get("/api/get-nodes/:container/:pname/:psid", func(p martini.Params) string {
+		ser, _ := pman.GetPipestanceSerialization(p["container"], p["pname"], p["psid"])
+		return makeJSON(ser)
+	})
+	// Get metadata contents.
+	type MetadataForm struct {
+		Path string
+		Name string
+	}
+	app.Post("/api/get-metadata/:container/:pname/:psid", binding.Bind(MetadataForm{}), func(body MetadataForm, params martini.Params) string {
+		if strings.Index(body.Path, "..") > -1 {
+			return "'..' not allowed in path."
+		}
+		data, err := ioutil.ReadFile(path.Join(body.Path, "_"+body.Name))
+		if err != nil {
+			return err.Error()
+		}
+		return string(data)
+	})
+
+	// Restart failed stage.
+	app.Post("/api/restart/:container/:pname/:psid/:fqname", func(p martini.Params) string {
+		pman.UnfailPipestance(p["container"], p["pname"], p["psid"], p["fqname"])
+		return ""
+	})
+
+	// API: Pipestance Invocation
+	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
+		fcid := body.Fcid
+		run := pool.find(fcid)
+		err := pman.Invoke(fcid, "PREPROCESS", fcid, argshim.buildCallSourceForRun(rt, run))
+		if err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
+		fcid := body.Fcid
+		samples, err := lena.getSamplesForFlowcell(fcid)
+		if err != nil {
+			return err.Error()
+		}
+		run := pool.find(fcid)
+		preprocPipestance, ok := pman.GetPipestance(fcid, "PREPROCESS", fcid)
+		if !ok {
+			return ""
+		}
+		for _, sample := range samples {
+			pname := argshim.getPipelineForSample(sample)
+			src := argshim.buildCallSourceForSample(rt, preprocPipestance, run, sample)
+			pman.Invoke(fcid, pname, strconv.Itoa(sample.Id), src)
+		}
+		return ""
 	})
 
 	http.ListenAndServe(":"+uiport, app)
