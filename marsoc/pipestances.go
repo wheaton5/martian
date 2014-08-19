@@ -103,7 +103,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 				if self.completed[fqname] || self.failed[fqname] {
 					continue
 				}
-				pipestance, _, err := self.rt.Reattach(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
+				pipestance, err := self.rt.Reattach(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
 				if err != nil {
 					core.LogError(err, "PIPEMAN", "%s was previously cached but no longer exists.", fqname)
 					self.writeCache()
@@ -136,22 +136,23 @@ func parseFQName(fqname string) (string, string) {
 
 func (self *PipestanceManager) processRunList() {
 	continueToRunList := []*core.Pipestance{}
-	done := make(chan bool)
+
 	mutex := &sync.Mutex{}
+	var wg sync.WaitGroup
+	wg.Add(len(self.runList))
+
 	for _, pipestance := range self.runList {
 		go func() {
 			nodes := pipestance.Node().AllNodes()
 
 			// Metadata refreshes can be asynchronous amongst themselves but
 			// all must be complete and consistent before starting to step.
-			ndone := make(chan bool)
-			count := 0
+			var mwg sync.WaitGroup
+			mwg.Add(len(nodes))
 			for _, node := range nodes {
-				count += node.RefreshMetadata(ndone)
+				node.RefreshMetadata(&mwg)
 			}
-			for i := 0; i < count; i++ {
-				<-ndone
-			}
+			mwg.Wait()
 
 			state := pipestance.GetOverallState()
 			fqname := pipestance.GetFQName()
@@ -207,19 +208,18 @@ func (self *PipestanceManager) processRunList() {
 					node.Step()
 				}
 			}
-			done <- true
+			wg.Done()
 		}()
 	}
-	for i := 0; i < len(self.runList); i++ {
-		<-done
-	}
+	wg.Wait()
+
 	// Remove completed and failed pipestances by omission.
 	self.runList = continueToRunList
 }
 
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
 	psPath := path.Join(self.path, container, pipeline, psid, self.rt.CodeVersion)
-	pipestance, _, err := self.rt.InvokeWithSource(psid, src, psPath)
+	pipestance, err := self.rt.InvokeWithSource(psid, src, psPath)
 	if err != nil {
 		return err
 	}
@@ -240,11 +240,9 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 		return
 	}
 	node := pipestance.Node().Find(fqname)
-	done := make(chan bool)
-	count := node.RestartFailedMetadatas(done)
-	for i := 0; i < count; i++ {
-		<-done
-	}
+	var wg sync.WaitGroup
+	node.RestartFailedMetadatas(&wg)
+	wg.Wait()
 	pipestance.Unimmortalize()
 	delete(self.failed, pipestance.GetFQName())
 	self.runList = append(self.runList, pipestance)
@@ -295,20 +293,18 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	}
 
 	// Reattach to the pipestance.
-	pipestance, _, err := self.rt.Reattach(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
+	pipestance, err := self.rt.Reattach(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
 	if err != nil {
 		return nil, false
 	}
 
 	// Refresh its metadata state and return.
 	nodes := pipestance.Node().AllNodes()
-	done := make(chan bool)
-	count := 0
+	var wg sync.WaitGroup
+	wg.Add(len(nodes))
 	for _, node := range nodes {
-		count += node.RefreshMetadata(done)
+		node.RefreshMetadata(&wg)
 	}
-	for i := 0; i < count; i++ {
-		<-done
-	}
+	wg.Wait()
 	return pipestance, true
 }

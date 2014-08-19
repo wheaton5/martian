@@ -121,7 +121,7 @@ func (self *Lena) loadDatabase() {
 	if err != nil {
 		self.mailer.Sendmail(
 			fmt.Sprintf("I swallowed a JSON bug."),
-			fmt.Sprintf("Precious Human,\n\nYou appear to have changed the Lena schema without updating my own.\n\nI will not show you any more samples until you rectify this oversight."),
+			fmt.Sprintf("Human,\n\nYou appear to have changed the Lena schema without updating my own.\n\nI will not show you any more samples until you rectify this oversight."),
 		)
 		core.LogError(err, "LENAAPI", "Could not parse JSON in %s.", self.dbPath)
 	}
