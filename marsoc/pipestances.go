@@ -235,7 +235,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 }
 
 func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline string, psid string) error {
-	headPath := path.Join(self.path, container, pipeline, psid)
+	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
 	return os.Remove(headPath)
 }
 

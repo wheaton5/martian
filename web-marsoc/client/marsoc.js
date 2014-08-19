@@ -100,6 +100,17 @@
         return console.log(data);
       });
     };
+    $scope.archiveSamples = function() {
+      return $http.post('/api/archive-fcid-samples', {
+        fcid: $scope.selrun.fcid
+      }).success(function(data) {
+        $scope.refreshRuns();
+        if (data) {
+          window.alert(data.toString());
+        }
+        return console.log(data);
+      });
+    };
     if (admin) {
       return $interval((function() {
         return $scope.refreshRuns();

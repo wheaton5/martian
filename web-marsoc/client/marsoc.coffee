@@ -66,6 +66,14 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
             if data then window.alert(data.toString())
             console.log(data)
         )
+
+    $scope.archiveSamples = () ->
+        $http.post('/api/archive-fcid-samples', { fcid: $scope.selrun.fcid }).success((data) ->
+            $scope.refreshRuns()
+            if data then window.alert(data.toString())
+            console.log(data)
+        )
+        
     # Only admin pages get auto-refresh.
     if admin then $interval((() -> $scope.refreshRuns()), 5000)
 )

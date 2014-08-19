@@ -112,6 +112,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 				if state, ok := pman.GetPipestanceState(run.Fcid, "PREPROCESS", run.Fcid); ok {
 					run.Preprocess = state
 				}
+				run.Preprocess = "complete"
 
 				// If PREPROCESS is not complete yet, neither is ANALYTICS.
 				run.Analysis = nil
@@ -180,14 +181,20 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		run := pool.find(fcid)
 		preprocPipestance, _ := pman.GetPipestance(fcid, "PREPROCESS", fcid)
 
+		var wg sync.WaitGroup
+		wg.Add(len(samples))
 		for _, sample := range samples {
-			pname := argshim.getPipelineForSample(sample)
-			sample.Pname = pname
-			sample.Psstate, _ = pman.GetPipestanceState(fcid, pname, fcid)
-			if preprocPipestance != nil {
-				sample.Callsrc = argshim.buildCallSourceForSample(rt, preprocPipestance, run, sample)
-			}
+			go func(wg *sync.WaitGroup, sample *Sample) {
+				pname := argshim.getPipelineForSample(sample)
+				sample.Pname = pname
+				sample.Psstate, _ = pman.GetPipestanceState(fcid, pname, fcid)
+				if preprocPipestance != nil {
+					sample.Callsrc = argshim.buildCallSourceForSample(rt, preprocPipestance, run, sample)
+				}
+				wg.Done()
+			}(&wg, sample)
 		}
+		wg.Wait()
 		return makeJSON(samples)
 	})
 

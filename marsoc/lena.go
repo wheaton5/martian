@@ -133,6 +133,9 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	if err := json.Unmarshal(data, &samples); err != nil {
 		return err
 	}
+
+	// Create a new, empty cache.
+	self.cache = map[string][]*Sample{}
 	for _, sample := range samples {
 		if sample.Sequencing_run == nil {
 			continue
@@ -159,6 +162,9 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	if !ok {
 		return errors.New("JSON does not contain a top-level list.")
 	}
+
+	// Create new, empty sample bag.
+	self.sampleBag = map[int]interface{}{}
 	for _, iface := range bagIfaces {
 		bagSample, ok := iface.(map[string]interface{})
 		if !ok {
