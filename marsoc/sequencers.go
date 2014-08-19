@@ -125,9 +125,10 @@ type SequencerPool struct {
 	runList     []*Run
 	runTable    map[string]*Run
 	folderCache map[string]*Run
+	mailer      *core.Mailer
 }
 
-func NewSequencerPool(p string, cachePath string) *SequencerPool {
+func NewSequencerPool(p string, cachePath string, mailer *core.Mailer) *SequencerPool {
 	self := &SequencerPool{}
 	self.path = p
 	self.cachePath = path.Join(cachePath, "sequencers")
@@ -135,6 +136,7 @@ func NewSequencerPool(p string, cachePath string) *SequencerPool {
 	self.runList = []*Run{}
 	self.runTable = map[string]*Run{}
 	self.folderCache = map[string]*Run{}
+	self.mailer = mailer
 	return self
 }
 
@@ -173,7 +175,7 @@ func (self *SequencerPool) goInventoryLoop() {
 			self.inventorySequencers()
 
 			// Wait for a bit.
-			time.Sleep(time.Second * time.Duration(10))
+			time.Sleep(time.Minute * time.Duration(5))
 		}
 	}()
 }
@@ -181,6 +183,15 @@ func (self *SequencerPool) goInventoryLoop() {
 // Inventory all runs concurrently.
 func (self *SequencerPool) inventorySequencers() {
 	oldRunCount := len(self.runList)
+
+	// Count number of runs that are complete,
+	// so we can email when a new run is complete.
+	oldCompleted := map[string]bool{}
+	for _, run := range self.runList {
+		if run.State == "complete" {
+			oldCompleted[run.Fcid] = true
+		}
+	}
 
 	runchan := make(chan *Run)
 	count := 0
@@ -218,6 +229,25 @@ func (self *SequencerPool) inventorySequencers() {
 	}
 
 	self.indexCache()
+
+	// Count again number of runs that are complete,
+	// so we can email when a new run is complete.
+	newCompleteds := []string{}
+	for _, run := range self.runList {
+		if run.State == "complete" {
+			if _, ok := oldCompleted[run.Fcid]; !ok {
+				newCompleteds = append(newCompleteds, run.Fcid)
+			}
+		}
+	}
+
+	// If there are new runs completed, send email.
+	if len(newCompleteds) > 0 {
+		self.mailer.Sendmail(
+			fmt.Sprintf("Run %s complete!", newCompleteds[0]),
+			fmt.Sprintf("Precious Human,\n\nIt appears that sequencing run %s has completed.\n\nKindly invoke PREPROCESS at http://marsoc/.", newCompleteds[0]),
+		)
+	}
 
 	if len(self.runList) > oldRunCount {
 		bytes, _ := json.MarshalIndent(self.folderCache, "", "    ")

@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,9 +32,10 @@ type PipestanceManager struct {
 	failed    map[string]bool
 	runList   []*core.Pipestance
 	runTable  map[string]*core.Pipestance
+	mailer    *core.Mailer
 }
 
-func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath string, stepms int) *PipestanceManager {
+func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath string, stepms int, mailer *core.Mailer) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.path = pipestancesPath
@@ -44,6 +46,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath st
 	self.failed = map[string]bool{}
 	self.runList = []*core.Pipestance{}
 	self.runTable = map[string]*core.Pipestance{}
+	self.mailer = mailer
 	return self
 }
 
@@ -126,6 +129,11 @@ func (self *PipestanceManager) goRunListLoop() {
 	}()
 }
 
+func parseFQName(fqname string) (string, string) {
+	parts := strings.Split(fqname, ".")
+	return parts[2], parts[1]
+}
+
 func (self *PipestanceManager) processRunList() {
 	continueToRunList := []*core.Pipestance{}
 	done := make(chan bool)
@@ -147,7 +155,7 @@ func (self *PipestanceManager) processRunList() {
 
 			state := pipestance.GetOverallState()
 			fqname := pipestance.GetFQName()
-			if state == "complete" {
+			if state == "completed" {
 				// If pipestance is done, remove from runTable, mark it in the
 				// cache as completed, and flush the cache.
 				core.LogInfo("PIPEMAN", "Complete and removing from runList: %s.", fqname)
@@ -156,18 +164,40 @@ func (self *PipestanceManager) processRunList() {
 				self.completed[fqname] = true
 				self.writeCache()
 				mutex.Unlock()
+
+				// Immortalization.
 				pipestance.Immortalize()
+
+				// VDR Kill
 				core.LogInfo("PIPEMAN", "Starting VDR kill for %s.", fqname)
 				killReport := pipestance.VDRKill()
 				core.LogInfo("PIPEMAN", "VDR killed %d files, %d bytes from %s.", killReport.Count, killReport.Size, fqname)
+
+				// Email notification.
+				pname, psid := parseFQName(fqname)
+				self.mailer.Sendmail(
+					fmt.Sprintf("%s of %s has succeeded!", pname, psid),
+					fmt.Sprintf("Precious Human,\n\nI am delighted to inform you that %s of %s has completed.\n\nMore details of my triumph are available at http://marsoc/pipestance/%s/%s/%s.\n\nBtw I also saved you %d bytes with VDR. You're welcome.", pname, psid, psid, pname, psid, killReport.Size),
+				)
 			} else if state == "failed" {
+				// If pipestance is failed, remove from runTable, mart it in the
+				// cache as failed, and flush the cache.
 				core.LogInfo("PIPEMAN", "Failed and removing from runList: %s.", fqname)
 				mutex.Lock()
 				delete(self.runTable, fqname)
 				self.failed[fqname] = true
 				self.writeCache()
 				mutex.Unlock()
+
+				// Immortalization.
 				pipestance.Immortalize()
+
+				// Email notification.
+				pname, psid := parseFQName(fqname)
+				self.mailer.Sendmail(
+					fmt.Sprintf("%s of %s has failed!", pname, psid),
+					fmt.Sprintf("Precious Human,\n\nI regret to inform you that %s of %s has failed.\n\nMore details of the tragedy are available at http://marsoc/pipestance/%s/%s/%s.", pname, psid, psid, pname, psid),
+				)
 			} else {
 				// If it is not done, step and keep it running.
 				mutex.Lock()

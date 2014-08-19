@@ -65,6 +65,7 @@ func main() {
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
 		{"MARSOC_PIPELINES_PATH", "path/to/pipelines"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
+		{"MARSOC_NOTIFY_EMAIL", "email@address.com"},
 	}, true)
 
 	// Do not log the value of these.
@@ -89,6 +90,7 @@ func main() {
 	u, _ := opts["--unfail"]
 	unfail := u.(bool)
 	uiport := env["MARSOC_PORT"]
+	notifyEmail := env["MARSOC_NOTIFY_EMAIL"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
 	pipelinesPath := env["MARSOC_PIPELINES_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
@@ -102,15 +104,7 @@ func main() {
 	STEP_SECS := 5
 
 	// Setup Mailer.
-	mailer := core.NewMailer(smtpUser, smtpPass)
-	_ = mailer
-	/*
-		err := mailer.Sendmail("Your pipestance is done!", "Pipestance HABOOBOO is complete. You can now find it at http://marsoc/.")
-		if err != nil {
-			core.LogError(err, "MAILER", "Could not send mail.")
-		}
-		os.Exit(0)
-	*/
+	mailer := core.NewMailer(smtpUser, smtpPass, notifyEmail)
 
 	// Setup Mario Runtime with pipelines path.
 	rt := core.NewRuntime(jobMode, pipelinesPath)
@@ -119,7 +113,7 @@ func main() {
 	core.LogInfoNoTime("CONFIG", "CODE_VERSION = %s", rt.CodeVersion)
 
 	// Setup SequencerPool, add sequencers, load cache, start inventory loop.
-	pool := NewSequencerPool(seqrunsPath, cachePath)
+	pool := NewSequencerPool(seqrunsPath, cachePath, mailer)
 	for _, seqcerName := range seqcerNames {
 		pool.add(seqcerName)
 	}
@@ -127,7 +121,7 @@ func main() {
 	pool.goInventoryLoop()
 
 	// Setup PipestanceManager, load cache, start runlist loop.
-	pman := NewPipestanceManager(rt, pipestancesPath, cachePath, STEP_SECS)
+	pman := NewPipestanceManager(rt, pipestancesPath, cachePath, STEP_SECS, mailer)
 	pman.loadCache(unfail)
 	pman.goRunListLoop()
 
