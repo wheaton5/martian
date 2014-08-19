@@ -95,9 +95,15 @@ func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, erro
 		} else if !touchTime.IsZero() && time.Since(touchTime) < time.Hour*RUN_IS_INACTIVE_AFTER_HOURS {
 			run.State = "running"
 		}
-		run.StartTime = startTime.Format(core.TIMEFMT)
-		run.CompleteTime = completeTime.Format(core.TIMEFMT)
-		run.TouchTime = touchTime.Format(core.TIMEFMT)
+		if !startTime.IsZero() {
+			run.StartTime = startTime.Format(core.TIMEFMT)
+		}
+		if !completeTime.IsZero() {
+			run.CompleteTime = completeTime.Format(core.TIMEFMT)
+		}
+		if !touchTime.IsZero() {
+			run.TouchTime = touchTime.Format(core.TIMEFMT)
+		}
 		runchan <- run
 	}(&run)
 	return 1, nil

@@ -15,7 +15,6 @@ app.filter('momentFormat',  () -> (time, fmt) -> moment(time).format(fmt)
     else
         diff = moment(run.touchTime).diff(run.startTime, 'hours')
     diff || '<1'
-    #if run.state == 'complete' then diff || '<1' else ''
 )
 
 app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
