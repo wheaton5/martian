@@ -126,7 +126,7 @@ func main() {
 	pman.goRunListLoop()
 
 	// Setup Lena and load cache.
-	lena := NewLena(lenaDownloadUrl, lenaAuthToken, cachePath)
+	lena := NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
 	lena.loadDatabase()
 	lena.goDownloadLoop()
 

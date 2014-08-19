@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	. "margo/core"
+	"margo/core"
 	"net/http"
 	"path"
 	"time"
@@ -97,27 +97,33 @@ type Lena struct {
 	dbPath      string
 	cache       map[string][]*Sample
 	sampleBag   map[int]interface{}
+	mailer      *core.Mailer
 }
 
-func NewLena(downloadUrl string, authToken string, cachePath string) *Lena {
+func NewLena(downloadUrl string, authToken string, cachePath string, mailer *core.Mailer) *Lena {
 	self := &Lena{}
 	self.downloadUrl = downloadUrl
 	self.authToken = authToken
 	self.dbPath = path.Join(cachePath, "lena.json")
 	self.cache = map[string][]*Sample{}
 	self.sampleBag = map[int]interface{}{}
+	self.mailer = mailer
 	return self
 }
 
 func (self *Lena) loadDatabase() {
 	data, err := ioutil.ReadFile(self.dbPath)
 	if err != nil {
-		LogError(err, "LENAAPI", "Could not read database file %s.", self.dbPath)
+		core.LogError(err, "LENAAPI", "Could not read database file %s.", self.dbPath)
 		return
 	}
 	err = self.ingestDatabase(data)
 	if err != nil {
-		LogError(err, "LENAAPI", "Could not parse JSON in %s.", self.dbPath)
+		self.mailer.Sendmail(
+			fmt.Sprintf("I swallowed a JSON bug."),
+			fmt.Sprintf("Precious Human,\n\nYou appear to have changed the Lena schema without updating my own.\n\nI will not show you any more samples until you rectify this oversight."),
+		)
+		core.LogError(err, "LENAAPI", "Could not parse JSON in %s.", self.dbPath)
 	}
 }
 
@@ -166,7 +172,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 		self.sampleBag[int(bagSampleId)] = iface
 	}
 
-	LogInfo("LENAAPI", "%d samples, %d bags loaded from %s.", len(samples), len(self.sampleBag), self.dbPath)
+	core.LogInfo("LENAAPI", "%d samples, %d bags loaded from %s.", len(samples), len(self.sampleBag), self.dbPath)
 	return nil
 }
 
@@ -174,19 +180,19 @@ func (self *Lena) ingestDatabase(data []byte) error {
 func (self *Lena) goDownloadLoop() {
 	go func() {
 		for {
-			LogInfo("LENAAPI", "Starting download...")
+			core.LogInfo("LENAAPI", "Starting download...")
 			data, err := self.lenaAPI()
 			if err != nil {
-				LogError(err, "LENAAPI", "Download error.")
+				core.LogError(err, "LENAAPI", "Download error.")
 			} else {
-				LogInfo("LENAAPI", "Download complete. %d bytes.", len(data))
+				core.LogInfo("LENAAPI", "Download complete. %d bytes.", len(data))
 				err := self.ingestDatabase(data)
 				if err == nil {
 					// If JSON parsed properly, save it.
 					ioutil.WriteFile(self.dbPath, data, 0600)
-					LogInfo("LENAAPI", "Database ingested and saved to %s.", self.dbPath)
+					core.LogInfo("LENAAPI", "Database ingested and saved to %s.", self.dbPath)
 				} else {
-					LogError(err, "LENAAPI", "Could not parse JSON from downloaded data.")
+					core.LogError(err, "LENAAPI", "Could not parse JSON from downloaded data.")
 				}
 			}
 
