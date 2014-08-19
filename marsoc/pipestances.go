@@ -234,6 +234,11 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	return nil
 }
 
+func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline string, psid string) error {
+	headPath := path.Join(self.path, container, pipeline, psid)
+	return os.Remove(headPath)
+}
+
 func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, fqname string) {
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {

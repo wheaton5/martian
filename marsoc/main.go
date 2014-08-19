@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/docopt/docopt-go"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
@@ -218,7 +219,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	})
 
 	// Get metadata file contents.
-	app.Post("/api/get-metadata/:container/:pname/:psid", binding.Bind(MetadataForm{}), func(body MetadataForm, params martini.Params) string {
+	app.Post("/api/get-metadata/:container/:pname/:psid", binding.Bind(MetadataForm{}), func(body MetadataForm, p martini.Params) string {
 		if strings.Index(body.Path, "..") > -1 {
 			return "'..' not allowed in path."
 		}
@@ -240,9 +241,11 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	//=========================================================================
 
 	// Invoke PREPROCESS.
-	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
+	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		fcid := body.Fcid
 		run := pool.find(fcid)
+
+		// Use argshim to build MRO call source and invoke.
 		if err := pman.Invoke(fcid, "PREPROCESS", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
 			return err.Error()
 		}
@@ -250,7 +253,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	})
 
 	// Invoke ANALYTICS.
-	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
+	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		// Get the seq run with this fcid.
 		fcid := body.Fcid
 		run := pool.find(fcid)
@@ -258,7 +261,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		// Get the PREPROCESS pipestance for this fcid/seq run.
 		preprocPipestance, ok := pman.GetPipestance(fcid, "PREPROCESS", fcid)
 		if !ok {
-			return "Could not get PREPROCESS pipestance."
+			return fmt.Sprintf("Could not get PREPROCESS pipestance %s.", fcid)
 		}
 
 		// Get all the samples for this fcid.
@@ -276,6 +279,30 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 
 			// Invoke the pipestance.
 			if err := pman.Invoke(fcid, pname, strconv.Itoa(sample.Id), src); err != nil {
+				errors = append(errors, err.Error())
+			}
+		}
+		return strings.Join(errors, "\n")
+	})
+
+	//=========================================================================
+	// Pipestance archival API.
+	//=========================================================================
+
+	// Archive pipestances.
+	app.Post("/api/archive-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		// Get all the samples for this fcid.
+		fcid := body.Fcid
+		samples, err := lena.getSamplesForFlowcell(fcid)
+		if err != nil {
+			return err.Error()
+		}
+
+		// Archive the samples.
+		errors := []string{}
+		for _, sample := range samples {
+			pname := argshim.getPipelineForSample(sample)
+			if err := pman.ArchivePipestanceHead(fcid, pname, strconv.Itoa(sample.Id)); err != nil {
 				errors = append(errors, err.Error())
 			}
 		}
