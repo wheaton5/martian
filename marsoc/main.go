@@ -65,13 +65,12 @@ func main() {
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
 		{"MARSOC_PIPELINES_PATH", "path/to/pipelines"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
-		{"MARSOC_SMTP_USER", "username"},
-		{"MARSOC_SMTP_PASS", "password"},
-		{"LENA_DOWNLOAD_URL", "url"},
-		{"LENA_AUTH_TOKEN", "token"},
 	}, true)
 
-	env2 := core.EnvRequire([][]string{
+	// Do not log the value of these.
+	envPrivate := core.EnvRequire([][]string{
+		{"LENA_DOWNLOAD_URL", "url"},
+		{"LENA_AUTH_TOKEN", "token"},
 		{"MARSOC_SMTP_USER", "username"},
 		{"MARSOC_SMTP_PASS", "password"},
 	}, false)
@@ -96,10 +95,10 @@ func main() {
 	seqrunsPath := env["MARSOC_SEQRUNS_PATH"]
 	pipestancesPath := env["MARSOC_PIPESTANCES_PATH"]
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
-	lenaAuthToken := env["LENA_AUTH_TOKEN"]
-	lenaDownloadUrl := env["LENA_DOWNLOAD_URL"]
-	smtpUser := env2["MARSOC_SMTP_USER"]
-	smtpPass := env2["MARSOC_SMTP_PASS"]
+	lenaAuthToken := envPrivate["LENA_AUTH_TOKEN"]
+	lenaDownloadUrl := envPrivate["LENA_DOWNLOAD_URL"]
+	smtpUser := envPrivate["MARSOC_SMTP_USER"]
+	smtpPass := envPrivate["MARSOC_SMTP_PASS"]
 	STEP_SECS := 5
 
 	// Setup Mailer.
@@ -306,7 +305,7 @@ func main() {
 		}
 		for _, sample := range samples {
 			pname := argshim.getPipelineForSample(sample)
-			src := argshim.buildCallSourceForSample(rt, preprocPipestance, run, sample)
+			src := argshim.buildCallSourceForSample(rt, preprocPipestance, run, lena.getSampleBagWithId(sample.Id))
 			pman.Invoke(fcid, pname, strconv.Itoa(sample.Id), src)
 		}
 		return ""

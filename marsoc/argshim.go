@@ -70,7 +70,7 @@ func (self *ArgShim) buildArgsForRun(run *Run) map[string]interface{} {
 	return map[string]interface{}{}
 }
 
-func (self *ArgShim) buildArgsForSample(run *Run, sample *Sample, preprocessOuts interface{}) map[string]interface{} {
+func (self *ArgShim) buildArgsForSample(run *Run, sample interface{}, preprocessOuts interface{}) map[string]interface{} {
 	v := self.invoke("buildArgsForSample", []interface{}{
 		run,
 		sample,
@@ -95,7 +95,7 @@ func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
 	return rt.BuildCallSource(pipeline, args)
 }
 
-func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, preprocPipestance *core.Pipestance, run *Run, sample *Sample) string {
+func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, preprocPipestance *core.Pipestance, run *Run, sample interface{}) string {
 	var preprocessOuts interface{}
 	if preprocPipestance != nil {
 		preprocessOuts = preprocPipestance.GetOuts(0)

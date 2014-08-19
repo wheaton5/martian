@@ -8,6 +8,8 @@ package main
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	. "margo/core"
 	"net/http"
@@ -52,19 +54,14 @@ type BarcodeSet struct {
 	Name string `json:"name"`
 }
 
-type SeqRunSample struct {
-	Id        int         `json:"id"`
-	Cell_line interface{} `json:"cell_line"`
-}
-
 type SequencingRun struct {
-	Id                    int             `json:"id"`
-	State                 string          `json:"state"`
-	Name                  string          `json:"name"`
-	Date                  string          `json:"date"`
-	Loading_concentration float32         `json:"loading_concentration"`
-	Failure_reason        string          `json:"failure_reason"`
-	Samples               []*SeqRunSample `json:"samples"`
+	Id                    int     `json:"id"`
+	State                 string  `json:"state"`
+	Name                  string  `json:"name"`
+	Date                  string  `json:"date"`
+	Loading_concentration float32 `json:"loading_concentration"`
+	Failure_reason        string  `json:"failure_reason"`
+	Samples               []int   `json:"samples"`
 }
 
 type User struct {
@@ -88,6 +85,7 @@ type Sample struct {
 	Template_input_mass      float32        `json:"template_input_mass"`
 	User                     *User          `json:"user"`
 	Lane                     interface{}    `json:"lane"`
+	Cell_line                string         `json:"cell_line"`
 	Pname                    string         `json:"pname"`
 	Psstate                  string         `json:"psstate"`
 	Callsrc                  string         `json:"callsrc"`
@@ -98,6 +96,7 @@ type Lena struct {
 	authToken   string
 	dbPath      string
 	cache       map[string][]*Sample
+	sampleBag   map[int]interface{}
 }
 
 func NewLena(downloadUrl string, authToken string, cachePath string) *Lena {
@@ -106,6 +105,7 @@ func NewLena(downloadUrl string, authToken string, cachePath string) *Lena {
 	self.authToken = authToken
 	self.dbPath = path.Join(cachePath, "lena.json")
 	self.cache = map[string][]*Sample{}
+	self.sampleBag = map[int]interface{}{}
 	return self
 }
 
@@ -117,11 +117,12 @@ func (self *Lena) loadDatabase() {
 	}
 	err = self.ingestDatabase(data)
 	if err != nil {
-		LogError(err, "LENAAPI", "Could not parse JSON in database file %s.", self.dbPath)
+		LogError(err, "LENAAPI", "Could not parse JSON in %s.", self.dbPath)
 	}
 }
 
 func (self *Lena) ingestDatabase(data []byte) error {
+	// First parse the JSON as structured data into Sample.
 	var samples []*Sample
 	if err := json.Unmarshal(data, &samples); err != nil {
 		return err
@@ -131,6 +132,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 			continue
 		}
 
+		// Store them into lists indexed by flowcell id.
 		fcid := sample.Sequencing_run.Name
 		slist, ok := self.cache[fcid]
 		if ok {
@@ -139,12 +141,38 @@ func (self *Lena) ingestDatabase(data []byte) error {
 			self.cache[fcid] = []*Sample{sample}
 		}
 	}
-	LogInfo("LENAAPI", "%d Lena samples loaded from data.", len(samples))
+	// Now parse the JSON into unstructured interface{} bags,
+	// which is only used as input into argshim.buildCallSourceForSample.
+	// We need this to be schemaless to allow Lena schema changes
+	// to pass through to the argshim without the need to update MARSOC.
+	var bag interface{}
+	if err := json.Unmarshal(data, &bag); err != nil {
+		return err
+	}
+	bagIfaces, ok := bag.([]interface{})
+	if !ok {
+		return errors.New("JSON does not contain a top-level list.")
+	}
+	for _, iface := range bagIfaces {
+		bagSample, ok := iface.(map[string]interface{})
+		if !ok {
+			return errors.New("JSON list includes something that was not an object.")
+		}
+		idIface := bagSample["id"]
+		bagSampleId, ok := idIface.(float64)
+		if !ok {
+			return errors.New(fmt.Sprintf("JSON object contains value for id that is not a number %v.", idIface))
+		}
+		self.sampleBag[int(bagSampleId)] = iface
+	}
+
+	LogInfo("LENAAPI", "%d samples, %d bags loaded from %s.", len(samples), len(self.sampleBag), self.dbPath)
 	return nil
 }
 
 // Start an infinite download loop.
 func (self *Lena) goDownloadLoop() {
+	return
 	go func() {
 		for {
 			LogInfo("LENAAPI", "Starting download...")
@@ -200,4 +228,8 @@ func (self *Lena) getSamplesForFlowcell(fcid string) ([]*Sample, error) {
 		return samples, nil
 	}
 	return []*Sample{}, nil
+}
+
+func (self *Lena) getSampleBagWithId(sampleId int) interface{} {
+	return self.sampleBag[sampleId]
 }
