@@ -243,31 +243,43 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
 		fcid := body.Fcid
 		run := pool.find(fcid)
-		err := pman.Invoke(fcid, "PREPROCESS", fcid, argshim.buildCallSourceForRun(rt, run))
-		if err != nil {
+		if err := pman.Invoke(fcid, "PREPROCESS", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
 			return err.Error()
 		}
-		return ""
+		return "success"
 	})
 
 	// Invoke ANALYTICS.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
+		// Get the seq run with this fcid.
 		fcid := body.Fcid
+		run := pool.find(fcid)
+
+		// Get the PREPROCESS pipestance for this fcid/seq run.
+		preprocPipestance, ok := pman.GetPipestance(fcid, "PREPROCESS", fcid)
+		if !ok {
+			return "Could not get PREPROCESS pipestance."
+		}
+
+		// Get all the samples for this fcid.
 		samples, err := lena.getSamplesForFlowcell(fcid)
 		if err != nil {
 			return err.Error()
 		}
-		run := pool.find(fcid)
-		preprocPipestance, ok := pman.GetPipestance(fcid, "PREPROCESS", fcid)
-		if !ok {
-			return ""
-		}
+
+		// Invoke the appropriate pipeline on each sample.
+		errors := []string{}
 		for _, sample := range samples {
+			// Use argshim to pick pipeline and build MRO call source.
 			pname := argshim.getPipelineForSample(sample)
 			src := argshim.buildCallSourceForSample(rt, preprocPipestance, run, lena.getSampleBagWithId(sample.Id))
-			pman.Invoke(fcid, pname, strconv.Itoa(sample.Id), src)
+
+			// Invoke the pipestance.
+			if err := pman.Invoke(fcid, pname, strconv.Itoa(sample.Id), src); err != nil {
+				errors = append(errors, err.Error())
+			}
 		}
-		return ""
+		return strings.Join(errors, "\n")
 	})
 
 	//=========================================================================
