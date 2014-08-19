@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"margo/core"
 	"net/http"
+	_ "os"
 	"path"
 	"runtime"
 	"strconv"
@@ -64,9 +65,16 @@ func main() {
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
 		{"MARSOC_PIPELINES_PATH", "path/to/pipelines"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
+		{"MARSOC_SMTP_USER", "username"},
+		{"MARSOC_SMTP_PASS", "password"},
 		{"LENA_DOWNLOAD_URL", "url"},
 		{"LENA_AUTH_TOKEN", "token"},
 	}, true)
+
+	env2 := core.EnvRequire([][]string{
+		{"MARSOC_SMTP_USER", "username"},
+		{"MARSOC_SMTP_PASS", "password"},
+	}, false)
 
 	// Job mode and SGE environment variables.
 	jobMode := env["MARSOC_JOBMODE"]
@@ -90,7 +98,20 @@ func main() {
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
 	lenaAuthToken := env["LENA_AUTH_TOKEN"]
 	lenaDownloadUrl := env["LENA_DOWNLOAD_URL"]
+	smtpUser := env2["MARSOC_SMTP_USER"]
+	smtpPass := env2["MARSOC_SMTP_PASS"]
 	STEP_SECS := 5
+
+	// Setup Mailer.
+	mailer := core.NewMailer(smtpUser, smtpPass)
+	_ = mailer
+	/*
+		err := mailer.Sendmail("Your pipestance is done!", "Pipestance HABOOBOO is complete. You can now find it at http://marsoc/.")
+		if err != nil {
+			core.LogError(err, "MAILER", "Could not send mail.")
+		}
+		os.Exit(0)
+	*/
 
 	// Setup Mario Runtime with pipelines path.
 	rt := core.NewRuntime(jobMode, pipelinesPath)

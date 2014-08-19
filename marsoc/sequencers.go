@@ -90,6 +90,8 @@ func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, erro
 		run.State = "failed"
 		if !completeTime.IsZero() {
 			run.State = "complete"
+		} else if touchTime.IsZero() {
+			run.State = "running"
 		} else if !touchTime.IsZero() && time.Since(touchTime) < time.Hour*RUN_IS_INACTIVE_AFTER_HOURS {
 			run.State = "running"
 		}
