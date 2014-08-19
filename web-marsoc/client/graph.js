@@ -101,7 +101,6 @@
       });
     };
     return $scope.refresh = function() {
-      console.log('refresh');
       return $http.get("/api/get-nodes/" + container + "/" + pname + "/" + psid).success(function(nodes) {
         $scope.nodes = _.indexBy(nodes, 'name');
         if ($scope.id) {

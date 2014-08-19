@@ -74,7 +74,6 @@ app.controller('MarioGraphCtrl', ($scope, $compile, $http, $interval) ->
         )
 
     $scope.refresh = () ->
-        console.log('refresh')
         $http.get("/api/get-nodes/#{container}/#{pname}/#{psid}").success((nodes) ->
             $scope.nodes = _.indexBy(nodes, 'name')
             if $scope.id then $scope.node = $scope.nodes[$scope.id]

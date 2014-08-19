@@ -172,7 +172,6 @@ func (self *Lena) ingestDatabase(data []byte) error {
 
 // Start an infinite download loop.
 func (self *Lena) goDownloadLoop() {
-	return
 	go func() {
 		for {
 			LogInfo("LENAAPI", "Starting download...")
