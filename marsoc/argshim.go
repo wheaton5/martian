@@ -7,7 +7,6 @@ package main
 
 import (
 	"encoding/json"
-	_ "fmt"
 	"margo/core"
 	"os/exec"
 	"path"

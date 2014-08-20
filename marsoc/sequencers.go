@@ -245,13 +245,16 @@ func (self *SequencerPool) inventorySequencers() {
 	if len(newCompleteds) > 0 {
 		self.mailer.Sendmail(
 			fmt.Sprintf("Run %s complete!", newCompleteds[0]),
-			fmt.Sprintf("Precious Human,\n\nIt appears that sequencing run %s has completed.\n\nKindly invoke PREPROCESS at http://marsoc/.", newCompleteds[0]),
+			fmt.Sprintf("Hey Preppie,\n\nI noticed sequencing run %s is done.\n\nLet's get this PREPROCESS party started at http://%s/.", newCompleteds[0], self.mailer.InstanceName),
 		)
 	}
 
+	// Update the on-disk cache.
+	bytes, _ := json.MarshalIndent(self.folderCache, "", "    ")
+	ioutil.WriteFile(self.cachePath, bytes, 0600)
+
+	// Note if total number of runs increased.
 	if len(self.runList) > oldRunCount {
-		bytes, _ := json.MarshalIndent(self.folderCache, "", "    ")
-		ioutil.WriteFile(self.cachePath, bytes, 0600)
 		core.LogInfo("SEQPOOL", "%d new runs written to cache. %d total.", len(self.runList)-oldRunCount, len(self.runList))
 	}
 }

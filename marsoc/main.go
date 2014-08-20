@@ -9,9 +9,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/docopt/docopt-go"
-	"github.com/go-martini/martini"
-	"github.com/martini-contrib/binding"
 	"html/template"
 	"io/ioutil"
 	"margo/core"
@@ -21,6 +18,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/docopt/docopt-go"
+	"github.com/go-martini/martini"
+	"github.com/martini-contrib/binding"
 )
 
 //=============================================================================
@@ -255,7 +256,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		if err := pman.Invoke(fcid, "PREPROCESS", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
 			return err.Error()
 		}
-		return "success"
+		return ""
 	})
 
 	// Invoke ANALYTICS.
@@ -386,7 +387,7 @@ func main() {
 	//=========================================================================
 	// Setup Mailer.
 	//=========================================================================
-	mailer := core.NewMailer(smtpUser, smtpPass, notifyEmail)
+	mailer := core.NewMailer(instanceName, smtpUser, smtpPass, notifyEmail)
 
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.

@@ -176,10 +176,12 @@ func (self *PipestanceManager) processRunList() {
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
-				self.mailer.Sendmail(
-					fmt.Sprintf("%s of %s has succeeded!", pname, psid),
-					fmt.Sprintf("Precious Human,\n\nI am delighted to inform you that %s of %s has completed.\n\nMore details of my triumph are available at http://marsoc/pipestance/%s/%s/%s.\n\nBtw I also saved you %d bytes with VDR. You're welcome.", pname, psid, psid, pname, psid, killReport.Size),
-				)
+				if pname == "PREPROCESS" {
+					self.mailer.Sendmail(
+						fmt.Sprintf("%s of %s has succeeded!", pname, psid),
+						fmt.Sprintf("Hey Preppie,\n\n%s of %s is done.\n\nCheck out my rad moves at http://%s/pipestance/%s/%s/%s.\n\nBtw I also saved you %d bytes with VDR. You're welcome.", pname, psid, self.mailer.InstanceName, psid, pname, psid, killReport.Size),
+					)
+				}
 			} else if state == "failed" {
 				// If pipestance is failed, remove from runTable, mart it in the
 				// cache as failed, and flush the cache.
@@ -197,7 +199,7 @@ func (self *PipestanceManager) processRunList() {
 				pname, psid := parseFQName(fqname)
 				self.mailer.Sendmail(
 					fmt.Sprintf("%s of %s has failed!", pname, psid),
-					fmt.Sprintf("Precious Human,\n\nI regret to inform you that %s of %s has failed.\n\nMore details of the tragedy are available at http://marsoc/pipestance/%s/%s/%s.", pname, psid, psid, pname, psid),
+					fmt.Sprintf("Hey Preppie,\n\n%s of %s failed.\n\nDon't feel bad, but check out what you messed up at http://%s/pipestance/%s/%s/%s.", pname, psid, self.mailer.InstanceName, psid, pname, psid),
 				)
 			} else {
 				// If it is not done, step and keep it running.
