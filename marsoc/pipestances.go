@@ -140,12 +140,12 @@ func parseFQName(fqname string) (string, string) {
 func (self *PipestanceManager) processRunList() {
 	continueToRunList := []*core.Pipestance{}
 
-	mutex := &sync.Mutex{}
+	mutex := sync.Mutex{}
 	var wg sync.WaitGroup
 	wg.Add(len(self.runList))
 
 	for _, pipestance := range self.runList {
-		go func() {
+		go func(pipestance *core.Pipestance, wg *sync.WaitGroup, mutex *sync.Mutex) {
 			nodes := pipestance.Node().AllNodes()
 
 			// Metadata refreshes can be asynchronous amongst themselves but
@@ -214,7 +214,7 @@ func (self *PipestanceManager) processRunList() {
 				}
 			}
 			wg.Done()
-		}()
+		}(pipestance, &wg, &mutex)
 	}
 	wg.Wait()
 
