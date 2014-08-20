@@ -59,10 +59,11 @@ type MainPage struct {
 	Admin        bool
 }
 type GraphPage struct {
-	Container string
-	Pname     string
-	Psid      string
-	Admin     bool
+	InstanceName string
+	Container    string
+	Pname        string
+	Psid         string
+	Admin        bool
 }
 
 // Forms
@@ -213,10 +214,10 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 
 	// Page renderers.
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("graph.html", &GraphPage{p["container"], p["pname"], p["psid"], false})
+		return render("graph.html", &GraphPage{instanceName, p["container"], p["pname"], p["psid"], false})
 	})
 	app.Get("/admin/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("graph.html", &GraphPage{p["container"], p["pname"], p["psid"], true})
+		return render("graph.html", &GraphPage{instanceName, p["container"], p["pname"], p["psid"], true})
 	})
 
 	// Get graph nodes.
@@ -412,6 +413,7 @@ func main() {
 	//=========================================================================
 	pman := NewPipestanceManager(rt, pipestancesPath, cachePath, stepSecs, mailer)
 	pman.loadCache(unfail)
+	pman.inventoryPipestances()
 	pman.goRunListLoop()
 
 	//=========================================================================

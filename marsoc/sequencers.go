@@ -12,7 +12,6 @@ import (
 	"margo/core"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -200,11 +199,11 @@ func (self *SequencerPool) inventorySequencers() {
 	for _, seqcer := range self.seqcers {
 
 		// Iterate over folders under each sequencer.
-		paths, _ := filepath.Glob(path.Join(seqcer.path, "*"))
-		for _, p := range paths {
+		pathInfos, _ := ioutil.ReadDir(seqcer.path)
+		for _, pathInfo := range pathInfos {
 
 			// Check that folder name matches pattern...
-			fname := path.Base(p)
+			fname := pathInfo.Name()
 			if !seqcer.folderPattern.MatchString(fname) {
 				continue
 			}

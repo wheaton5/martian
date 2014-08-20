@@ -8,11 +8,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"io/ioutil"
 	"margo/core"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -90,15 +90,18 @@ func (self *PipestanceManager) inventoryPipestances() {
 	// and put them in the runlist.
 
 	// Iterate over top level containers (flowcells).
-	containers, _ := filepath.Glob(path.Join(self.path, "*"))
-	for _, container := range containers {
+	containerInfos, _ := ioutil.ReadDir(self.path)
+	for _, containerInfo := range containerInfos {
+		container := containerInfo.Name()
 
 		// Iterate over all known pipelines.
 		for _, pipeline := range self.pipelines {
-			psids, _ := filepath.Glob(path.Join(self.path, container, pipeline, "*"))
+			psidInfos, _ := ioutil.ReadDir(path.Join(self.path, container, pipeline))
 
 			// Iterate over psids under this pipeline.
-			for _, psid := range psids {
+			for _, psidInfo := range psidInfos {
+				psid := psidInfo.Name()
+
 				fqname := makeFQName(pipeline, psid)
 				if self.completed[fqname] || self.failed[fqname] {
 					continue
@@ -156,7 +159,7 @@ func (self *PipestanceManager) processRunList() {
 
 			state := pipestance.GetOverallState()
 			fqname := pipestance.GetFQName()
-			if state == "completed" {
+			if state == "complete" {
 				// If pipestance is done, remove from runTable, mark it in the
 				// cache as completed, and flush the cache.
 				core.LogInfo("PIPEMAN", "Complete and removing from runList: %s.", fqname)
@@ -179,7 +182,7 @@ func (self *PipestanceManager) processRunList() {
 				if pname == "PREPROCESS" {
 					self.mailer.Sendmail(
 						fmt.Sprintf("%s of %s has succeeded!", pname, psid),
-						fmt.Sprintf("Hey Preppie,\n\n%s of %s is done.\n\nCheck out my rad moves at http://%s/pipestance/%s/%s/%s.\n\nBtw I also saved you %d bytes with VDR. You're welcome.", pname, psid, self.mailer.InstanceName, psid, pname, psid, killReport.Size),
+						fmt.Sprintf("Hey Preppie,\n\n%s of %s is done.\n\nCheck out my rad moves at http://%s/pipestance/%s/%s/%s.\n\nBtw I also saved you %s with VDR. You know you love me.", pname, psid, self.mailer.InstanceName, psid, pname, psid, humanize.Bytes(killReport.Size)),
 					)
 				}
 			} else if state == "failed" {
