@@ -112,7 +112,6 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 				if state, ok := pman.GetPipestanceState(run.Fcid, "PREPROCESS", run.Fcid); ok {
 					run.Preprocess = state
 				}
-				run.Preprocess = "complete"
 
 				// If PREPROCESS is not complete yet, neither is ANALYTICS.
 				run.Analysis = nil
