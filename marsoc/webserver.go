@@ -121,7 +121,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 				// Get the state of ANALYTICS for each sample in this run.
 				samples, err := lena.getSamplesForFlowcell(run.Fcid)
 				if err != nil {
-					core.LogError(err, "WEBAPI", "Error getting samples for flowcell id %s.", run.Fcid)
+					core.LogError(err, "webserv", "Error getting samples for flowcell id %s.", run.Fcid)
 					return
 				}
 				if len(samples) == 0 {
