@@ -23,17 +23,25 @@ func makeFQName(pipeline string, psid string) string {
 	return fmt.Sprintf("ID.%s.%s", psid, pipeline)
 }
 
+type PipestanceNotification struct {
+	State   string
+	Pname   string
+	Psid    string
+	Vdrsize uint64
+}
+
 type PipestanceManager struct {
-	rt        *core.Runtime
-	path      string
-	cachePath string
-	stepms    int
-	pipelines []string
-	completed map[string]bool
-	failed    map[string]bool
-	runList   []*core.Pipestance
-	runTable  map[string]*core.Pipestance
-	mailer    *core.Mailer
+	rt          *core.Runtime
+	path        string
+	cachePath   string
+	stepms      int
+	pipelines   []string
+	completed   map[string]bool
+	failed      map[string]bool
+	runList     []*core.Pipestance
+	runTable    map[string]*core.Pipestance
+	notifyQueue []*PipestanceNotification
+	mailer      *core.Mailer
 }
 
 func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath string, stepms int, mailer *core.Mailer) *PipestanceManager {
@@ -47,8 +55,16 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath st
 	self.failed = map[string]bool{}
 	self.runList = []*core.Pipestance{}
 	self.runTable = map[string]*core.Pipestance{}
+	self.notifyQueue = []*PipestanceNotification{}
 	self.mailer = mailer
 	return self
+}
+
+func (self *PipestanceManager) CopyAndClearNotifyQueue() []*PipestanceNotification {
+	notifyQueue := make([]*PipestanceNotification, len(self.notifyQueue))
+	copy(notifyQueue, self.notifyQueue)
+	self.notifyQueue = []*PipestanceNotification{}
+	return notifyQueue
 }
 
 func (self *PipestanceManager) loadCache(unfail bool) {
@@ -182,11 +198,19 @@ func (self *PipestanceManager) processRunList() {
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
-				if pname == "PREPROCESS" {
+				if pname == "APREPROCESS" {
 					self.mailer.Sendmail(
+						[]string{},
 						fmt.Sprintf("%s of %s has succeeded!", pname, psid),
 						fmt.Sprintf("Hey Preppie,\n\n%s of %s is done.\n\nCheck out my rad moves at http://%s/pipestance/%s/%s/%s.\n\nBtw I also saved you %s with VDR. Show me love!", pname, psid, self.mailer.InstanceName, psid, pname, psid, humanize.Bytes(killReport.Size)),
 					)
+				} else {
+					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
+						State:   "complete",
+						Pname:   pname,
+						Psid:    psid,
+						Vdrsize: killReport.Size,
+					})
 				}
 			} else if state == "failed" {
 				// If pipestance is failed, remove from runTable, mart it in the
@@ -203,10 +227,20 @@ func (self *PipestanceManager) processRunList() {
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
-				self.mailer.Sendmail(
-					fmt.Sprintf("%s of %s has failed!", pname, psid),
-					fmt.Sprintf("Hey Preppie,\n\n%s of %s failed.\n\nDon't feel bad, but check out what you messed up at http://%s/pipestance/%s/%s/%s.", pname, psid, self.mailer.InstanceName, psid, pname, psid),
-				)
+				if pname == "APREPROCESS" {
+					self.mailer.Sendmail(
+						[]string{},
+						fmt.Sprintf("%s of %s has failed!", pname, psid),
+						fmt.Sprintf("Hey Preppie,\n\n%s of %s failed.\n\nDon't feel bad, but check out what you messed up at http://%s/pipestance/%s/%s/%s.", pname, psid, self.mailer.InstanceName, psid, pname, psid),
+					)
+				} else {
+					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
+						State:   "failed",
+						Pname:   pname,
+						Psid:    psid,
+						Vdrsize: 0,
+					})
+				}
 			} else {
 				// If it is not done, step and keep it running.
 				mutex.Lock()

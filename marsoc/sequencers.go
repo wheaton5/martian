@@ -243,6 +243,7 @@ func (self *SequencerPool) inventorySequencers() {
 	// If there are new runs completed, send email.
 	if len(newCompleteds) > 0 {
 		self.mailer.Sendmail(
+			[]string{},
 			fmt.Sprintf("Run %s complete!", newCompleteds[0]),
 			fmt.Sprintf("Hey Preppie,\n\nI noticed sequencing run %s is done.\n\nLet's get this PREPROCESS party started at http://%s/.", newCompleteds[0], self.mailer.InstanceName),
 		)

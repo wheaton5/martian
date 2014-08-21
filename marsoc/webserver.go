@@ -280,7 +280,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		for _, sample := range samples {
 			// Use argshim to pick pipeline and build MRO call source.
 			pname := argshim.getPipelineForSample(sample)
-			src := argshim.buildCallSourceForSample(rt, preprocPipestance, run, lena.getSampleBagWithId(sample.Id))
+			src := argshim.buildCallSourceForSample(rt, preprocPipestance, run, lena.getSampleBagWithId(strconv.Itoa(sample.Id)))
 
 			// Invoke the pipestance.
 			if err := pman.Invoke(fcid, pname, strconv.Itoa(sample.Id), src); err != nil {

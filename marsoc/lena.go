@@ -10,13 +10,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"io/ioutil"
 	"margo/core"
 	"net/http"
 	"path"
+	"strconv"
 	"time"
-
-	"github.com/dustin/go-humanize"
 )
 
 type Oligo struct {
@@ -97,8 +97,9 @@ type Lena struct {
 	downloadUrl string
 	authToken   string
 	dbPath      string
-	cache       map[string][]*Sample
-	sampleBag   map[int]interface{}
+	fcidTable   map[string][]*Sample
+	spidTable   map[string]*Sample
+	sbagTable   map[string]interface{}
 	mailer      *core.Mailer
 }
 
@@ -107,8 +108,9 @@ func NewLena(downloadUrl string, authToken string, cachePath string, mailer *cor
 	self.downloadUrl = downloadUrl
 	self.authToken = authToken
 	self.dbPath = path.Join(cachePath, "lena.json")
-	self.cache = map[string][]*Sample{}
-	self.sampleBag = map[int]interface{}{}
+	self.fcidTable = map[string][]*Sample{}
+	self.spidTable = map[string]*Sample{}
+	self.sbagTable = map[string]interface{}{}
 	self.mailer = mailer
 	return self
 }
@@ -122,6 +124,7 @@ func (self *Lena) loadDatabase() {
 	err = self.ingestDatabase(data)
 	if err != nil {
 		self.mailer.Sendmail(
+			[]string{},
 			fmt.Sprintf("I swallowed a JSON bug."),
 			fmt.Sprintf("Human,\n\nYou appear to have changed the Lena schema without updating my own.\n\nI will not show you any more samples until you rectify this oversight."),
 		)
@@ -137,7 +140,8 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	}
 
 	// Create a new, empty cache.
-	self.cache = map[string][]*Sample{}
+	self.fcidTable = map[string][]*Sample{}
+	self.spidTable = map[string]*Sample{}
 	for _, sample := range samples {
 		if sample.Sequencing_run == nil {
 			continue
@@ -145,12 +149,13 @@ func (self *Lena) ingestDatabase(data []byte) error {
 
 		// Store them into lists indexed by flowcell id.
 		fcid := sample.Sequencing_run.Name
-		slist, ok := self.cache[fcid]
+		slist, ok := self.fcidTable[fcid]
 		if ok {
-			self.cache[fcid] = append(slist, sample)
+			self.fcidTable[fcid] = append(slist, sample)
 		} else {
-			self.cache[fcid] = []*Sample{sample}
+			self.fcidTable[fcid] = []*Sample{sample}
 		}
+		self.spidTable[strconv.Itoa(sample.Id)] = sample
 	}
 	// Now parse the JSON into unstructured interface{} bags,
 	// which is only used as input into argshim.buildCallSourceForSample.
@@ -166,21 +171,22 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	}
 
 	// Create new, empty sample bag.
-	self.sampleBag = map[int]interface{}{}
+	self.sbagTable = map[string]interface{}{}
 	for _, iface := range bagIfaces {
-		bagSample, ok := iface.(map[string]interface{})
+		spbag, ok := iface.(map[string]interface{})
 		if !ok {
 			return errors.New("JSON list includes something that was not an object.")
 		}
-		idIface := bagSample["id"]
-		bagSampleId, ok := idIface.(float64)
+		idIface := spbag["id"]
+		fspid, ok := idIface.(float64)
 		if !ok {
 			return errors.New(fmt.Sprintf("JSON object contains value for id that is not a number %v.", idIface))
 		}
-		self.sampleBag[int(bagSampleId)] = iface
+		spid := strconv.Itoa(int(fspid))
+		self.sbagTable[spid] = iface
 	}
 
-	core.LogInfo("lenaapi", "%d samples, %d bags loaded from %s.", len(samples), len(self.sampleBag), self.dbPath)
+	core.LogInfo("lenaapi", "%d samples, %d bags loaded from %s.", len(samples), len(self.sbagTable), self.dbPath)
 	return nil
 }
 
@@ -237,12 +243,17 @@ func (self *Lena) lenaAPI() ([]byte, error) {
 }
 
 func (self *Lena) getSamplesForFlowcell(fcid string) ([]*Sample, error) {
-	if samples, ok := self.cache[fcid]; ok {
+	if samples, ok := self.fcidTable[fcid]; ok {
 		return samples, nil
 	}
 	return []*Sample{}, nil
 }
 
-func (self *Lena) getSampleBagWithId(sampleId int) interface{} {
-	return self.sampleBag[sampleId]
+func (self *Lena) getSampleWithId(sampleId string) (*Sample, bool) {
+	sample, ok := self.spidTable[sampleId]
+	return sample, ok
+}
+
+func (self *Lena) getSampleBagWithId(sampleId string) interface{} {
+	return self.sbagTable[sampleId]
 }

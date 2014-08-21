@@ -6,12 +6,66 @@
 package main
 
 import (
+	"fmt"
 	"github.com/docopt/docopt-go"
+	"github.com/dustin/go-humanize"
 	"margo/core"
 	"os"
 	"runtime"
 	"strings"
+	"time"
 )
+
+func composeBody(mailer *core.Mailer, notices []*PipestanceNotification) (string, string) {
+	statelist := ""
+	pname := ""
+	psid := ""
+	var vdrsize uint64
+	state := "completed"
+	for _, notice := range notices {
+		statelist += fmt.Sprintf("%s of %s is %s\n", notice.Pname, notice.Psid, notice.State)
+		pname = notice.Pname
+		psid = notice.Psid
+		vdrsize += notice.Vdrsize
+		if notice.State == "failed" {
+			state = "failed"
+		}
+	}
+	if state == "completed" {
+		return state, fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\nCheck out my rad moves at http://%s/pipestance/%s/%s/%s.\n\nBtw I also saved you %s with VDR. Show me love!", statelist, mailer.InstanceName, psid, pname, psid, humanize.Bytes(vdrsize))
+	}
+	return state, fmt.Sprintf("Hey Preppie,\n\nSome of your analysis failed!\n%s\nDon't feel bad, but see what you messed up at http://%s/pipestance/%s/%s/%s.", statelist, mailer.InstanceName, psid, pname, psid)
+}
+
+func runEmailNotifier(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) {
+	for {
+		notifyQueue := pman.CopyAndClearNotifyQueue()
+		userTable := map[string][]*PipestanceNotification{}
+		userlessNotices := []*PipestanceNotification{}
+		for _, notice := range notifyQueue {
+			sample, ok := lena.getSampleWithId(notice.Psid)
+			if !ok {
+				userlessNotices = append(userlessNotices, notice)
+				continue
+			}
+			nlist, ok := userTable[sample.User.Username]
+			if ok {
+				userTable[sample.User.Username] = append(nlist, notice)
+			} else {
+				userTable[sample.User.Username] = []*PipestanceNotification{}
+			}
+		}
+		for user, notices := range userTable {
+			state, body := composeBody(mailer, notices)
+			mailer.Sendmail([]string{user}, fmt.Sprintf("Analysis runs %s!", state), body)
+		}
+		if len(userlessNotices) > 0 {
+			state, body := composeBody(mailer, userlessNotices)
+			mailer.Sendmail([]string{}, fmt.Sprintf("Analysis runs %s!", state), body)
+		}
+		time.Sleep(time.Minute * time.Duration(1))
+	}
+}
 
 func main() {
 	runtime.GOMAXPROCS(2)
@@ -123,6 +177,11 @@ func main() {
 	// Start web server.
 	//=========================================================================
 	go runWebServer(uiport, instanceName, rt, pool, pman, lena, argshim)
+
+	//=========================================================================
+	// Start email notifier.
+	//=========================================================================
+	go runEmailNotifier(pman, lena, mailer)
 
 	// Let daemons take over.
 	done := make(chan bool)
