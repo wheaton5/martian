@@ -8,7 +8,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"io/ioutil"
 	"margo/core"
 	"os"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dustin/go-humanize"
 )
 
 func makeFQName(pipeline string, psid string) string {
@@ -175,14 +176,14 @@ func (self *PipestanceManager) processRunList() {
 				// VDR Kill
 				core.LogInfo("PIPEMAN", "Starting VDR kill for %s.", fqname)
 				killReport := pipestance.VDRKill()
-				core.LogInfo("PIPEMAN", "VDR killed %d files, %d bytes from %s.", killReport.Count, killReport.Size, fqname)
+				core.LogInfo("PIPEMAN", "VDR killed %d files, %s from %s.", killReport.Count, humanize.Bytes(killReport.Size), fqname)
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
 				if pname == "PREPROCESS" {
 					self.mailer.Sendmail(
 						fmt.Sprintf("%s of %s has succeeded!", pname, psid),
-						fmt.Sprintf("Hey Preppie,\n\n%s of %s is done.\n\nCheck out my rad moves at http://%s/pipestance/%s/%s/%s.\n\nBtw I also saved you %s with VDR. You know you love me.", pname, psid, self.mailer.InstanceName, psid, pname, psid, humanize.Bytes(killReport.Size)),
+						fmt.Sprintf("Hey Preppie,\n\n%s of %s is done.\n\nCheck out my rad moves at http://%s/pipestance/%s/%s/%s.\n\nBtw I also saved you %s with VDR. Show me love!", pname, psid, self.mailer.InstanceName, psid, pname, psid, humanize.Bytes(killReport.Size)),
 					)
 				}
 			} else if state == "failed" {
@@ -240,6 +241,8 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 }
 
 func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline string, psid string) error {
+	delete(self.completed, makeFQName(pipeline, psid))
+	self.writeCache()
 	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
 	return os.Remove(headPath)
 }
@@ -254,7 +257,8 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	node.RestartFailedMetadatas(&wg)
 	wg.Wait()
 	pipestance.Unimmortalize()
-	delete(self.failed, pipestance.GetFQName())
+	delete(self.failed, makeFQName(pipeline, psid))
+	self.writeCache()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[pipestance.GetFQName()] = pipestance
 }

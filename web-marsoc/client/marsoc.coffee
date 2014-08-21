@@ -57,22 +57,22 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
         $http.post('/api/invoke-preprocess', { fcid: $scope.selrun.fcid }).success((data) ->
             $scope.refreshRuns()
             if data then window.alert(data.toString())
-            console.log(data)
         )
 
     $scope.invokeAnalysis = () ->
         $http.post('/api/invoke-analysis', { fcid: $scope.selrun.fcid }).success((data) ->
             $scope.refreshRuns()
             if data then window.alert(data.toString())
-            console.log(data)
         )
 
     $scope.archiveSamples = () ->
         $http.post('/api/archive-fcid-samples', { fcid: $scope.selrun.fcid }).success((data) ->
             $scope.refreshRuns()
             if data then window.alert(data.toString())
-            console.log(data)
         )
+
+    $scope.allDone = () ->
+        _.every($scope.samples, (s) -> s.psstate == 'complete')
         
     # Only admin pages get auto-refresh.
     if admin then $interval((() -> $scope.refreshRuns()), 5000)

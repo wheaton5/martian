@@ -84,9 +84,8 @@
       }).success(function(data) {
         $scope.refreshRuns();
         if (data) {
-          window.alert(data.toString());
+          return window.alert(data.toString());
         }
-        return console.log(data);
       });
     };
     $scope.invokeAnalysis = function() {
@@ -95,9 +94,8 @@
       }).success(function(data) {
         $scope.refreshRuns();
         if (data) {
-          window.alert(data.toString());
+          return window.alert(data.toString());
         }
-        return console.log(data);
       });
     };
     $scope.archiveSamples = function() {
@@ -106,9 +104,13 @@
       }).success(function(data) {
         $scope.refreshRuns();
         if (data) {
-          window.alert(data.toString());
+          return window.alert(data.toString());
         }
-        return console.log(data);
+      });
+    };
+    $scope.allDone = function() {
+      return _.every($scope.samples, function(s) {
+        return s.psstate === 'complete';
       });
     };
     if (admin) {

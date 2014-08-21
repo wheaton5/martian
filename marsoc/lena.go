@@ -15,6 +15,8 @@ import (
 	"net/http"
 	"path"
 	"time"
+
+	"github.com/dustin/go-humanize"
 )
 
 type Oligo struct {
@@ -191,7 +193,7 @@ func (self *Lena) goDownloadLoop() {
 			if err != nil {
 				core.LogError(err, "LENAAPI", "Download error.")
 			} else {
-				core.LogInfo("LENAAPI", "Download complete. %d bytes.", len(data))
+				core.LogInfo("LENAAPI", "Download complete. %s.", humanize.Bytes(uint64(len(data))))
 				err := self.ingestDatabase(data)
 				if err == nil {
 					// If JSON parsed properly, save it.

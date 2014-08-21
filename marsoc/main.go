@@ -135,7 +135,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 				states := []string{}
 				run.Analysis = "running"
 				for _, sample := range samples {
-					state, ok := pman.GetPipestanceState(run.Fcid, argshim.getPipelineForSample(sample), run.Fcid)
+					state, ok := pman.GetPipestanceState(run.Fcid, argshim.getPipelineForSample(sample), strconv.Itoa(sample.Id))
 					if ok {
 						states = append(states, state)
 					} else {
@@ -188,7 +188,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			go func(wg *sync.WaitGroup, sample *Sample) {
 				pname := argshim.getPipelineForSample(sample)
 				sample.Pname = pname
-				sample.Psstate, _ = pman.GetPipestanceState(fcid, pname, fcid)
+				sample.Psstate, _ = pman.GetPipestanceState(fcid, pname, strconv.Itoa(sample.Id))
 				if preprocPipestance != nil {
 					sample.Callsrc = argshim.buildCallSourceForSample(rt, preprocPipestance, run, sample)
 				}
