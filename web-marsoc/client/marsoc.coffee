@@ -24,6 +24,7 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
     $scope.selrun = null
     $scope.sampi = 0
     $scope.samples = null
+    $scope.showbutton = true
     
     $http.get('/api/get-runs').success((data) ->
         $scope.runs = data
@@ -37,6 +38,7 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
                 $scope.runTable[run.fcid].state = run.state
             $http.post('/api/get-samples', { fcid: $scope.selrun?.fcid }).success((data) ->
                 $scope.samples = data
+                $scope.showbutton = true
             )
         )
 
@@ -54,18 +56,21 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
         )
 
     $scope.invokePreprocess = () ->
+        $scope.showbutton = false
         $http.post('/api/invoke-preprocess', { fcid: $scope.selrun.fcid }).success((data) ->
             $scope.refreshRuns()
             if data then window.alert(data.toString())
         )
 
     $scope.invokeAnalysis = () ->
+        $scope.showbutton = false
         $http.post('/api/invoke-analysis', { fcid: $scope.selrun.fcid }).success((data) ->
             $scope.refreshRuns()
             if data then window.alert(data.toString())
         )
 
     $scope.archiveSamples = () ->
+        $scope.showbutton = false
         $http.post('/api/archive-fcid-samples', { fcid: $scope.selrun.fcid }).success((data) ->
             $scope.refreshRuns()
             if data then window.alert(data.toString())

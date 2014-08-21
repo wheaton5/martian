@@ -54,7 +54,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath st
 func (self *PipestanceManager) loadCache(unfail bool) {
 	bytes, err := ioutil.ReadFile(self.cachePath)
 	if err != nil {
-		core.LogError(err, "pipeman", "Could not read cache file %s.", self.cachePath)
+		core.LogInfo("pipeman", "Could not read cache file %s.", self.cachePath)
 		return
 	}
 
@@ -83,7 +83,9 @@ func (self *PipestanceManager) writeCache() {
 		"failed":    self.failed,
 	}
 	bytes, _ := json.MarshalIndent(cache, "", "    ")
-	ioutil.WriteFile(self.cachePath, bytes, 0600)
+	if err := ioutil.WriteFile(self.cachePath, bytes, 0600); err != nil {
+		core.LogError(err, "pipeman", "Could not write cache file %s.", self.cachePath)
+	}
 }
 
 func (self *PipestanceManager) inventoryPipestances() {

@@ -37,6 +37,7 @@
     $scope.selrun = null;
     $scope.sampi = 0;
     $scope.samples = null;
+    $scope.showbutton = true;
     $http.get('/api/get-runs').success(function(data) {
       $scope.runs = data;
       return $scope.runTable = _.indexBy($scope.runs, 'fcid');
@@ -52,7 +53,8 @@
         return $http.post('/api/get-samples', {
           fcid: (_ref = $scope.selrun) != null ? _ref.fcid : void 0
         }).success(function(data) {
-          return $scope.samples = data;
+          $scope.samples = data;
+          return $scope.showbutton = true;
         });
       });
     };
@@ -79,6 +81,7 @@
       });
     };
     $scope.invokePreprocess = function() {
+      $scope.showbutton = false;
       return $http.post('/api/invoke-preprocess', {
         fcid: $scope.selrun.fcid
       }).success(function(data) {
@@ -89,6 +92,7 @@
       });
     };
     $scope.invokeAnalysis = function() {
+      $scope.showbutton = false;
       return $http.post('/api/invoke-analysis', {
         fcid: $scope.selrun.fcid
       }).success(function(data) {
@@ -99,6 +103,7 @@
       });
     };
     $scope.archiveSamples = function() {
+      $scope.showbutton = false;
       return $http.post('/api/archive-fcid-samples', {
         fcid: $scope.selrun.fcid
       }).success(function(data) {

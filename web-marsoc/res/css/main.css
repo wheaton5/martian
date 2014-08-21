@@ -17,6 +17,12 @@
 .admin {
     background-color: #770000;
 }
+.admin-exit {
+    color: #b6d7a8;
+}
+.admin-exit:hover {
+    color: #b6d7a8;
+}
 .navbar-header {
     width: 100%;
 }

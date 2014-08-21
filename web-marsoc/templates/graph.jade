@@ -26,7 +26,10 @@ html(ng-app="app" ng-controller="MarioGraphCtrl")
                         span.logo-color X
                         | &nbsp;[[.InstanceName]]&nbsp;
                     | / [[.Psid]] / [[.Pname]]
-                    span(ng-if="admin") &nbsp;(admin)
+                    span(ng-if="admin")
+                        | &nbsp;(
+                        a.admin-exit(href="/") exit admin mode
+                        | )
         #graph(style="margin-left: 25px; margin-top: 75px")
             svg(transform="scale(0.5)" width="875px" height="1000px")
                 g#top(transform="translate(5,5) scale(0.80)")

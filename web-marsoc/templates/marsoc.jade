@@ -20,7 +20,10 @@ html(ng-app="app")
                     |10
                     span.logo-color X
                     | &nbsp;[[.InstanceName]] / Sequencer Runs
-                    span(ng-if="admin") &nbsp;(admin)
+                    span(ng-if="admin")
+                        | &nbsp;(
+                        a.admin-exit(href="/") exit admin mode
+                        | )
         #runs.detail
             #run-table-wrapper
                 table.table.table-striped#run-table
@@ -73,7 +76,7 @@ html(ng-app="app")
                                 .minibox(ng-class="selrun.preprocess" style="text-align:center; width: 85px") 
                                     a(href="{{urlprefix}}/pipestance/{{selrun.fcid}}/PREPROCESS/{{selrun.fcid}}") {{selrun.fcid}}<br>{{selrun.preprocess}}
 
-                        td(ng-if="selrun.state == 'complete' && !selrun.preprocess && admin") 
+                        td(ng-if="selrun.state == 'complete' && !selrun.preprocess && admin && showbutton") 
                             pre {{selrun.callsrc}}
                             button.btn.btn-default(ng-click="invokePreprocess()") Invoke
 
@@ -86,9 +89,8 @@ html(ng-app="app")
                         td
                             div(ng-if="!samples") Loading from Lena...
                             div(ng-if="samples")
-                                button.btn.btn-default(ng-if="!samples[sampi].psstate && admin" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke All
-                                | &nbsp;&nbsp;
-                                button.btn.btn-default(ng-if="allDone() && admin" ng-click="archiveSamples()" style="margin-bottom: 15px") Archive All
+                                button.btn.btn-default(ng-if="!samples[sampi].psstate && admin && showbutton" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke All
+                                button.btn.btn-default(ng-if="allDone() && admin && showbutton" ng-click="archiveSamples()" style="margin-bottom: 15px") Archive All
                                 div(style="margin-top: 5px")
                                     .minibox(ng-repeat="sample in samples" ng-class="sample.psstate" ng-mouseover="sampi=$index"
                                         style="text-align:center; margin-right:2px; margin-bottom: 2px; width: 85px; ") 
