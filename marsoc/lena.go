@@ -116,7 +116,7 @@ func NewLena(downloadUrl string, authToken string, cachePath string, mailer *cor
 func (self *Lena) loadDatabase() {
 	data, err := ioutil.ReadFile(self.dbPath)
 	if err != nil {
-		core.LogError(err, "LENAAPI", "Could not read database file %s.", self.dbPath)
+		core.LogError(err, "lenaapi", "Could not read database file %s.", self.dbPath)
 		return
 	}
 	err = self.ingestDatabase(data)
@@ -125,7 +125,7 @@ func (self *Lena) loadDatabase() {
 			fmt.Sprintf("I swallowed a JSON bug."),
 			fmt.Sprintf("Human,\n\nYou appear to have changed the Lena schema without updating my own.\n\nI will not show you any more samples until you rectify this oversight."),
 		)
-		core.LogError(err, "LENAAPI", "Could not parse JSON in %s.", self.dbPath)
+		core.LogError(err, "lenaapi", "Could not parse JSON in %s.", self.dbPath)
 	}
 }
 
@@ -180,7 +180,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 		self.sampleBag[int(bagSampleId)] = iface
 	}
 
-	core.LogInfo("LENAAPI", "%d samples, %d bags loaded from %s.", len(samples), len(self.sampleBag), self.dbPath)
+	core.LogInfo("lenaapi", "%d samples, %d bags loaded from %s.", len(samples), len(self.sampleBag), self.dbPath)
 	return nil
 }
 
@@ -188,19 +188,19 @@ func (self *Lena) ingestDatabase(data []byte) error {
 func (self *Lena) goDownloadLoop() {
 	go func() {
 		for {
-			core.LogInfo("LENAAPI", "Starting download...")
+			core.LogInfo("lenaapi", "Starting download...")
 			data, err := self.lenaAPI()
 			if err != nil {
-				core.LogError(err, "LENAAPI", "Download error.")
+				core.LogError(err, "lenaapi", "Download error.")
 			} else {
-				core.LogInfo("LENAAPI", "Download complete. %s.", humanize.Bytes(uint64(len(data))))
+				core.LogInfo("lenaapi", "Download complete. %s.", humanize.Bytes(uint64(len(data))))
 				err := self.ingestDatabase(data)
 				if err == nil {
 					// If JSON parsed properly, save it.
 					ioutil.WriteFile(self.dbPath, data, 0600)
-					core.LogInfo("LENAAPI", "Database ingested and saved to %s.", self.dbPath)
+					core.LogInfo("lenaapi", "Database ingested and saved to %s.", self.dbPath)
 				} else {
-					core.LogError(err, "LENAAPI", "Could not parse JSON from downloaded data.")
+					core.LogError(err, "lenaapi", "Could not parse JSON from downloaded data.")
 				}
 			}
 

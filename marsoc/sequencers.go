@@ -143,16 +143,16 @@ func NewSequencerPool(p string, cachePath string, mailer *core.Mailer) *Sequence
 func (self *SequencerPool) loadCache() {
 	bytes, err := ioutil.ReadFile(self.cachePath)
 	if err != nil {
-		core.LogError(err, "SEQPOOL", "Could not read cache file %s.", self.cachePath)
+		core.LogError(err, "seqpool", "Could not read cache file %s.", self.cachePath)
 		return
 	}
 	if err := json.Unmarshal(bytes, &self.folderCache); err != nil {
-		core.LogError(err, "SEQPOOL", "Could not parse JSON in cache file %s.", self.cachePath)
+		core.LogError(err, "seqpool", "Could not parse JSON in cache file %s.", self.cachePath)
 		return
 	}
 
 	self.indexCache()
-	core.LogInfo("SEQPOOL", "%d runs loaded from cache.", len(self.runList))
+	core.LogInfo("seqpool", "%d runs loaded from cache.", len(self.runList))
 }
 
 // Sort the runList from newest to oldest.
@@ -254,7 +254,7 @@ func (self *SequencerPool) inventorySequencers() {
 
 	// Note if total number of runs increased.
 	if len(self.runList) > oldRunCount {
-		core.LogInfo("SEQPOOL", "%d new runs written to cache. %d total.", len(self.runList)-oldRunCount, len(self.runList))
+		core.LogInfo("seqpool", "%d new runs written to cache. %d total.", len(self.runList)-oldRunCount, len(self.runList))
 	}
 }
 
@@ -274,10 +274,10 @@ func (a ByRevFdate) Less(i, j int) bool {
 func (self *SequencerPool) add(name string) {
 	if strings.HasPrefix(name, "miseq") {
 		self.seqcers = append(self.seqcers, NewMiSeqSequencer(self, name))
-		core.LogInfo("SEQPOOL", "Add MiSeq %s.", name)
+		core.LogInfo("seqpool", "Add MiSeq %s.", name)
 	} else if strings.HasPrefix(name, "hiseq") {
 		self.seqcers = append(self.seqcers, NewHiSeqSequencer(self, name))
-		core.LogInfo("SEQPOOL", "Add HiSeq %s.", name)
+		core.LogInfo("seqpool", "Add HiSeq %s.", name)
 	}
 }
 

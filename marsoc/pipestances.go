@@ -54,13 +54,13 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath st
 func (self *PipestanceManager) loadCache(unfail bool) {
 	bytes, err := ioutil.ReadFile(self.cachePath)
 	if err != nil {
-		core.LogError(err, "PIPEMAN", "Could not read cache file %s.", self.cachePath)
+		core.LogError(err, "pipeman", "Could not read cache file %s.", self.cachePath)
 		return
 	}
 
 	var cache map[string]map[string]bool
 	if err := json.Unmarshal(bytes, &cache); err != nil {
-		core.LogError(err, "PIPEMAN", "Could not parse JSON in cache file %s.", self.cachePath)
+		core.LogError(err, "pipeman", "Could not parse JSON in cache file %s.", self.cachePath)
 		return
 	}
 
@@ -69,12 +69,12 @@ func (self *PipestanceManager) loadCache(unfail bool) {
 	}
 	// If we got commandline flag 'unfail', ignore cached fail flags and re-evaluate all
 	// previously failed pipestances because we are probably trying to restart them.
-	core.LogInfo("PIPEMAN", "Unfail flag is set to %t.", unfail)
+	core.LogInfo("pipeman", "Unfail flag is set to %t.", unfail)
 	if failed, ok := cache["failed"]; !unfail && ok {
 		self.failed = failed
 	}
-	core.LogInfo("PIPEMAN", "%d completed pipestance flags loaded from cache.", len(self.completed))
-	core.LogInfo("PIPEMAN", "%d failed pipestance flags loaded from cache.", len(self.failed))
+	core.LogInfo("pipeman", "%d completed pipestance flags loaded from cache.", len(self.completed))
+	core.LogInfo("pipeman", "%d failed pipestance flags loaded from cache.", len(self.failed))
 }
 
 func (self *PipestanceManager) writeCache() {
@@ -109,11 +109,11 @@ func (self *PipestanceManager) inventoryPipestances() {
 				}
 				pipestance, err := self.rt.Reattach(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
 				if err != nil {
-					core.LogError(err, "PIPEMAN", "%s was previously cached but no longer exists.", fqname)
+					core.LogError(err, "pipeman", "%s was previously cached but no longer exists.", fqname)
 					self.writeCache()
 					continue
 				}
-				core.LogInfo("PIPEMAN", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
+				core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
 				self.runList = append(self.runList, pipestance)
 				self.runTable[fqname] = pipestance
 			}
@@ -163,7 +163,7 @@ func (self *PipestanceManager) processRunList() {
 			if state == "complete" {
 				// If pipestance is done, remove from runTable, mark it in the
 				// cache as completed, and flush the cache.
-				core.LogInfo("PIPEMAN", "Complete and removing from runList: %s.", fqname)
+				core.LogInfo("pipeman", "Complete and removing from runList: %s.", fqname)
 				mutex.Lock()
 				delete(self.runTable, fqname)
 				self.completed[fqname] = true
@@ -174,9 +174,9 @@ func (self *PipestanceManager) processRunList() {
 				pipestance.Immortalize()
 
 				// VDR Kill
-				core.LogInfo("PIPEMAN", "Starting VDR kill for %s.", fqname)
+				core.LogInfo("pipeman", "Starting VDR kill for %s.", fqname)
 				killReport := pipestance.VDRKill()
-				core.LogInfo("PIPEMAN", "VDR killed %d files, %s from %s.", killReport.Count, humanize.Bytes(killReport.Size), fqname)
+				core.LogInfo("pipeman", "VDR killed %d files, %s from %s.", killReport.Count, humanize.Bytes(killReport.Size), fqname)
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
@@ -189,7 +189,7 @@ func (self *PipestanceManager) processRunList() {
 			} else if state == "failed" {
 				// If pipestance is failed, remove from runTable, mart it in the
 				// cache as failed, and flush the cache.
-				core.LogInfo("PIPEMAN", "Failed and removing from runList: %s.", fqname)
+				core.LogInfo("pipeman", "Failed and removing from runList: %s.", fqname)
 				mutex.Lock()
 				delete(self.runTable, fqname)
 				self.failed[fqname] = true
@@ -230,7 +230,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		return err
 	}
 	fqname := pipestance.GetFQName()
-	core.LogInfo("PIPEMAN", "Instantiating and pushing to runList: %s.", fqname)
+	core.LogInfo("pipeman", "Instantiating and pushing to runList: %s.", fqname)
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
 	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
