@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
+	_ "github.com/dustin/go-humanize"
 	"io/ioutil"
 	"margo/core"
 	"net/http"
