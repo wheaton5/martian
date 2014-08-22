@@ -17,21 +17,27 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-func composeBody(mailer *core.Mailer, notices []*PipestanceNotification) (string, string) {
-	statelist := ""
+func sendNotificationMail(users []string, mailer *core.Mailer, notices []*PipestanceNotification) {
+	results := []string{}
 	var vdrsize uint64
-	state := "completed"
+	worstState := "completed"
+	psids := []string{}
 	for _, notice := range notices {
-		statelist += fmt.Sprintf("%s of %s is %s.\n", notice.Pname, notice.Psid, notice.State)
+		psids = append(psids, notice.Psid)
+		results = append(results, fmt.Sprintf("%s of %s is %s.", notice.Pname, notice.Psid, notice.State))
 		vdrsize += notice.Vdrsize
 		if notice.State == "failed" {
-			state = "failed"
+			worstState = "failed"
 		}
 	}
-	if state == "completed" {
-		return state, fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\nBtw I also saved you %s with VDR. Show me love!", statelist, humanize.Bytes(vdrsize))
+	body := ""
+	if worstState == "completed" {
+		body = fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\n\nBtw I also saved you %s with VDR. Show me love!", strings.Join(results, "\n"), humanize.Bytes(vdrsize))
+	} else {
+		body = fmt.Sprintf("Hey Preppie,\n\nSome of your analysis failed!\n%s\nDon't feel bad, you'll get 'em next time!", strings.Join(results, "\n"))
 	}
-	return state, fmt.Sprintf("Hey Preppie,\n\nSome of your analysis failed!\n%s\nDon't feel bad, you'll get 'em next time!", statelist)
+	subj := fmt.Sprintf("Analysis runs %s! (%s)", worstState, strings.Join(psids, ", "))
+	mailer.Sendmail(users, subj, body)
 }
 
 func runEmailNotifier(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) {
@@ -53,12 +59,10 @@ func runEmailNotifier(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) 
 			}
 		}
 		for user, notices := range userTable {
-			state, body := composeBody(mailer, notices)
-			mailer.Sendmail([]string{user + "@10xtechnologies.com"}, fmt.Sprintf("Analysis runs %s!", state), body)
+			sendNotificationMail([]string{user + "@10xtechnologies.com"}, mailer, notices)
 		}
 		if len(userlessNotices) > 0 {
-			state, body := composeBody(mailer, userlessNotices)
-			mailer.Sendmail([]string{}, fmt.Sprintf("Analysis runs %s!", state), body)
+			sendNotificationMail([]string{}, mailer, userlessNotices)
 		}
 		time.Sleep(time.Minute * time.Duration(5))
 	}
