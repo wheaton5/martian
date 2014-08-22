@@ -5,6 +5,12 @@
 #
 
 app = angular.module('app', ['ui.bootstrap','ngClipboard'])
+app.filter('shorten',  () -> (str) ->
+    if length(str) < 61
+        str
+    else
+        str.substr(0, 30) #+ "..." + str.substr(length(str) - 30)
+)
 
 renderGraph = ($scope, $compile) ->
     g = new dagreD3.Digraph()
@@ -13,7 +19,7 @@ renderGraph = ($scope, $compile) ->
         g.addNode(node.name, node)
     for node in _.values($scope.nodes)
         for edge in node.edges
-            g.addEdge(null, edge.from, edge.to, {}) 
+            g.addEdge(null, edge.from, edge.to, {})
     (new dagreD3.Renderer()).run(g, d3.select("g"))
     maxX = 0.0
     d3.selectAll("g.node").each((id) ->
@@ -21,7 +27,6 @@ renderGraph = ($scope, $compile) ->
         d3.select(this).attr('ng-click', "selectNode('#{id}')")
         d3.select(this).attr('ng-class', "[node.name=='#{id}'?'seled':'',nodes['#{id}'].state]")
         xCoord = parseFloat(d3.select(this).attr('transform').substr(10).split(',')[0])
-        console.log(xCoord)
         if xCoord > maxX
             maxX = xCoord
     )

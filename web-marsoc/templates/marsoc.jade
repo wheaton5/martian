@@ -62,6 +62,9 @@ html(ng-app="app")
                         td Runtime
                         td {{selrun | runDuration}} hours
                     tr
+                        td Age
+                        td {{selrun.completeTime | momentTimeAgo}}
+                    tr
                         td Path
                         td.param {{selrun.path}}
 

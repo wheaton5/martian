@@ -53,7 +53,7 @@ html(ng-app="app" ng-controller="MarioGraphCtrl")
                     td 
                         button.btn.btn-default.btn-xs(type="button" clip-copy="copyToClipboard()")
                             span.glyphicon.glyphicon-paperclip
-                        span.copyable {{node.path}}
+                        span.copyable {{node.path | shorten}}
                 tr(ng-if="node.type=='stage'")
                     td {{node.stagecodeLang}}
                     td 
@@ -120,7 +120,7 @@ html(ng-app="app" ng-controller="MarioGraphCtrl")
                             | {{mdviews.join}}
 
                 tr(ng-repeat-start="(bindtype, bindings) in node.forks[forki].bindings").active
-                    th(colspan="4") {{bindtype}} Bindings
+                    th(colspan="3") {{bindtype}} Bindings
                     th Source
                     th Value
                 tr(ng-repeat="bnd in bindings")
@@ -128,9 +128,9 @@ html(ng-app="app" ng-controller="MarioGraphCtrl")
                         i {{bnd.type}}
                     td.tight {{bnd.id}}
                     td.tight =
-                    td.tight
-                        span(ng-if="bnd.valexp") {{bnd.valexp}}
-                        span(ng-if="!bnd.valexp") {{bnd.value}}
+                    //td.tight
+                    //    span(ng-if="bnd.valexp") {{bnd.valexp}}
+                    //    span(ng-if="!bnd.valexp") {{bnd.value}}
                     td
                         span(ng-class="[bnd.mode=='reference'?'minibox':'',nodes[bnd.node].state]") {{bnd.node}}
                             span(ng-if="bnd.mode=='reference'") \#{{bnd.matchedFork}}

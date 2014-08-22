@@ -3,6 +3,16 @@
 
   app = angular.module('app', ['ui.bootstrap', 'ngClipboard']);
 
+  app.filter('shorten', function() {
+    return function(str) {
+      if (length(str) < 61) {
+        return str;
+      } else {
+        return str.substr(0, 30);
+      }
+    };
+  });
+
   renderGraph = function($scope, $compile) {
     var edge, g, maxX, node, scale, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
     g = new dagreD3.Digraph();
@@ -29,7 +39,6 @@
       d3.select(this).attr('ng-click', "selectNode('" + id + "')");
       d3.select(this).attr('ng-class', "[node.name=='" + id + "'?'seled':'',nodes['" + id + "'].state]");
       xCoord = parseFloat(d3.select(this).attr('transform').substr(10).split(',')[0]);
-      console.log(xCoord);
       if (xCoord > maxX) {
         return maxX = xCoord;
       }

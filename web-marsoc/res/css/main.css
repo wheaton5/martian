@@ -15,7 +15,13 @@
 
 /* Page-specific styles */
 .admin {
-    background-color: #770000;
+    background-color: #822 !important;
+}
+.navbar-inverse.admin .navbar-brand {
+    color: white;
+}
+.navbar-inverse.admin .navbar-brand:hover {
+    color: white;
 }
 .admin-exit {
     color: #b6d7a8;
@@ -26,10 +32,20 @@
 .navbar-header {
     width: 100%;
 }
+.navbar-inverse {
+    background-color: #eee;
+    border-bottom: 0;
+}
 .navbar-inverse .navbar-brand {
     position: fixed;
     width: 100%;
-    color: white;
+    color: #555;
+    font-size: 20px;
+}
+.navbar-inverse .navbar-brand:hover {
+    position: fixed;
+    width: 100%;
+    color: #555;
     font-size: 20px;
 }
 .navbar-inverse .navbar-left {
