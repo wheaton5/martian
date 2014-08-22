@@ -200,12 +200,14 @@ func (self *PipestanceManager) processRunList() {
 				// Email notification.
 				pname, psid := parseFQName(fqname)
 				if pname == "PREPROCESS" {
+					// For PREPROCESS, just email the admins.
 					self.mailer.Sendmail(
 						[]string{},
 						fmt.Sprintf("%s of %s has succeeded!", pname, psid),
 						fmt.Sprintf("Hey Preppie,\n\n%s of %s is done.\n\nCheck out my rad moves at http://%s/pipestance/%s/%s/%s.\n\nBtw I also saved you %s with VDR. Show me love!", pname, psid, self.mailer.InstanceName, psid, pname, psid, humanize.Bytes(killReport.Size)),
 					)
 				} else {
+					// For ANALYTICS, queue up notification for batch email of users.
 					mutex.Lock()
 					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
 						State:   "complete",
@@ -231,12 +233,14 @@ func (self *PipestanceManager) processRunList() {
 				// Email notification.
 				pname, psid := parseFQName(fqname)
 				if pname == "PREPROCESS" {
+					// For PREPROCESS, just email the admins.
 					self.mailer.Sendmail(
 						[]string{},
 						fmt.Sprintf("%s of %s has failed!", pname, psid),
 						fmt.Sprintf("Hey Preppie,\n\n%s of %s failed.\n\nDon't feel bad, but check out what you messed up at http://%s/pipestance/%s/%s/%s.", pname, psid, self.mailer.InstanceName, psid, pname, psid),
 					)
 				} else {
+					// For ANALYTICS, queue up notification for batch email of users.
 					mutex.Lock()
 					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
 						State:   "failed",

@@ -18,10 +18,11 @@ import (
 )
 
 func sendNotificationMail(users []string, mailer *core.Mailer, notices []*PipestanceNotification) {
+	// Build summary of the notices.
 	results := []string{}
-	var vdrsize uint64
 	worstState := "completed"
 	psids := []string{}
+	var vdrsize uint64
 	for _, notice := range notices {
 		psids = append(psids, notice.Psid)
 		results = append(results, fmt.Sprintf("%s of %s is %s.", notice.Pname, notice.Psid, notice.State))
@@ -30,6 +31,8 @@ func sendNotificationMail(users []string, mailer *core.Mailer, notices []*Pipest
 			worstState = "failed"
 		}
 	}
+
+	// Compose the email.
 	body := ""
 	if worstState == "completed" {
 		body = fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\n\nBtw I also saved you %s with VDR. Show me love!", strings.Join(results, "\n"), humanize.Bytes(vdrsize))
@@ -42,15 +45,24 @@ func sendNotificationMail(users []string, mailer *core.Mailer, notices []*Pipest
 
 func runEmailNotifier(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) {
 	for {
+		// Copy and clear the notifyQueue from PipestanceManager to avoid races.
 		notifyQueue := pman.CopyAndClearNotifyQueue()
+
+		// Build a table of users to lists of notifications.
+		// Also, collect all the notices that don't have a user associated.
 		userTable := map[string][]*PipestanceNotification{}
 		userlessNotices := []*PipestanceNotification{}
 		for _, notice := range notifyQueue {
+			// Get the sample with the psid in the notice.
 			sample, ok := lena.getSampleWithId(notice.Psid)
+
+			// If no sample, add to the userless table.
 			if !ok {
 				userlessNotices = append(userlessNotices, notice)
 				continue
 			}
+
+			// Otherwise, build a list of notices for each user.
 			nlist, ok := userTable[sample.User.Username]
 			if ok {
 				userTable[sample.User.Username] = append(nlist, notice)
@@ -58,12 +70,18 @@ func runEmailNotifier(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) 
 				userTable[sample.User.Username] = []*PipestanceNotification{notice}
 			}
 		}
+
+		// Send emails to all users associated with samples.
 		for user, notices := range userTable {
 			sendNotificationMail([]string{user + "@10xtechnologies.com"}, mailer, notices)
 		}
+
+		// Send userless notices to the admins.
 		if len(userlessNotices) > 0 {
 			sendNotificationMail([]string{}, mailer, userlessNotices)
 		}
+
+		// Wait a bit.
 		time.Sleep(time.Minute * time.Duration(5))
 	}
 }
