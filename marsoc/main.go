@@ -19,23 +19,19 @@ import (
 
 func composeBody(mailer *core.Mailer, notices []*PipestanceNotification) (string, string) {
 	statelist := ""
-	pname := ""
-	psid := ""
 	var vdrsize uint64
 	state := "completed"
 	for _, notice := range notices {
 		statelist += fmt.Sprintf("%s of %s is %s.\n", notice.Pname, notice.Psid, notice.State)
-		pname = notice.Pname
-		psid = notice.Psid
 		vdrsize += notice.Vdrsize
 		if notice.State == "failed" {
 			state = "failed"
 		}
 	}
 	if state == "completed" {
-		return state, fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\nCheck out my rad moves at http://%s/pipestance/%s/%s/%s.\n\nBtw I also saved you %s with VDR. Show me love!", statelist, mailer.InstanceName, psid, pname, psid, humanize.Bytes(vdrsize))
+		return state, fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\nBtw I also saved you %s with VDR. Show me love!", statelist, humanize.Bytes(vdrsize))
 	}
-	return state, fmt.Sprintf("Hey Preppie,\n\nSome of your analysis failed!\n%s\nDon't feel bad, but see what you messed up at http://%s/pipestance/%s/%s/%s.", statelist, mailer.InstanceName, psid, pname, psid)
+	return state, fmt.Sprintf("Hey Preppie,\n\nSome of your analysis failed!\n%s\nDon't feel bad, you'll get 'em next time!", statelist)
 }
 
 func runEmailNotifier(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) {
@@ -134,7 +130,7 @@ func main() {
 	//=========================================================================
 	// Setup Mailer.
 	//=========================================================================
-	mailer := core.NewMailer(instanceName, smtpUser, smtpPass, notifyEmail)
+	mailer := core.NewMailer(instanceName, smtpUser, smtpPass, notifyEmail, instanceName != "marsoc")
 
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.

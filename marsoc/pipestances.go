@@ -24,10 +24,11 @@ func makeFQName(pipeline string, psid string) string {
 }
 
 type PipestanceNotification struct {
-	State   string
-	Pname   string
-	Psid    string
-	Vdrsize uint64
+	State     string
+	Container string
+	Pname     string
+	Psid      string
+	Vdrsize   uint64
 }
 
 type PipestanceManager struct {
