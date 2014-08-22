@@ -34,7 +34,10 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 
 	cmd := exec.Command(self.cmdPath)
 	cmd.Stdin = strings.NewReader(string(bytes))
-	out, _ := cmd.Output()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		core.LogError(err, "ARGSHIM", "Error: %s", out)
+	}
 
 	var v interface{}
 	json.Unmarshal(out, &v)

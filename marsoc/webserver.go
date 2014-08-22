@@ -13,7 +13,6 @@ import (
 	"io/ioutil"
 	"margo/core"
 	"net/http"
-	"os"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -32,7 +31,6 @@ import (
 func makeRelPath(p string) string {
 	_, filename, _, _ := runtime.Caller(1)
 	exeDir, _ := filepath.Abs(filepath.Dir(filename))
-	fmt.Println(os.Args)
 	return path.Join(exeDir, p)
 }
 
