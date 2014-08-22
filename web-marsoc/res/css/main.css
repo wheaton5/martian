@@ -235,6 +235,9 @@ h4#stagename {
     margin-top: 75px
 }
 .copyable {
+    display: none;
+}
+.copyable-display {
     margin-left: 10px;
 }
 .node rect {

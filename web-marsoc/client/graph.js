@@ -4,11 +4,12 @@
   app = angular.module('app', ['ui.bootstrap', 'ngClipboard']);
 
   app.filter('shorten', function() {
-    return function(str) {
-      if (length(str) < 61) {
-        return str;
+    return function(s) {
+      s = s + "";
+      if (s.length < 71) {
+        return s;
       } else {
-        return str.substr(0, 30);
+        return s.substr(0, 30) + " ... " + s.substr(s.length - 50);
       }
     };
   });

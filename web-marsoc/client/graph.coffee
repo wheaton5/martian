@@ -5,11 +5,10 @@
 #
 
 app = angular.module('app', ['ui.bootstrap','ngClipboard'])
-app.filter('shorten',  () -> (str) ->
-    if length(str) < 61
-        str
-    else
-        str.substr(0, 30) #+ "..." + str.substr(length(str) - 30)
+app.filter('shorten',  () -> (s) ->
+    s = s + ""
+    if s.length < 71 then return s
+    else return s.substr(0, 30) + " ... " + s.substr(s.length - 50)
 )
 
 renderGraph = ($scope, $compile) ->
