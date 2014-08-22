@@ -22,7 +22,7 @@ html(ng-app="app" ng-controller="MarioGraphCtrl")
         header.navbar.navbar-inverse.navbar-fixed-top(ng-class="{admin: admin}")
             .navbar-header 
                 .navbar-brand
-                    a(href="{{urlprefix}}" style="color:white") 10
+                    a(href="{{urlprefix}}" style="color:#555") 10
                         span.logo-color X
                         | &nbsp;[[.InstanceName]]&nbsp;
                     | / [[.Psid]] / [[.Pname]]
@@ -183,5 +183,5 @@ html(ng-app="app" ng-controller="MarioGraphCtrl")
         | container = '[[.Container]]'
         | pname = '[[.Pname]]';
         | psid = '[[.Psid]]';
-        | admin = '[[.Admin]]'
+        | admin = [[.Admin]]
     script(src="/graph.js")

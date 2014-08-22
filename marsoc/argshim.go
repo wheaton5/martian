@@ -36,7 +36,7 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 	cmd.Stdin = strings.NewReader(string(bytes))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		core.LogError(err, "ARGSHIM", "Error: %s", out)
+		core.LogError(err, "argshim", "Error: %s", out)
 	}
 
 	var v interface{}
