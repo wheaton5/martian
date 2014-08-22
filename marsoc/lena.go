@@ -194,17 +194,17 @@ func (self *Lena) ingestDatabase(data []byte) error {
 func (self *Lena) goDownloadLoop() {
 	go func() {
 		for {
-			core.LogInfo("lenaapi", "Starting download...")
+			//core.LogInfo("lenaapi", "Starting download...")
 			data, err := self.lenaAPI()
 			if err != nil {
 				core.LogError(err, "lenaapi", "Download error.")
 			} else {
-				core.LogInfo("lenaapi", "Download complete. %s.", humanize.Bytes(uint64(len(data))))
+				//core.LogInfo("lenaapi", "Download complete. %s.", humanize.Bytes(uint64(len(data))))
 				err := self.ingestDatabase(data)
 				if err == nil {
 					// If JSON parsed properly, save it.
 					ioutil.WriteFile(self.dbPath, data, 0600)
-					core.LogInfo("lenaapi", "Database ingested and saved to %s.", self.dbPath)
+					//core.LogInfo("lenaapi", "Database ingested and saved to %s.", self.dbPath)
 				} else {
 					core.LogError(err, "lenaapi", "Could not parse JSON from downloaded data.")
 				}
