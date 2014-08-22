@@ -7,13 +7,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/docopt/docopt-go"
-	"github.com/dustin/go-humanize"
 	"margo/core"
 	"os"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/docopt/docopt-go"
+	"github.com/dustin/go-humanize"
 )
 
 func composeBody(mailer *core.Mailer, notices []*PipestanceNotification) (string, string) {
@@ -23,7 +24,7 @@ func composeBody(mailer *core.Mailer, notices []*PipestanceNotification) (string
 	var vdrsize uint64
 	state := "completed"
 	for _, notice := range notices {
-		statelist += fmt.Sprintf("%s of %s is %s\n", notice.Pname, notice.Psid, notice.State)
+		statelist += fmt.Sprintf("%s of %s is %s.\n", notice.Pname, notice.Psid, notice.State)
 		pname = notice.Pname
 		psid = notice.Psid
 		vdrsize += notice.Vdrsize
@@ -52,18 +53,18 @@ func runEmailNotifier(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) 
 			if ok {
 				userTable[sample.User.Username] = append(nlist, notice)
 			} else {
-				userTable[sample.User.Username] = []*PipestanceNotification{}
+				userTable[sample.User.Username] = []*PipestanceNotification{notice}
 			}
 		}
 		for user, notices := range userTable {
 			state, body := composeBody(mailer, notices)
-			mailer.Sendmail([]string{user}, fmt.Sprintf("Analysis runs %s!", state), body)
+			mailer.Sendmail([]string{user + "@10xtechnologies.com"}, fmt.Sprintf("Analysis runs %s!", state), body)
 		}
 		if len(userlessNotices) > 0 {
 			state, body := composeBody(mailer, userlessNotices)
 			mailer.Sendmail([]string{}, fmt.Sprintf("Analysis runs %s!", state), body)
 		}
-		time.Sleep(time.Minute * time.Duration(1))
+		time.Sleep(time.Minute * time.Duration(5))
 	}
 }
 
