@@ -151,7 +151,7 @@ func main() {
 	//=========================================================================
 	// Setup Mailer.
 	//=========================================================================
-	mailer := core.NewMailer(instanceName, smtpUser, smtpPass, notifyEmail, instanceName != "marsoc")
+	mailer := core.NewMailer(instanceName, smtpUser, smtpPass, notifyEmail, instanceName != "MARSOC")
 
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
