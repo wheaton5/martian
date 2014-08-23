@@ -168,9 +168,12 @@ func (self *PipestanceManager) processRunList() {
 			// Metadata refreshes can be asynchronous amongst themselves but
 			// all must be complete and consistent before starting to step.
 			var mwg sync.WaitGroup
-			mwg.Add(len(nodes))
 			for _, node := range nodes {
-				node.RefreshMetadata(&mwg)
+				mwg.Add(1)
+				go func(node *core.Node) {
+					node.RefreshMetadata()
+					mwg.Done()
+				}(node)
 			}
 			mwg.Wait()
 
@@ -295,9 +298,7 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 		return
 	}
 	node := pipestance.Node().Find(fqname)
-	var wg sync.WaitGroup
-	node.RestartFromFailed(&wg)
-	wg.Wait()
+	node.RestartFromFailed()
 	pipestance.Unimmortalize()
 	delete(self.failed, makeFQName(pipeline, psid))
 	self.writeCache()
@@ -357,9 +358,12 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	// Refresh its metadata state and return.
 	nodes := pipestance.Node().AllNodes()
 	var wg sync.WaitGroup
-	wg.Add(len(nodes))
 	for _, node := range nodes {
-		node.RefreshMetadata(&wg)
+		wg.Add(1)
+		go func(node *core.Node) {
+			node.RefreshMetadata()
+			wg.Done()
+		}(node)
 	}
 	wg.Wait()
 	return pipestance, true
