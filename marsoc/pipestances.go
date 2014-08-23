@@ -68,7 +68,7 @@ func (self *PipestanceManager) CopyAndClearNotifyQueue() []*PipestanceNotificati
 	return notifyQueue
 }
 
-func (self *PipestanceManager) loadCache(unfail bool) {
+func (self *PipestanceManager) loadCache() {
 	bytes, err := ioutil.ReadFile(self.cachePath)
 	if err != nil {
 		core.LogInfo("pipeman", "Could not read cache file %s.", self.cachePath)
@@ -84,10 +84,7 @@ func (self *PipestanceManager) loadCache(unfail bool) {
 	if completed, ok := cache["completed"]; ok {
 		self.completed = completed
 	}
-	// If we got commandline flag 'unfail', ignore cached fail flags and re-evaluate all
-	// previously failed pipestances because we are probably trying to restart them.
-	core.LogInfo("pipeman", "Unfail flag is set to %t.", unfail)
-	if failed, ok := cache["failed"]; !unfail && ok {
+	if failed, ok := cache["failed"]; ok {
 		self.failed = failed
 	}
 	core.LogInfo("pipeman", "%d completed pipestance flags loaded from cache.", len(self.completed))
@@ -299,7 +296,7 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	}
 	node := pipestance.Node().Find(fqname)
 	var wg sync.WaitGroup
-	node.RestartFailedMetadatas(&wg)
+	node.RestartFromFailed(&wg)
 	wg.Wait()
 	pipestance.Unimmortalize()
 	delete(self.failed, makeFQName(pipeline, psid))

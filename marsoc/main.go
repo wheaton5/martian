@@ -97,9 +97,10 @@ func main() {
 	// Parse commandline.
 	doc :=
 		`Usage: 
-    marsoc [--unfail] 
+    marsoc 
     marsoc -h | --help | --version`
 	opts, _ := docopt.Parse(doc, nil, true, "marsoc", false)
+	_ = opts
 
 	// Required Mario environment variables.
 	env := core.EnvRequire([][]string{
@@ -133,8 +134,6 @@ func main() {
 	}, false)
 
 	// Prepare configuration variables.
-	u, _ := opts["--unfail"]
-	unfail := u.(bool)
 	uiport := env["MARSOC_PORT"]
 	notifyEmail := env["MARSOC_NOTIFY_EMAIL"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
@@ -176,7 +175,7 @@ func main() {
 	// Setup PipestanceManager, load cache, start runlist loop.
 	//=========================================================================
 	pman := NewPipestanceManager(rt, pipestancesPath, cachePath, stepSecs, mailer)
-	pman.loadCache(unfail)
+	pman.loadCache()
 	pman.inventoryPipestances()
 	pman.goRunListLoop()
 
