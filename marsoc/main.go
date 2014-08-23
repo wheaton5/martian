@@ -27,9 +27,9 @@ func sendNotificationMail(users []string, mailer *core.Mailer, notices []*Pipest
 		psids = append(psids, notice.Psid)
 		var url string
 		if notice.State == "complete" {
-			url = fmt.Sprintf("lena/seq_results/sample%strim10/)", notice.Psid)
+			url = fmt.Sprintf("lena/seq_results/sample%strim10/", notice.Psid)
 		} else {
-			url = fmt.Sprintf("%s/pipestance/%s/%s/%s)", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
+			url = fmt.Sprintf("%s/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
 		}
 		result := fmt.Sprintf("%s of %s is %s (http://%s)", notice.Pname, notice.Psid, strings.ToUpper(notice.State), url)
 		results = append(results, result)
