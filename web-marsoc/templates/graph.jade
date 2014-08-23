@@ -24,8 +24,8 @@ html(ng-app="app" ng-controller="MarioGraphCtrl")
                 .navbar-brand
                     a(href="{{urlprefix}}" style="color:#555") 10
                         span.logo-color X
-                        | &nbsp;[[.InstanceName]]&nbsp;
-                    | / [[.Psid]] / [[.Pname]]
+                        | &nbsp;[[.InstanceName]]
+                    | &nbsp;/ [[.Psid]] / [[.Pname]]
                     span(ng-if="admin")
                         | &nbsp;(
                         a.admin-exit(href="/") exit admin mode

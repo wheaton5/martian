@@ -18,7 +18,7 @@
     background-color: #822 !important;
 }
 .admin .navbar-brand a {
-    color: white;
+    color: white !important;
 }
 .navbar-inverse.admin .navbar-brand {
     color: white;
@@ -27,10 +27,10 @@
     color: white;
 }
 .admin .navbar-brand a.admin-exit {
-    color: #b6d7a8;
+    color: #b6d7a8 !important;
 }
 .admin .navbar-brand a.admin-exit:hover {
-    color: #b6d7a8;
+    color: #b6d7a8 !important;
 }
 .navbar-header {
     width: 100%;
