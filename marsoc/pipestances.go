@@ -32,17 +32,18 @@ type PipestanceNotification struct {
 }
 
 type PipestanceManager struct {
-	rt          *core.Runtime
-	path        string
-	cachePath   string
-	stepms      int
-	pipelines   []string
-	completed   map[string]bool
-	failed      map[string]bool
-	runList     []*core.Pipestance
-	runTable    map[string]*core.Pipestance
-	notifyQueue []*PipestanceNotification
-	mailer      *core.Mailer
+	rt             *core.Runtime
+	path           string
+	cachePath      string
+	stepms         int
+	pipelines      []string
+	completed      map[string]bool
+	failed         map[string]bool
+	runList        []*core.Pipestance
+	runTable       map[string]*core.Pipestance
+	containerTable map[string]string
+	notifyQueue    []*PipestanceNotification
+	mailer         *core.Mailer
 }
 
 func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath string, stepms int, mailer *core.Mailer) *PipestanceManager {
@@ -56,6 +57,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath st
 	self.failed = map[string]bool{}
 	self.runList = []*core.Pipestance{}
 	self.runTable = map[string]*core.Pipestance{}
+	self.containerTable = map[string]string{}
 	self.notifyQueue = []*PipestanceNotification{}
 	self.mailer = mailer
 	return self
@@ -120,6 +122,11 @@ func (self *PipestanceManager) inventoryPipestances() {
 				psid := psidInfo.Name()
 
 				fqname := makeFQName(pipeline, psid)
+
+				// Cache the fqname to container mapping so we know what container
+				// an analysis pipestance is in for notification emails.
+				self.containerTable[fqname] = container
+
 				if self.completed[fqname] || self.failed[fqname] {
 					continue
 				}
@@ -210,10 +217,11 @@ func (self *PipestanceManager) processRunList() {
 					// For ANALYTICS, queue up notification for batch email of users.
 					mutex.Lock()
 					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
-						State:   "complete",
-						Pname:   pname,
-						Psid:    psid,
-						Vdrsize: killReport.Size,
+						State:     "complete",
+						Container: self.containerTable[fqname],
+						Pname:     pname,
+						Psid:      psid,
+						Vdrsize:   killReport.Size,
 					})
 					mutex.Unlock()
 				}
@@ -243,10 +251,11 @@ func (self *PipestanceManager) processRunList() {
 					// For ANALYTICS, queue up notification for batch email of users.
 					mutex.Lock()
 					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
-						State:   "failed",
-						Pname:   pname,
-						Psid:    psid,
-						Vdrsize: 0,
+						State:     "failed",
+						Container: self.containerTable[fqname],
+						Pname:     pname,
+						Psid:      psid,
+						Vdrsize:   0,
 					})
 					mutex.Unlock()
 				}
@@ -278,6 +287,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	core.LogInfo("pipeman", "Instantiating and pushing to runList: %s.", fqname)
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
+	self.containerTable[fqname] = container
 	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
 	os.Remove(headPath)
 	os.Symlink(self.rt.CodeVersion, headPath)

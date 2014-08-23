@@ -20,24 +20,31 @@ import (
 func sendNotificationMail(users []string, mailer *core.Mailer, notices []*PipestanceNotification) {
 	// Build summary of the notices.
 	results := []string{}
-	worstState := "completed"
+	worstState := "complete"
 	psids := []string{}
 	var vdrsize uint64
 	for _, notice := range notices {
 		psids = append(psids, notice.Psid)
-		results = append(results, fmt.Sprintf("%s of %s is %s.", notice.Pname, notice.Psid, notice.State))
+		var url string
+		if notice.State == "complete" {
+			url = fmt.Sprintf("lena/seq_results/sample%strim10/)", notice.Psid)
+		} else {
+			url = fmt.Sprintf("%s/pipestance/%s/%s/%s)", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
+		}
+		result := fmt.Sprintf("%s of %s is %s (http://%s)", notice.Pname, notice.Psid, strings.ToUpper(notice.State), url)
+		results = append(results, result)
 		vdrsize += notice.Vdrsize
 		if notice.State == "failed" {
-			worstState = "failed"
+			worstState = notice.State
 		}
 	}
 
 	// Compose the email.
 	body := ""
-	if worstState == "completed" {
-		body = fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\n\nBtw I also saved you %s with VDR. Show me love!", strings.Join(results, "\n"), humanize.Bytes(vdrsize))
+	if worstState == "complete" {
+		body = fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\n\nBtw I also saved you %s with VDR. Show me love!\n\nLena might take up to an hour to show your results.", strings.Join(results, "\n"), humanize.Bytes(vdrsize))
 	} else {
-		body = fmt.Sprintf("Hey Preppie,\n\nSome of your analysis failed!\n%s\nDon't feel bad, you'll get 'em next time!", strings.Join(results, "\n"))
+		body = fmt.Sprintf("Hey Preppie,\n\nSome of your analysis failed!\n\n%s\n\nDon't feel bad, you'll get 'em next time!", strings.Join(results, "\n"))
 	}
 	subj := fmt.Sprintf("Analysis runs %s! (%s)", worstState, strings.Join(psids, ", "))
 	mailer.Sendmail(users, subj, body)
