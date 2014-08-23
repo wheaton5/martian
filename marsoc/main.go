@@ -42,7 +42,7 @@ func sendNotificationMail(users []string, mailer *core.Mailer, notices []*Pipest
 	// Compose the email.
 	body := ""
 	if worstState == "complete" {
-		body = fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\n\nBtw I also saved you %s with VDR. Show me love!\n\nLena might take up to an hour to show your results.", strings.Join(results, "\n"), humanize.Bytes(vdrsize))
+		body = fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\n\nLena might take up to an hour to show your results.\n\nBtw I also saved you %s with VDR. Show me love!", strings.Join(results, "\n"), humanize.Bytes(vdrsize))
 	} else {
 		body = fmt.Sprintf("Hey Preppie,\n\nSome of your analysis failed!\n\n%s\n\nDon't feel bad, you'll get 'em next time!", strings.Join(results, "\n"))
 	}
