@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# unqueue.sh 0 99
+# unqueue_chunks 0 99
 #
 # Deletes _jobinfo files from a numeric range of chunks to cause Mario runtime
 # to submit them to SGE.
