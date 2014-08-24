@@ -19,16 +19,18 @@ app.directive('pipeGraph', () ->
 )
 renderPipeline = (pipelineDec) ->
     g = new dagreD3.Digraph() 
-    for callStm in pipelineDec.callStmList
-        g.addNode(callStm.id, {label: callStm.id})
-    for callStm in pipelineDec.callStmList
-        for bindStm in callStm.bindStmList
-            valueExp = bindStm.valueExp
-            if valueExp.kind == 'call'
-                g.addEdge(null, valueExp.id, callStm.id, {label:bindStm.type})
-    console.log(d3.select("g#" + pipelineDec.id))
-    (new dagreD3.Renderer()).run(g, d3.select("g#" + pipelineDec.id))
-
+    for callStm in pipelineDec.Calls
+        g.addNode(callStm.Id, {label: callStm.Id})
+    for callStm in pipelineDec.Calls
+        for bindStm in callStm.Bindings.List
+            valueExp = bindStm.Exp
+            if valueExp.Kind == 'call'
+                g.addEdge(null, valueExp.Id, callStm.Id, {label:bindStm.Tname})
+    (new dagreD3.Renderer()).run(g, d3.select("g#" + pipelineDec.Id))
+    d3.selectAll("g.node rect").each((id) ->
+        d3.select(this).attr('rx', 20).attr('ry', 20))
+    d3.selectAll("g.node").each((id) ->
+        d3.select(this).classed('complete', true))
 
 # Main editor directive.
 app.directive('mainAceEditor', () ->
@@ -134,13 +136,15 @@ app.controller('MarioEdCtrl', ($scope, $http) ->
                 $scope.compilerMessages = data
                 $scope.pipelineDecList = []
             else
+                console.log(data)
                 # Build was successful.
                 ptree = data
+                filetypes = _.keys(ptree.FiletypeTable)
                 $scope.compilerMessages = "Build successful:\n" +
-                    "    #{ptree.filetypeDecList.length} filetype declarations\n" +
-                    "    #{ptree.stageDecList.length} stage declarations\n" +
-                    "    #{ptree.pipelineDecList.length} pipeline declarations"
-                $scope.pipelineDecList = ptree.pipelineDecList
+                    "    #{filetypes.length} filetype declarations\n" +
+                    "    #{ptree.Stages.length} stage declarations\n" +
+                    "    #{ptree.Pipelines.length} pipeline declarations"
+                $scope.pipelineDecList = ptree.Pipelines
 
                 # Switch to tab of first graph.
                 if $scope.pipelineDecList[0]?

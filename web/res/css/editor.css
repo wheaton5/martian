@@ -139,10 +139,11 @@ pre#compiler-messages {
     font-size: 12px;
 }
 
-
 tspan {
-    font-family: Helvetica;
+    font-family: Menlo;
     font-size: 12px;
+    cursor: pointer;
+    -webkit-user-select: none;
 }
 .node rect {
     stroke: #333;
@@ -156,4 +157,9 @@ tspan {
     stroke: #333;
     stroke-width: 1.5px;
     fill: none;
+}
+
+.complete rect, .chunks_complete rect, .join_complete rect, .split_complete rect {
+    fill: #b6d7a8;
+    color: black;
 }

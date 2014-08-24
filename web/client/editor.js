@@ -20,29 +20,34 @@
   renderPipeline = function(pipelineDec) {
     var bindStm, callStm, g, valueExp, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
     g = new dagreD3.Digraph();
-    _ref = pipelineDec.callStmList;
+    _ref = pipelineDec.Calls;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       callStm = _ref[_i];
-      g.addNode(callStm.id, {
-        label: callStm.id
+      g.addNode(callStm.Id, {
+        label: callStm.Id
       });
     }
-    _ref1 = pipelineDec.callStmList;
+    _ref1 = pipelineDec.Calls;
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
       callStm = _ref1[_j];
-      _ref2 = callStm.bindStmList;
+      _ref2 = callStm.Bindings.List;
       for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
         bindStm = _ref2[_k];
-        valueExp = bindStm.valueExp;
-        if (valueExp.kind === 'call') {
-          g.addEdge(null, valueExp.id, callStm.id, {
-            label: bindStm.type
+        valueExp = bindStm.Exp;
+        if (valueExp.Kind === 'call') {
+          g.addEdge(null, valueExp.Id, callStm.Id, {
+            label: bindStm.Tname
           });
         }
       }
     }
-    console.log(d3.select("g#" + pipelineDec.id));
-    return (new dagreD3.Renderer()).run(g, d3.select("g#" + pipelineDec.id));
+    (new dagreD3.Renderer()).run(g, d3.select("g#" + pipelineDec.Id));
+    d3.selectAll("g.node rect").each(function(id) {
+      return d3.select(this).attr('rx', 20).attr('ry', 20);
+    });
+    return d3.selectAll("g.node").each(function(id) {
+      return d3.select(this).classed('complete', true);
+    });
   };
 
   app.directive('mainAceEditor', function() {
@@ -156,7 +161,7 @@
       return $http.post('/build', {
         fname: $scope.mainEditor.fname
       }).success(function(data) {
-        var locMatch, ptree;
+        var filetypes, locMatch, ptree;
         if (typeof data === 'string') {
           locMatch = data.match(/on line (\d+):/);
           if (locMatch != null) {
@@ -165,9 +170,11 @@
           $scope.compilerMessages = data;
           return $scope.pipelineDecList = [];
         } else {
+          console.log(data);
           ptree = data;
-          $scope.compilerMessages = "Build successful:\n" + ("    " + ptree.filetypeDecList.length + " filetype declarations\n") + ("    " + ptree.stageDecList.length + " stage declarations\n") + ("    " + ptree.pipelineDecList.length + " pipeline declarations");
-          $scope.pipelineDecList = ptree.pipelineDecList;
+          filetypes = _.keys(ptree.FiletypeTable);
+          $scope.compilerMessages = "Build successful:\n" + ("    " + filetypes.length + " filetype declarations\n") + ("    " + ptree.Stages.length + " stage declarations\n") + ("    " + ptree.Pipelines.length + " pipeline declarations");
+          $scope.pipelineDecList = ptree.Pipelines;
           if ($scope.pipelineDecList[0] != null) {
             return $scope.pipelineDecList[0].active = true;
           }

@@ -45,12 +45,12 @@ html(ng-app="app")
         tab(heading="{{includeEditor.fname}}") 
             include-ace-editor(editor-info="includeEditor")
 
-        tab(heading="{{pipelineDec.id}}" ng-repeat="pipelineDec in pipelineDecList" 
+        tab(heading="{{pipelineDec.Id}}" ng-repeat="pipelineDec in pipelineDecList" 
             select="selectTab(pipelineDec)" active="pipelineDec.active")
-            svg
+            svg(width="1000px" height="1000px")
                 g(pipe-graph
                   pipeline-dec="pipelineDec"
-                  id="{{pipelineDec.id}}" 
+                  id="{{pipelineDec.Id}}" 
                   transform="translate(20,20)")
 
     script(src="editor.js")
