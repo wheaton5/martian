@@ -89,7 +89,7 @@ func runEmailNotifier(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) 
 		}
 
 		// Wait a bit.
-		time.Sleep(time.Minute * time.Duration(5))
+		time.Sleep(time.Minute * time.Duration(30))
 	}
 }
 
