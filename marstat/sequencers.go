@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"margo/core"
@@ -36,6 +37,7 @@ type Run struct {
 	Callsrc      interface{} `json:"callsrc"`
 	Preprocess   interface{} `json:"preprocess"`
 	Analysis     interface{} `json:"analysis"`
+	RunInfoXml   *XMLRunInfo `json:"runinfoxml"`
 }
 
 type Sequencer struct {
@@ -60,6 +62,41 @@ func NewMiSeqSequencer(pool *SequencerPool, name string) *Sequencer {
 
 func NewHiSeqSequencer(pool *SequencerPool, name string) *Sequencer {
 	return NewSequencer(pool, name, "^(\\d{6})_(\\w+)_(\\d+)_[AB]([A-Z0-9]{9})$")
+}
+
+type XMLFlowcellLayout struct {
+	XMLName      xml.Name `xml:"FlowcellLayout"`
+	LaneCount    int      `xml:"LaneCount,attr"`
+	SurfaceCount int      `xml:"SurfaceCount,attr"`
+	SwathCount   int      `xml:"SwathCount,attr"`
+	TileCount    int      `xml:"TileCount,attr"`
+}
+
+type XMLRead struct {
+	XMLName       xml.Name `xml:"Read"`
+	Number        int      `xml:"Number,attr"`
+	NumCycles     int      `xml:"NumCycles,attr"`
+	IsIndexedRead string   `xml:"IsIndexedRead,attr"`
+}
+
+type XMLReads struct {
+	XMLName xml.Name  `xml:"Reads"`
+	Reads   []XMLRead `xml:"Read"`
+}
+
+type XMLRun struct {
+	XMLName    xml.Name `xml:"Run"`
+	Id         string   `xml:"Id,attr"`
+	Number     int      `xml:"Number,attr"`
+	Flowcell   string
+	Instrument string
+	Date       string
+	Reads      XMLReads `xml:"Reads"`
+}
+
+type XMLRunInfo struct {
+	XMLName xml.Name `xml:"RunInfo"`
+	Run     XMLRun   `xml:"Run"`
 }
 
 // Parse the folder name into info fields and get various file mod times.
@@ -103,6 +140,18 @@ func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, erro
 		if !touchTime.IsZero() {
 			run.TouchTime = touchTime.Format(core.TIMEFMT)
 		}
+
+		var xmlRunInfo XMLRunInfo
+		file, err := os.Open(path.Join(run.Path, "RunInfo.xml"))
+		if err != nil {
+			goto done
+		}
+		defer file.Close()
+		if err := xml.NewDecoder(file).Decode(&xmlRunInfo); err != nil {
+			goto done
+		}
+		run.RunInfoXml = &xmlRunInfo
+	done:
 		runchan <- run
 	}(&run)
 	return 1, nil
@@ -198,12 +247,14 @@ func (self *SequencerPool) inventorySequencers() {
 				continue
 			}
 			// ...is not already cached...
-			if run, ok := self.folderCache[fname]; ok {
-				// ...and is not yet complete.
-				if run.State == "complete" {
-					continue
+			/*
+				if run, ok := self.folderCache[fname]; ok {
+					// ...and is not yet complete.
+					if run.State == "complete" {
+						continue
+					}
 				}
-			}
+			*/
 
 			// Hit the filesystem for details.
 			num, _ := seqcer.getFolderInfo(fname, runchan)

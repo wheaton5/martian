@@ -4,17 +4,47 @@
 # Angular controllers for mario runner main UI.
 #
 
+actualSeconds = (run) ->
+    if run.completeTime
+        d = moment(run.completeTime).diff(run.startTime)
+    else
+        d = moment(run.touchTime).diff(run.startTime)
+    return moment.duration(d / 1000, 'seconds')
+
+predictedSeconds = (run) ->
+    reads = run.runinfoxml.Run.Reads.Reads
+    total = _.reduce(reads, (sum, read) -> 
+        sum + read.NumCycles
+    , 0)
+    if run.seqcerName.indexOf("hiseq") == 0
+        d = 314 * total + 30960
+    else
+        d = 249 * total + 6060
+    return moment.duration(d, 'seconds')
+    
 app = angular.module('app', ['ui.bootstrap'])
 app.filter('momentFormat',  () -> (time, fmt) -> moment(time).format(fmt)
 ).filter('momentTimeAgo', () -> (time) -> moment(time).fromNow()
 ).filter('flowcellFront', () -> (fcid) -> fcid.substr(0,5)
 ).filter('flowcellBack',  () -> (fcid) -> fcid.substr(5,4)
-).filter('runDuration',   () -> (run) ->
-    if run.completeTime
-        diff = moment(run.completeTime).diff(run.startTime, 'hours')
-    else
-        diff = moment(run.touchTime).diff(run.startTime, 'hours')
-    diff || '<1'
+).filter('cycleInfo',    () -> (selrun) ->
+    reads = selrun.runinfoxml.Run.Reads.Reads
+    readLens = _.map(reads, (read) -> read.NumCycles).join(", ")
+    total = _.reduce(reads, (sum, read) -> 
+        sum + read.NumCycles
+    , 0)
+    "#{readLens} (#{total})"
+).filter('runDuration', () -> (run) ->
+    dact = actualSeconds(run)
+    if not dact? then return '<1' 
+    dpred = predictedSeconds(run)
+    pctg = Math.floor(dact / dpred * 100.0)
+    "#{dact.hours() + 24 * dact.days()}h #{dact.minutes()}m (#{pctg}%)" 
+).filter('runPrediction', () -> (run) ->
+    dact = actualSeconds(run)
+    dpred = predictedSeconds(run)
+    eta = moment(run.startTime).add(dpred).format("ddd MMM D, h:mm a")
+    "#{dpred.hours() + 24 * dpred.days()}h #{dpred.minutes()}m (#{eta})"
 )
 
 app.controller('MarioRunCtrl', ($scope, $http, $interval) ->

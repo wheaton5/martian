@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"margo/core"
@@ -36,6 +37,7 @@ type Run struct {
 	Callsrc      interface{} `json:"callsrc"`
 	Preprocess   interface{} `json:"preprocess"`
 	Analysis     interface{} `json:"analysis"`
+	RunInfoXml   *XMLRunInfo `json:"runinfoxml"`
 }
 
 type Sequencer struct {
@@ -43,6 +45,41 @@ type Sequencer struct {
 	name          string
 	folderPattern *regexp.Regexp
 	path          string
+}
+
+type XMLFlowcellLayout struct {
+	XMLName      xml.Name `xml:"FlowcellLayout"`
+	LaneCount    int      `xml:"LaneCount,attr"`
+	SurfaceCount int      `xml:"SurfaceCount,attr"`
+	SwathCount   int      `xml:"SwathCount,attr"`
+	TileCount    int      `xml:"TileCount,attr"`
+}
+
+type XMLRead struct {
+	XMLName       xml.Name `xml:"Read"`
+	Number        int      `xml:"Number,attr"`
+	NumCycles     int      `xml:"NumCycles,attr"`
+	IsIndexedRead string   `xml:"IsIndexedRead,attr"`
+}
+
+type XMLReads struct {
+	XMLName xml.Name  `xml:"Reads"`
+	Reads   []XMLRead `xml:"Read"`
+}
+
+type XMLRun struct {
+	XMLName    xml.Name `xml:"Run"`
+	Id         string   `xml:"Id,attr"`
+	Number     int      `xml:"Number,attr"`
+	Flowcell   string
+	Instrument string
+	Date       string
+	Reads      XMLReads `xml:"Reads"`
+}
+
+type XMLRunInfo struct {
+	XMLName xml.Name `xml:"RunInfo"`
+	Run     XMLRun   `xml:"Run"`
 }
 
 func NewSequencer(pool *SequencerPool, name string, folderPattern string) *Sequencer {
@@ -103,6 +140,18 @@ func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, erro
 		if !touchTime.IsZero() {
 			run.TouchTime = touchTime.Format(core.TIMEFMT)
 		}
+
+		var xmlRunInfo XMLRunInfo
+		file, err := os.Open(path.Join(run.Path, "RunInfo.xml"))
+		if err != nil {
+			goto done
+		}
+		defer file.Close()
+		if err := xml.NewDecoder(file).Decode(&xmlRunInfo); err != nil {
+			goto done
+		}
+		run.RunInfoXml = &xmlRunInfo
+	done:
 		runchan <- run
 	}(&run)
 	return 1, nil

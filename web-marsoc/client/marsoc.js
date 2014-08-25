@@ -1,5 +1,29 @@
 (function() {
-  var app;
+  var actualSeconds, app, predictedSeconds;
+
+  actualSeconds = function(run) {
+    var d;
+    if (run.completeTime) {
+      d = moment(run.completeTime).diff(run.startTime);
+    } else {
+      d = moment(run.touchTime).diff(run.startTime);
+    }
+    return moment.duration(d / 1000, 'seconds');
+  };
+
+  predictedSeconds = function(run) {
+    var d, reads, total;
+    reads = run.runinfoxml.Run.Reads.Reads;
+    total = _.reduce(reads, function(sum, read) {
+      return sum + read.NumCycles;
+    }, 0);
+    if (run.seqcerName.indexOf("hiseq") === 0) {
+      d = 314 * total + 30960;
+    } else {
+      d = 249 * total + 6060;
+    }
+    return moment.duration(d, 'seconds');
+  };
 
   app = angular.module('app', ['ui.bootstrap']);
 
@@ -19,15 +43,36 @@
     return function(fcid) {
       return fcid.substr(5, 4);
     };
+  }).filter('cycleInfo', function() {
+    return function(selrun) {
+      var readLens, reads, total;
+      reads = selrun.runinfoxml.Run.Reads.Reads;
+      readLens = _.map(reads, function(read) {
+        return read.NumCycles;
+      }).join(", ");
+      total = _.reduce(reads, function(sum, read) {
+        return sum + read.NumCycles;
+      }, 0);
+      return "" + readLens + " (" + total + ")";
+    };
   }).filter('runDuration', function() {
     return function(run) {
-      var diff;
-      if (run.completeTime) {
-        diff = moment(run.completeTime).diff(run.startTime, 'hours');
-      } else {
-        diff = moment(run.touchTime).diff(run.startTime, 'hours');
+      var dact, dpred, pctg;
+      dact = actualSeconds(run);
+      if (dact == null) {
+        return '<1';
       }
-      return diff || '<1';
+      dpred = predictedSeconds(run);
+      pctg = Math.floor(dact / dpred * 100.0);
+      return "" + (dact.hours() + 24 * dact.days()) + "h " + (dact.minutes()) + "m (" + pctg + "%)";
+    };
+  }).filter('runPrediction', function() {
+    return function(run) {
+      var dact, dpred, eta;
+      dact = actualSeconds(run);
+      dpred = predictedSeconds(run);
+      eta = moment(run.startTime).add(dpred).format("ddd MMM D, h:mm a");
+      return "" + (dpred.hours() + 24 * dpred.days()) + "h " + (dpred.minutes()) + "m (" + eta + ")";
     };
   });
 
