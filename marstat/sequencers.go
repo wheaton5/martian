@@ -144,14 +144,21 @@ func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, erro
 		var xmlRunInfo XMLRunInfo
 		file, err := os.Open(path.Join(run.Path, "RunInfo.xml"))
 		if err != nil {
-			goto done
+			runchan <- run
+			return
 		}
 		defer file.Close()
 		if err := xml.NewDecoder(file).Decode(&xmlRunInfo); err != nil {
-			goto done
+			runchan <- run
+			return
 		}
 		run.RunInfoXml = &xmlRunInfo
-	done:
+		cycleTotal := 0
+		for _, read := range xmlRunInfo.Run.Reads.Reads {
+			cycleTotal += read.NumCycles
+		}
+		fmt.Printf("%v,%v,%s,%s,%d\n", startTime, cycleTotal, run.Fcid, run.SeqcerName[0:5], completeTime.Sub(startTime)/1000/1000/1000/60)
+
 		runchan <- run
 	}(&run)
 	return 1, nil
