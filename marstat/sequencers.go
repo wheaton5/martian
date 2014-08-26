@@ -223,15 +223,13 @@ func (self *SequencerPool) indexCache() {
 }
 
 // Start an infinite inventory loop.
-func (self *SequencerPool) goInventoryLoop() {
-	go func() {
-		for {
-			self.inventorySequencers()
+func (self *SequencerPool) inventoryLoop() {
+	for {
+		self.inventorySequencers()
 
-			// Wait for a bit.
-			time.Sleep(time.Minute * time.Duration(5))
-		}
-	}()
+		// Wait for a bit.
+		time.Sleep(time.Minute * time.Duration(5))
+	}
 }
 
 // Inventory all runs concurrently.

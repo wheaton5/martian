@@ -50,7 +50,7 @@ func sendNotificationMail(users []string, mailer *core.Mailer, notices []*Pipest
 	mailer.Sendmail(users, subj, body)
 }
 
-func runEmailNotifier(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) {
+func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) {
 	for {
 		// Copy and clear the notifyQueue from PipestanceManager to avoid races.
 		notifyQueue := pman.CopyAndClearNotifyQueue()
@@ -169,29 +169,26 @@ func main() {
 	core.LogInfo("configs", "CODE_VERSION = %s", rt.CodeVersion)
 
 	//=========================================================================
-	// Setup SequencerPool, add sequencers, load cache, start inventory loop.
+	// Setup SequencerPool, add sequencers, and load seq run cache.
 	//=========================================================================
 	pool := NewSequencerPool(seqrunsPath, cachePath, mailer)
 	for _, seqcerName := range seqcerNames {
 		pool.add(seqcerName)
 	}
 	pool.loadCache()
-	pool.goInventoryLoop()
 
 	//=========================================================================
-	// Setup PipestanceManager, load cache, start runlist loop.
+	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
 	pman := NewPipestanceManager(rt, pipestancesPath, cachePath, stepSecs, mailer)
 	pman.loadCache()
 	pman.inventoryPipestances()
-	pman.goRunListLoop()
 
 	//=========================================================================
 	// Setup Lena and load cache.
 	//=========================================================================
 	lena := NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
 	lena.loadDatabase()
-	lena.goDownloadLoop()
 
 	//=========================================================================
 	// Setup argshim.
@@ -201,12 +198,15 @@ func main() {
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	go runWebServer(uiport, instanceName, rt, pool, pman, lena, argshim)
+	runWebServer(uiport, instanceName, rt, pool, pman, lena, argshim)
 
 	//=========================================================================
-	// Start email notifier.
+	// Start all daemon loops.
 	//=========================================================================
-	go runEmailNotifier(pman, lena, mailer)
+	go pool.inventoryLoop()
+	go pman.runListLoop()
+	go lena.downloadLoop()
+	go emailNotifierLoop(pman, lena, mailer)
 
 	// Let daemons take over.
 	done := make(chan bool)
