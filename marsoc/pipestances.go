@@ -145,13 +145,15 @@ func (self *PipestanceManager) inventoryPipestances() {
 }
 
 // Start an infinite process loop.
-func (self *PipestanceManager) runListLoop() {
-	for {
-		self.processRunList()
+func (self *PipestanceManager) goRunListLoop() {
+	go func() {
+		for {
+			self.processRunList()
 
-		// Wait for a bit.
-		time.Sleep(time.Second * time.Duration(self.stepms))
-	}
+			// Wait for a bit.
+			time.Sleep(time.Second * time.Duration(self.stepms))
+		}
+	}()
 }
 
 func parseFQName(fqname string) (string, string) {

@@ -203,9 +203,9 @@ func main() {
 	//=========================================================================
 	// Start all daemon loops.
 	//=========================================================================
-	go pool.inventoryLoop()
-	go pman.runListLoop()
-	go lena.downloadLoop()
+	go pool.goInventoryLoop()
+	go pman.goRunListLoop()
+	go lena.goDownloadLoop()
 	go emailNotifierLoop(pman, lena, mailer)
 
 	// Let daemons take over.

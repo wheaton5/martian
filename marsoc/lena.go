@@ -191,27 +191,29 @@ func (self *Lena) ingestDatabase(data []byte) error {
 }
 
 // Start an infinite download loop.
-func (self *Lena) downloadLoop() {
-	for {
-		//core.LogInfo("lenaapi", "Starting download...")
-		data, err := self.lenaAPI()
-		if err != nil {
-			core.LogError(err, "lenaapi", "Download error.")
-		} else {
-			//core.LogInfo("lenaapi", "Download complete. %s.", humanize.Bytes(uint64(len(data))))
-			err := self.ingestDatabase(data)
-			if err == nil {
-				// If JSON parsed properly, save it.
-				ioutil.WriteFile(self.dbPath, data, 0600)
-				//core.LogInfo("lenaapi", "Database ingested and saved to %s.", self.dbPath)
+func (self *Lena) goDownloadLoop() {
+	go func() {
+		for {
+			//core.LogInfo("lenaapi", "Starting download...")
+			data, err := self.lenaAPI()
+			if err != nil {
+				core.LogError(err, "lenaapi", "Download error.")
 			} else {
-				core.LogError(err, "lenaapi", "Could not parse JSON from downloaded data.")
+				//core.LogInfo("lenaapi", "Download complete. %s.", humanize.Bytes(uint64(len(data))))
+				err := self.ingestDatabase(data)
+				if err == nil {
+					// If JSON parsed properly, save it.
+					ioutil.WriteFile(self.dbPath, data, 0600)
+					//core.LogInfo("lenaapi", "Database ingested and saved to %s.", self.dbPath)
+				} else {
+					core.LogError(err, "lenaapi", "Could not parse JSON from downloaded data.")
+				}
 			}
-		}
 
-		// Wait for a bit.
-		time.Sleep(time.Minute * time.Duration(10))
-	}
+			// Wait for a bit.
+			time.Sleep(time.Minute * time.Duration(10))
+		}
+	}()
 }
 
 func (self *Lena) lenaAPI() ([]byte, error) {

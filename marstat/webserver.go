@@ -11,6 +11,7 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"html/template"
+	"margo/core"
 	"net/http"
 )
 
@@ -19,7 +20,7 @@ import (
 //=============================================================================
 // Render a page from template.
 func render(tname string, data interface{}) string {
-	tmpl, err := template.New(tname).Delims("[[", "]]").ParseFiles("../web-marsoc/templates/" + tname)
+	tmpl, err := template.New(tname).Delims("[[", "]]").ParseFiles(core.RelPath("../web-marsoc/templates/" + tname))
 	if err != nil {
 		return err.Error()
 	}
@@ -73,8 +74,8 @@ func runWebServer(uiport string, instanceName string, pool *SequencerPool) {
 	m := martini.New()
 	r := martini.NewRouter()
 	m.Use(martini.Recovery())
-	m.Use(martini.Static("../web-marsoc/res", martini.StaticOptions{"", true, "index.html", nil}))
-	m.Use(martini.Static("../web-marsoc/client", martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web-marsoc/res"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web-marsoc/client"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
 	app := &martini.ClassicMartini{m, r}
