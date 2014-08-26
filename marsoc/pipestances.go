@@ -147,6 +147,8 @@ func (self *PipestanceManager) inventoryPipestances() {
 // Start an infinite process loop.
 func (self *PipestanceManager) goRunListLoop() {
 	go func() {
+		// Sleep for 5 seconds to let the webserver fail on port rebind.
+		time.Sleep(time.Second * time.Duration(5))
 		for {
 			self.processRunList()
 

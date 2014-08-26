@@ -51,46 +51,48 @@ func sendNotificationMail(users []string, mailer *core.Mailer, notices []*Pipest
 }
 
 func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) {
-	for {
-		// Copy and clear the notifyQueue from PipestanceManager to avoid races.
-		notifyQueue := pman.CopyAndClearNotifyQueue()
+	go func() {
+		for {
+			// Copy and clear the notifyQueue from PipestanceManager to avoid races.
+			notifyQueue := pman.CopyAndClearNotifyQueue()
 
-		// Build a table of users to lists of notifications.
-		// Also, collect all the notices that don't have a user associated.
-		userTable := map[string][]*PipestanceNotification{}
-		userlessNotices := []*PipestanceNotification{}
-		for _, notice := range notifyQueue {
-			// Get the sample with the psid in the notice.
-			sample, ok := lena.getSampleWithId(notice.Psid)
+			// Build a table of users to lists of notifications.
+			// Also, collect all the notices that don't have a user associated.
+			userTable := map[string][]*PipestanceNotification{}
+			userlessNotices := []*PipestanceNotification{}
+			for _, notice := range notifyQueue {
+				// Get the sample with the psid in the notice.
+				sample, ok := lena.getSampleWithId(notice.Psid)
 
-			// If no sample, add to the userless table.
-			if !ok {
-				userlessNotices = append(userlessNotices, notice)
-				continue
+				// If no sample, add to the userless table.
+				if !ok {
+					userlessNotices = append(userlessNotices, notice)
+					continue
+				}
+
+				// Otherwise, build a list of notices for each user.
+				nlist, ok := userTable[sample.User.Username]
+				if ok {
+					userTable[sample.User.Username] = append(nlist, notice)
+				} else {
+					userTable[sample.User.Username] = []*PipestanceNotification{notice}
+				}
 			}
 
-			// Otherwise, build a list of notices for each user.
-			nlist, ok := userTable[sample.User.Username]
-			if ok {
-				userTable[sample.User.Username] = append(nlist, notice)
-			} else {
-				userTable[sample.User.Username] = []*PipestanceNotification{notice}
+			// Send emails to all users associated with samples.
+			for user, notices := range userTable {
+				sendNotificationMail([]string{user + "@10xtechnologies.com"}, mailer, notices)
 			}
-		}
 
-		// Send emails to all users associated with samples.
-		for user, notices := range userTable {
-			sendNotificationMail([]string{user + "@10xtechnologies.com"}, mailer, notices)
-		}
+			// Send userless notices to the admins.
+			if len(userlessNotices) > 0 {
+				sendNotificationMail([]string{}, mailer, userlessNotices)
+			}
 
-		// Send userless notices to the admins.
-		if len(userlessNotices) > 0 {
-			sendNotificationMail([]string{}, mailer, userlessNotices)
+			// Wait a bit.
+			time.Sleep(time.Minute * time.Duration(30))
 		}
-
-		// Wait a bit.
-		time.Sleep(time.Minute * time.Duration(30))
-	}
+	}()
 }
 
 func main() {
@@ -196,17 +198,17 @@ func main() {
 	argshim := NewArgShim(pipelinesPath)
 
 	//=========================================================================
+	// Start all daemon loops.
+	//=========================================================================
+	pool.goInventoryLoop()
+	pman.goRunListLoop()
+	lena.goDownloadLoop()
+	emailNotifierLoop(pman, lena, mailer)
+
+	//=========================================================================
 	// Start web server.
 	//=========================================================================
 	runWebServer(uiport, instanceName, rt, pool, pman, lena, argshim)
-
-	//=========================================================================
-	// Start all daemon loops.
-	//=========================================================================
-	go pool.goInventoryLoop()
-	go pman.goRunListLoop()
-	go lena.goDownloadLoop()
-	go emailNotifierLoop(pman, lena, mailer)
 
 	// Let daemons take over.
 	done := make(chan bool)

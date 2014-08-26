@@ -223,7 +223,7 @@ func (self *SequencerPool) goInventoryLoop() {
 			self.inventorySequencers()
 
 			// Wait for a bit.
-			time.Sleep(time.Minute * time.Duration(5))
+			time.Sleep(time.Minute * time.Duration(1))
 		}
 	}()
 }
