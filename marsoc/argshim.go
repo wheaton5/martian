@@ -8,7 +8,6 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"margo/core"
 	"os/exec"
 	"path"
