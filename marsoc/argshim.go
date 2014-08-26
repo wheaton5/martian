@@ -6,22 +6,34 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"fmt"
 	"margo/core"
 	"os/exec"
 	"path"
-	"strings"
 )
 
 type ArgShim struct {
 	cmdPath            string
 	samplePipelinesMap map[string]string
+	writer             *bufio.Writer
+	reader             *bufio.Reader
 }
 
 func NewArgShim(pipelinesPath string) *ArgShim {
 	self := &ArgShim{}
 	self.cmdPath = path.Join(pipelinesPath, "argshim", "marsoc.coffee")
+
+	cmd := exec.Command(self.cmdPath)
+	stdin, _ := cmd.StdinPipe()
+	self.writer = bufio.NewWriter(stdin)
+	stdout, _ := cmd.StdoutPipe()
+	self.reader = bufio.NewReader(stdout)
+	cmd.Start()
+
 	self.samplePipelinesMap = self.getSamplePipelinesMap()
+
 	return self
 }
 
@@ -32,15 +44,14 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 	}
 	bytes, _ := json.Marshal(input)
 
-	cmd := exec.Command(self.cmdPath)
-	cmd.Stdin = strings.NewReader(string(bytes))
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		core.LogError(err, "argshim", "Error: %s", out)
-	}
+	self.writer.Write([]byte(string(bytes) + "\n"))
+	self.writer.Flush()
+
+	line, _, _ := self.reader.ReadLine()
+	fmt.Println(string(line))
 
 	var v interface{}
-	json.Unmarshal(out, &v)
+	json.Unmarshal(line, &v)
 	return v
 }
 
