@@ -11,6 +11,7 @@ import (
 	"margo/core"
 	"os/exec"
 	"path"
+	"sync"
 )
 
 type ArgShim struct {
@@ -18,17 +19,19 @@ type ArgShim struct {
 	samplePipelinesMap map[string]string
 	writer             *bufio.Writer
 	reader             *bufio.Reader
+	mutex              *sync.Mutex
 }
 
 func NewArgShim(pipelinesPath string) *ArgShim {
 	self := &ArgShim{}
 	self.cmdPath = path.Join(pipelinesPath, "argshim", "marsoc.coffee")
+	self.mutex = &sync.Mutex{}
 
 	cmd := exec.Command(self.cmdPath)
 	stdin, _ := cmd.StdinPipe()
-	self.writer = bufio.NewWriter(stdin)
+	self.writer = bufio.NewWriterSize(stdin, 1000000)
 	stdout, _ := cmd.StdoutPipe()
-	self.reader = bufio.NewReader(stdout)
+	self.reader = bufio.NewReaderSize(stdout, 1000000)
 	cmd.Start()
 
 	self.samplePipelinesMap = self.getSamplePipelinesMap()
@@ -43,10 +46,12 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 	}
 	bytes, _ := json.Marshal(input)
 
+	self.mutex.Lock()
 	self.writer.Write([]byte(string(bytes) + "\n"))
 	self.writer.Flush()
 
 	line, _, _ := self.reader.ReadLine()
+	self.mutex.Unlock()
 
 	var v interface{}
 	json.Unmarshal(line, &v)
