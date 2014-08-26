@@ -48,7 +48,6 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 	self.writer.Flush()
 
 	line, _, _ := self.reader.ReadLine()
-	fmt.Println(string(line))
 
 	var v interface{}
 	json.Unmarshal(line, &v)
