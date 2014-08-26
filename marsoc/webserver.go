@@ -123,8 +123,6 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 					run.Preprocess = state
 				}
 
-				run.Preprocess = "complete"
-
 				// If PREPROCESS is not complete yet, neither is ANALYTICS.
 				run.Analysis = nil
 				if run.Preprocess != "complete" {
