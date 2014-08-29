@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"margo/core"
 	"os/exec"
-	"path"
 	"sync"
 )
 
@@ -22,9 +21,9 @@ type ArgShim struct {
 	mutex              *sync.Mutex
 }
 
-func NewArgShim(pipelinesPath string) *ArgShim {
+func NewArgShim(argshimPath string) *ArgShim {
 	self := &ArgShim{}
-	self.cmdPath = path.Join(pipelinesPath, "argshim", "marsoc.coffee")
+	self.cmdPath = argshimPath
 	self.mutex = &sync.Mutex{}
 
 	cmd := exec.Command(self.cmdPath)

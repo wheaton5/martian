@@ -119,6 +119,7 @@ func main() {
 		{"MARSOC_SEQUENCERS", "miseq001;hiseq001"},
 		{"MARSOC_SEQRUNS_PATH", "path/to/sequencers"},
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
+		{"MARSOC_ARGSHIM_PATH", "path/to/argshim"},
 		{"MARSOC_PIPELINES_PATH", "path/to/mros"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
 		{"MARSOC_NOTIFY_EMAIL", "email@address.com"},
@@ -147,6 +148,7 @@ func main() {
 	notifyEmail := env["MARSOC_NOTIFY_EMAIL"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
 	pipelinesPath := env["MARSOC_PIPELINES_PATH"]
+	argshimPath := env["MARSOC_ARGSHIM_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQRUNS_PATH"]
 	pipestancesPath := env["MARSOC_PIPESTANCES_PATH"]
@@ -195,7 +197,7 @@ func main() {
 	//=========================================================================
 	// Setup argshim.
 	//=========================================================================
-	argshim := NewArgShim(pipelinesPath)
+	argshim := NewArgShim(argshimPath)
 
 	//=========================================================================
 	// Start all daemon loops.
