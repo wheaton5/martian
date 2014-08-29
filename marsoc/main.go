@@ -119,7 +119,7 @@ func main() {
 		{"MARSOC_SEQUENCERS", "miseq001;hiseq001"},
 		{"MARSOC_SEQRUNS_PATH", "path/to/sequencers"},
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
-		{"MARSOC_PIPELINES_PATH", "path/to/pipelines"},
+		{"MARSOC_PIPELINES_PATH", "path/to/mros"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
 		{"MARSOC_NOTIFY_EMAIL", "email@address.com"},
 	}, true)
