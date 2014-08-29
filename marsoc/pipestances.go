@@ -176,15 +176,15 @@ func (self *PipestanceManager) processRunList() {
 
 			// Metadata refreshes can be asynchronous amongst themselves but
 			// all must be complete and consistent before starting to step.
-			var mwg sync.WaitGroup
+			//var mwg sync.WaitGroup
 			for _, node := range nodes {
-				mwg.Add(1)
-				go func(node *core.Node) {
-					node.RefreshMetadata()
-					mwg.Done()
-				}(node)
+				//mwg.Add(1)
+				//go func(node *core.Node) {
+				node.RefreshMetadata()
+				//mwg.Done()
+				//}(node)
 			}
-			mwg.Wait()
+			//mwg.Wait()
 
 			state := pipestance.GetOverallState()
 			fqname := pipestance.GetFQName()
