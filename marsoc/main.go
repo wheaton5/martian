@@ -147,7 +147,7 @@ func main() {
 	uiport := env["MARSOC_PORT"]
 	notifyEmail := env["MARSOC_NOTIFY_EMAIL"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
-	pipelinesPath := env["MARSOC_PIPELINES_PATH"]
+	mroPath := env["MARSOC_MRO_PATH"]
 	argshimPath := env["MARSOC_ARGSHIM_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQRUNS_PATH"]
@@ -167,7 +167,7 @@ func main() {
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
 	//=========================================================================
-	rt := core.NewRuntime(jobMode, pipelinesPath)
+	rt := core.NewRuntime(jobMode, mroPath)
 	_, err := rt.CompileAll()
 	core.DieIf(err)
 	core.LogInfo("configs", "CODE_VERSION = %s", rt.CodeVersion)
