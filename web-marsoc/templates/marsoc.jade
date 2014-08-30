@@ -8,6 +8,7 @@ html(ng-app="app")
     head
         title [[.InstanceName]] / Sequencer Runs
         link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/marsoc.css")
         link(rel="stylesheet" href="/css/main.css")
         script(src="/js/angular.min.js")
         script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
@@ -25,29 +26,28 @@ html(ng-app="app")
                         a.admin-exit(href="/") exit admin mode
                         | )
         #runs.detail
-            #run-table-wrapper
-                table.table.table-striped#run-table
-                    thead
-                        tr
-                            th.col-date(style="padding-left: 20px") Date
-                            th Sequencer
-                            th.col-flowcell Flowcell ID
-                            th.align-center Sequencing
-                            th.align-center Preprocess
-                            th.align-center Analysis
-                    tbody
-                        tr(ng-repeat="run in runs" ng-click="selectRun(run)" ng-class="{tablehover:run.selected}")
-                            td.col-date(ng-if="run.fdate" style="padding-left: 20px") {{run.fdate | momentFormat:'MMM D'}}
-                            td.col-flowcell {{run.seqcerName}}
-                            td.col-flowcell 
-                                span(style="font-weight: bold") {{run.fcid | flowcellFront}}
-                                span(style="color:#aaa") {{run.fcid | flowcellBack}}
-                            td.align-center
-                                .minibox(ng-class="run.state") {{run.state}}
-                            td.align-center
-                                .minibox(ng-if="run.preprocess" ng-class="run.preprocess") {{run.preprocess}}
-                            td.align-center
-                                .minibox(ng-if="run.analysis" ng-class="run.analysis" style="width:75px") {{run.analysis}}
+            table.table.table-striped#run-table
+                thead
+                    tr
+                        th.col-date(style="padding-left: 20px") Date
+                        th Sequencer
+                        th.col-flowcell Flowcell ID
+                        th.align-center Sequencing
+                        th.align-center Preprocess
+                        th.align-center Analysis
+                tbody
+                    tr(ng-repeat="run in runs" ng-click="selectRun(run)" ng-class="{tablehover:run.selected}")
+                        td.col-date(ng-if="run.fdate" style="padding-left: 20px") {{run.fdate | momentFormat:'MMM D'}}
+                        td.col-flowcell {{run.seqcerName}}
+                        td.col-flowcell 
+                            span(style="font-weight: bold") {{run.fcid | flowcellFront}}
+                            span(style="color:#aaa") {{run.fcid | flowcellBack}}
+                        td.align-center
+                            .minibox(ng-class="run.state") {{run.state}}
+                        td.align-center
+                            .minibox(ng-if="run.preprocess" ng-class="run.preprocess") {{run.preprocess}}
+                        td.align-center
+                            .minibox(ng-if="run.analysis" ng-class="run.analysis" style="width:75px") {{run.analysis}}
 
         #one-run(ng-if="selrun")
             table.table

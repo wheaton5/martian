@@ -1,0 +1,64 @@
+/*
+ * Copyright (c) 2014 10X Technologies, Inc. All rights reserved.
+ *
+ * Styles for MARSOC main page.
+ *
+ */
+#one-run {
+    position: absolute;
+    left: 650px;
+    top: 50px;
+}
+
+.detail {
+    margin-top: 50px;
+    height: 768px;
+    overflow-y: scroll;
+    position: absolute;
+}
+
+#run-table {
+    border-right: 1px solid #ddd;
+}
+#run-table .align-right {
+    text-align: right;
+}
+#run-table .align-center {
+    text-align: center;
+}
+#run-table a {
+    text-decoration: none;
+    color: #666;
+}
+#run-table tr {
+    cursor: pointer;
+}
+#run-table .col-date {
+    width: 90px;
+}
+#run-table .col-age {
+    text-align: right;
+}
+#run-table td.col-run-num {
+    padding-left: 0;
+    width: 60px;
+}
+#run-table td.col-instr {
+    width: 100px;
+    font-family: Menlo, Arial;
+}
+#run-table td.col-flowcell {
+    width: 120px;
+    font-family: Menlo, Arial;
+}
+table#run-table tr.tablehover td {
+  background-color: #007dc3; 
+  color: white; 
+}
+td.param {
+    font-family: Menlo, Arial;
+}
+#selected-pipeline {
+    font-family: Menlo, Arial;
+    overflow: hidden;
+}

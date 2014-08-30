@@ -63,6 +63,7 @@ type GraphPage struct {
 	Pname        string
 	Psid         string
 	Admin        bool
+	AdminStyle   bool
 }
 
 // Forms
@@ -85,6 +86,8 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	m.Use(martini.Recovery())
 	m.Use(martini.Static(core.RelPath("../web-marsoc/res"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.Use(martini.Static(core.RelPath("../web-marsoc/client"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/res"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/client"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
 	app := &martini.ClassicMartini{m, r}
@@ -213,10 +216,24 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 
 	// Page renderers.
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("graph.html", &GraphPage{instanceName, p["container"], p["pname"], p["psid"], false})
+		return render("graph.html", &GraphPage{
+			InstanceName: instanceName,
+			Container:    p["container"],
+			Pname:        p["pname"],
+			Psid:         p["psid"],
+			Admin:        false,
+			AdminStyle:   false,
+		})
 	})
 	app.Get("/admin/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("graph.html", &GraphPage{instanceName, p["container"], p["pname"], p["psid"], true})
+		return render("graph.html", &GraphPage{
+			InstanceName: instanceName,
+			Container:    p["container"],
+			Pname:        p["pname"],
+			Psid:         p["psid"],
+			Admin:        true,
+			AdminStyle:   true,
+		})
 	})
 
 	// Get graph nodes.
