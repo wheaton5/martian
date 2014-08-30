@@ -174,17 +174,11 @@ func (self *PipestanceManager) processRunList() {
 		go func(pipestance *core.Pipestance, wg *sync.WaitGroup, mutex *sync.Mutex) {
 			nodes := pipestance.Node().AllNodes()
 
-			// Metadata refreshes can be asynchronous amongst themselves but
-			// all must be complete and consistent before starting to step.
-			//var mwg sync.WaitGroup
+			// We used to make this concurrent but ended up with too many
+			// goroutines (Pranav's 96-sample run).
 			for _, node := range nodes {
-				//mwg.Add(1)
-				//go func(node *core.Node) {
 				node.RefreshMetadata()
-				//mwg.Done()
-				//}(node)
 			}
-			//mwg.Wait()
 
 			state := pipestance.GetOverallState()
 			fqname := pipestance.GetFQName()

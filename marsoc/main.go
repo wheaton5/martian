@@ -17,6 +17,8 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
+var __VERSION__ string
+
 func sendNotificationMail(users []string, mailer *core.Mailer, notices []*PipestanceNotification) {
 	// Build summary of the notices.
 	results := []string{}
@@ -104,36 +106,37 @@ func main() {
 	// Commandline argument and environment variables.
 	//=========================================================================
 	// Parse commandline.
-	doc :=
-		`Usage: 
+	doc := `MARSOC: Mario SeqOps Command
+
+Usage: 
     marsoc 
-    marsoc -h | --help | --version`
-	opts, _ := docopt.Parse(doc, nil, true, "marsoc", false)
+    marsoc -h | --help | --version
+
+Options:
+    -h --help     Show this message.
+    --version     Show version.`
+	opts, _ := docopt.Parse(doc, nil, true, __VERSION__, false)
 	_ = opts
 
 	// Required Mario environment variables.
 	env := core.EnvRequire([][]string{
 		{"MARSOC_PORT", ">2000"},
 		{"MARSOC_INSTANCE_NAME", "displayed_in_ui"},
-		{"MARSOC_JOBMODE", "local|sge"},
 		{"MARSOC_SEQUENCERS", "miseq001;hiseq001"},
-		{"MARSOC_SEQRUNS_PATH", "path/to/sequencers"},
+		{"MARSOC_SEQUENCERS_PATH", "path/to/sequencers"},
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
 		{"MARSOC_ARGSHIM_PATH", "path/to/argshim"},
-		{"MARSOC_MRO_PATH", "path/to/mros"},
+		{"MARSOC_MROPATH", "path/to/mros"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
 		{"MARSOC_NOTIFY_EMAIL", "email@address.com"},
 	}, true)
 
 	// Required job mode and SGE environment variables.
-	jobMode := env["MARSOC_JOBMODE"]
-	if jobMode == "sge" {
-		core.EnvRequire([][]string{
-			{"SGE_ROOT", "path/to/sge/root"},
-			{"SGE_CLUSTER_NAME", "SGE cluster name"},
-			{"SGE_CELL", "usually 'default'"},
-		}, true)
-	}
+	core.EnvRequire([][]string{
+		{"SGE_ROOT", "path/to/sge/root"},
+		{"SGE_CLUSTER_NAME", "SGE cluster name"},
+		{"SGE_CELL", "usually 'default'"},
+	}, true)
 
 	// Do not log the value of these environment variables.
 	envPrivate := core.EnvRequire([][]string{
@@ -147,10 +150,10 @@ func main() {
 	uiport := env["MARSOC_PORT"]
 	notifyEmail := env["MARSOC_NOTIFY_EMAIL"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
-	mroPath := env["MARSOC_MRO_PATH"]
+	mroPath := env["MARSOC_MROPATH"]
 	argshimPath := env["MARSOC_ARGSHIM_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
-	seqrunsPath := env["MARSOC_SEQRUNS_PATH"]
+	seqrunsPath := env["MARSOC_SEQUENCERS_PATH"]
 	pipestancesPath := env["MARSOC_PIPESTANCES_PATH"]
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
 	lenaAuthToken := envPrivate["LENA_AUTH_TOKEN"]
@@ -167,7 +170,7 @@ func main() {
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
 	//=========================================================================
-	rt := core.NewRuntime(jobMode, mroPath)
+	rt := core.NewRuntime("sge", mroPath)
 	_, err := rt.CompileAll()
 	core.DieIf(err)
 	core.LogInfo("configs", "CODE_VERSION = %s", rt.CodeVersion)
