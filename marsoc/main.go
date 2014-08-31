@@ -17,7 +17,7 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-var __VERSION__ string
+var __VERSION__ string = "<version not embedded>"
 
 func sendNotificationMail(users []string, mailer *core.Mailer, notices []*PipestanceNotification) {
 	// Build summary of the notices.
