@@ -47,13 +47,14 @@ Options:
 Mario Pipeline Runner.
 
 Usage: 
-    mrp <call.mro> <pipestance_name> [--port=<num>] [--noui] [--novdr] [--sge]
+    mrp <call.mro> <pipestance_name> [--port=<num>] [--cores=<num>] [--noui] [--novdr] [--sge]
     mrp -h | --help | --version
 
 Options:
     --port=<num>  Serve UI at http://localhost:<num>
                     Overrides $MROPORT environment variable.
                     Defaults to 3600 if not otherwise specified.
+    --cores=<num> Maximum number of cores to use in local mode.
     --noui        Disable UI.
     --novdr       Disable Volatile Data Removal.
     --sge         Run jobs on Sun Grid Engine instead of locally.
