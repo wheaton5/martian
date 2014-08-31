@@ -9,8 +9,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/go-martini/martini"
-	"github.com/martini-contrib/binding"
 	"html/template"
 	"io/ioutil"
 	"margo/core"
@@ -20,6 +18,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/go-martini/martini"
+	"github.com/martini-contrib/binding"
 )
 
 //=============================================================================
@@ -27,8 +28,8 @@ import (
 //=============================================================================
 
 // Render a page from template.
-func render(tname string, data interface{}) string {
-	tmpl, err := template.New(tname).Delims("[[", "]]").ParseFiles(core.RelPath("../web-marsoc/templates/" + tname))
+func render(dir string, tname string, data interface{}) string {
+	tmpl, err := template.New(tname).Delims("[[", "]]").ParseFiles(core.RelPath(path.Join("..", dir, tname)))
 	if err != nil {
 		return err.Error()
 	}
@@ -97,8 +98,8 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	//=========================================================================
 
 	// Page renderers.
-	app.Get("/", func() string { return render("marsoc.html", &MainPage{instanceName, false}) })
-	app.Get("/admin", func() string { return render("marsoc.html", &MainPage{instanceName, true}) })
+	app.Get("/", func() string { return render("web-marsoc/templates", "marsoc.html", &MainPage{instanceName, false}) })
+	app.Get("/admin", func() string { return render("web-marsoc/templates", "marsoc.html", &MainPage{instanceName, true}) })
 
 	// Get all sequencing runs.
 	app.Get("/api/get-runs", func() string {
@@ -216,7 +217,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 
 	// Page renderers.
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("graph.html", &GraphPage{
+		return render("web/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
 			Container:    p["container"],
 			Pname:        p["pname"],
@@ -226,7 +227,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		})
 	})
 	app.Get("/admin/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("graph.html", &GraphPage{
+		return render("web/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
 			Container:    p["container"],
 			Pname:        p["pname"],
