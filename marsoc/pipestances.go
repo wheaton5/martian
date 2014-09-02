@@ -20,6 +20,7 @@ import (
 )
 
 func makeFQName(pipeline string, psid string) string {
+	// This construction must remain identical to Pipestance::GetFQName.
 	return fmt.Sprintf("ID.%s.%s", psid, pipeline)
 }
 
@@ -298,15 +299,15 @@ func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline 
 	return os.Remove(headPath)
 }
 
-func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, fqname string) {
+func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, nodeFQname string) {
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
 		return
 	}
-	node := pipestance.Node().Find(fqname)
+	node := pipestance.Node().Find(nodeFQname)
 	node.RestartFromFailed()
 	pipestance.Unimmortalize()
-	delete(self.failed, makeFQName(pipeline, psid))
+	delete(self.failed, pipestance.GetFQName())
 	self.writeCache()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[pipestance.GetFQName()] = pipestance
