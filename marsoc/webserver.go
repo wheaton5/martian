@@ -55,8 +55,9 @@ func makeJSON(data interface{}) string {
 //=============================================================================
 // Pages
 type MainPage struct {
-	InstanceName string
-	Admin        bool
+	InstanceName     string
+	Admin            bool
+	PipelinesVersion string
 }
 type GraphPage struct {
 	InstanceName string
@@ -98,8 +99,22 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	//=========================================================================
 
 	// Page renderers.
-	app.Get("/", func() string { return render("web-marsoc/templates", "marsoc.html", &MainPage{instanceName, false}) })
-	app.Get("/admin", func() string { return render("web-marsoc/templates", "marsoc.html", &MainPage{instanceName, true}) })
+	app.Get("/", func() string {
+		return render("web-marsoc/templates", "marsoc.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            false,
+				PipelinesVersion: rt.CodeVersion,
+			})
+	})
+	app.Get("/admin", func() string {
+		return render("web-marsoc/templates", "marsoc.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            true,
+				PipelinesVersion: rt.CodeVersion,
+			})
+	})
 
 	// Get all sequencing runs.
 	app.Get("/api/get-runs", func() string {
