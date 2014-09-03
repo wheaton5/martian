@@ -10,7 +10,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"margo/core"
+	"mario/core"
 	"os"
 	"path"
 	"regexp"

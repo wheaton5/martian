@@ -7,7 +7,7 @@ package main
 
 import (
 	"fmt"
-	"margo/core"
+	"mario/core"
 	"os"
 	"runtime"
 	"strings"

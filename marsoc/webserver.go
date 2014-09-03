@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"margo/core"
+	"mario/core"
 	"net/http"
 	"os"
 	"path"

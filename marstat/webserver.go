@@ -11,7 +11,7 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"html/template"
-	"margo/core"
+	"mario/core"
 	"net/http"
 )
 
