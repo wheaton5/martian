@@ -1,0 +1,18 @@
+[submodule "github.com/codegangsta/inject"]
+	path = github.com/codegangsta/inject
+	url = https://github.com/codegangsta/inject
+[submodule "github.com/docopt/docopt-go"]
+	path = github.com/docopt/docopt-go
+	url = https://github.com/docopt/docopt.go.git
+[submodule "github.com/dustin/go-humanize"]
+	path = github.com/dustin/go-humanize
+	url = https://github.com/dustin/go-humanize
+[submodule "github.com/go-martini/martini"]
+	path = github.com/go-martini/martini
+	url = https://github.com/go-martini/martini
+[submodule "github.com/martini-contrib/binding"]
+	path = github.com/martini-contrib/binding
+	url = https://github.com/martini-contrib/binding
+[submodule "github.com/10XDev/osext"]
+	path = github.com/10XDev/osext
+	url = git@github.com:10XDev/osext.git
