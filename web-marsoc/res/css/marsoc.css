@@ -16,6 +16,9 @@
     overflow-y: scroll;
     position: absolute;
 }
+.code-version {
+    float: right;
+}
 
 #run-table {
     border-right: 1px solid #ddd;

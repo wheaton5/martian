@@ -8,7 +8,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"margo/core"
+	"mario/core"
 	"os/exec"
 	"sync"
 )
