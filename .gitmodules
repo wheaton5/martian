@@ -1,0 +1,3 @@
+[submodule "vendor/osext"]
+	path = vendor/osext
+	url = https://github.com/10XDev/osext
