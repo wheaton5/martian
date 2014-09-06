@@ -45,10 +45,10 @@ type PipestanceManager struct {
 	runTable       map[string]*core.Pipestance
 	containerTable map[string]string
 	notifyQueue    []*PipestanceNotification
-	mailer         *core.Mailer
+	mailer         *Mailer
 }
 
-func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath string, stepms int, mailer *core.Mailer) *PipestanceManager {
+func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath string, stepms int, mailer *Mailer) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.path = pipestancesPath

@@ -3,7 +3,7 @@
 //
 // Mario mailer.
 //
-package core
+package main
 
 import (
 	"bytes"

@@ -173,10 +173,10 @@ type SequencerPool struct {
 	runList     []*Run
 	runTable    map[string]*Run
 	folderCache map[string]*Run
-	mailer      *core.Mailer
+	mailer      *Mailer
 }
 
-func NewSequencerPool(p string, cachePath string, mailer *core.Mailer) *SequencerPool {
+func NewSequencerPool(p string, cachePath string, mailer *Mailer) *SequencerPool {
 	self := &SequencerPool{}
 	self.path = p
 	self.cachePath = path.Join(cachePath, "sequencers")

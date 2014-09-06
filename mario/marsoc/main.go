@@ -19,7 +19,7 @@ import (
 
 var __VERSION__ string = "<version not embedded>"
 
-func sendNotificationMail(users []string, mailer *core.Mailer, notices []*PipestanceNotification) {
+func sendNotificationMail(users []string, mailer *Mailer, notices []*PipestanceNotification) {
 	// Build summary of the notices.
 	results := []string{}
 	worstState := "complete"
@@ -52,7 +52,7 @@ func sendNotificationMail(users []string, mailer *core.Mailer, notices []*Pipest
 	mailer.Sendmail(users, subj, body)
 }
 
-func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *core.Mailer) {
+func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 	go func() {
 		for {
 			// Copy and clear the notifyQueue from PipestanceManager to avoid races.
@@ -165,13 +165,8 @@ Options:
 	//=========================================================================
 	// Setup Mailer.
 	//=========================================================================
-	mailer := core.NewMailer(instanceName, emailHost, emailSender, emailRecipient,
+	mailer := NewMailer(instanceName, emailHost, emailSender, emailRecipient,
 		instanceName != "MARSOC")
-	if err := mailer.Sendmail([]string{"alex@10xtechnologies.com"}, "hi", "ho"); err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(err)
-	}
 
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
