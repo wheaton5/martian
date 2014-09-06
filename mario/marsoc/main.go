@@ -128,8 +128,9 @@ Options:
 		{"MARSOC_ARGSHIM_PATH", "path/to/argshim"},
 		{"MARSOC_MROPATH", "path/to/mros"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
-		{"MARSOC_NOTIFY_EMAIL", "email@address.com"},
-		{"MARSOC_SMTP_HOST", "smtp.server.local"},
+		{"MARSOC_EMAIL_HOST", "smtp.server.local"},
+		{"MARSOC_EMAIL_SENDER", "email@address.com"},
+		{"MARSOC_EMAIL_RECIPIENT", "email@address.com"},
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
@@ -147,7 +148,6 @@ Options:
 
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
-	notifyEmail := env["MARSOC_NOTIFY_EMAIL"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
 	mroPath := env["MARSOC_MROPATH"]
 	argshimPath := env["MARSOC_ARGSHIM_PATH"]
@@ -157,13 +157,21 @@ Options:
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
 	lenaAuthToken := envPrivate["LENA_AUTH_TOKEN"]
 	lenaDownloadUrl := envPrivate["LENA_DOWNLOAD_URL"]
-	smtpHost := envPrivate["MARSOC_SMTP_HOST"]
+	emailHost := env["MARSOC_EMAIL_HOST"]
+	emailSender := env["MARSOC_EMAIL_SENDER"]
+	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	stepSecs := 5
 
 	//=========================================================================
 	// Setup Mailer.
 	//=========================================================================
-	mailer := core.NewMailer(instanceName, smtpHost, notifyEmail, instanceName != "MARSOC")
+	mailer := core.NewMailer(instanceName, emailHost, emailSender, emailRecipient,
+		instanceName != "MARSOC")
+	if err := mailer.Sendmail([]string{"alex@10xtechnologies.com"}, "hi", "ho"); err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(err)
+	}
 
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
