@@ -158,14 +158,13 @@ Options:
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
 	lenaAuthToken := envPrivate["LENA_AUTH_TOKEN"]
 	lenaDownloadUrl := envPrivate["LENA_DOWNLOAD_URL"]
-	smtpUser := envPrivate["MARSOC_SMTP_USER"]
-	smtpPass := envPrivate["MARSOC_SMTP_PASS"]
+	smtpHost := envPrivate["MARSOC_SMTP_HOST"]
 	stepSecs := 5
 
 	//=========================================================================
 	// Setup Mailer.
 	//=========================================================================
-	mailer := core.NewMailer(instanceName, smtpUser, smtpPass, notifyEmail, instanceName != "MARSOC")
+	mailer := core.NewMailer(instanceName, smtpHost, notifyEmail, instanceName != "MARSOC")
 
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
