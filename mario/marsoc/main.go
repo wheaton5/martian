@@ -129,6 +129,8 @@ Options:
 		{"MARSOC_MROPATH", "path/to/mros"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
 		{"MARSOC_NOTIFY_EMAIL", "email@address.com"},
+		{"MARSOC_SMTP_HOST", "smtp.server.local"},
+		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
 	// Required job mode and SGE environment variables.
@@ -140,10 +142,7 @@ Options:
 
 	// Do not log the value of these environment variables.
 	envPrivate := core.EnvRequire([][]string{
-		{"LENA_DOWNLOAD_URL", "url"},
 		{"LENA_AUTH_TOKEN", "token"},
-		{"MARSOC_SMTP_USER", "username"},
-		{"MARSOC_SMTP_PASS", "password"},
 	}, false)
 
 	// Prepare configuration variables.
