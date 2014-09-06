@@ -41,6 +41,7 @@ type PipestanceManager struct {
 	completed      map[string]bool
 	failed         map[string]bool
 	runList        []*core.Pipestance
+	runListMutex   *sync.Mutex
 	runTable       map[string]*core.Pipestance
 	containerTable map[string]string
 	notifyQueue    []*PipestanceNotification
@@ -57,6 +58,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath st
 	self.completed = map[string]bool{}
 	self.failed = map[string]bool{}
 	self.runList = []*core.Pipestance{}
+	self.runListMutex = &sync.Mutex{}
 	self.runTable = map[string]*core.Pipestance{}
 	self.containerTable = map[string]string{}
 	self.notifyQueue = []*PipestanceNotification{}
@@ -138,8 +140,10 @@ func (self *PipestanceManager) inventoryPipestances() {
 					continue
 				}
 				core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
+				self.runListMutex.Lock()
 				self.runList = append(self.runList, pipestance)
 				self.runTable[fqname] = pipestance
+				self.runListMutex.Unlock()
 			}
 		}
 	}
@@ -167,12 +171,13 @@ func parseFQName(fqname string) (string, string) {
 func (self *PipestanceManager) processRunList() {
 	continueToRunList := []*core.Pipestance{}
 
-	mutex := sync.Mutex{}
 	var wg sync.WaitGroup
+	self.runListMutex.Lock()
 	wg.Add(len(self.runList))
+	self.runListMutex.Unlock()
 
 	for _, pipestance := range self.runList {
-		go func(pipestance *core.Pipestance, wg *sync.WaitGroup, mutex *sync.Mutex) {
+		go func(pipestance *core.Pipestance, wg *sync.WaitGroup) {
 			nodes := pipestance.Node().AllNodes()
 
 			// We used to make this concurrent but ended up with too many
@@ -187,11 +192,11 @@ func (self *PipestanceManager) processRunList() {
 				// If pipestance is done, remove from runTable, mark it in the
 				// cache as completed, and flush the cache.
 				core.LogInfo("pipeman", "Complete and removing from runList: %s.", fqname)
-				mutex.Lock()
+				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
 				self.completed[fqname] = true
 				self.writeCache()
-				mutex.Unlock()
+				self.runListMutex.Unlock()
 
 				// Immortalization.
 				pipestance.Immortalize()
@@ -212,7 +217,7 @@ func (self *PipestanceManager) processRunList() {
 					)
 				} else {
 					// For ANALYTICS, queue up notification for batch email of users.
-					mutex.Lock()
+					self.runListMutex.Lock()
 					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
 						State:     "complete",
 						Container: self.containerTable[fqname],
@@ -220,17 +225,17 @@ func (self *PipestanceManager) processRunList() {
 						Psid:      psid,
 						Vdrsize:   killReport.Size,
 					})
-					mutex.Unlock()
+					self.runListMutex.Unlock()
 				}
 			} else if state == "failed" {
-				// If pipestance is failed, remove from runTable, mart it in the
+				// If pipestance is failed, remove from runTable, mark it in the
 				// cache as failed, and flush the cache.
 				core.LogInfo("pipeman", "Failed and removing from runList: %s.", fqname)
-				mutex.Lock()
+				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
 				self.failed[fqname] = true
 				self.writeCache()
-				mutex.Unlock()
+				self.runListMutex.Unlock()
 
 				// Immortalization.
 				pipestance.Immortalize()
@@ -246,7 +251,7 @@ func (self *PipestanceManager) processRunList() {
 					)
 				} else {
 					// For ANALYTICS, queue up notification for batch email of users.
-					mutex.Lock()
+					self.runListMutex.Lock()
 					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
 						State:     "failed",
 						Container: self.containerTable[fqname],
@@ -254,24 +259,26 @@ func (self *PipestanceManager) processRunList() {
 						Psid:      psid,
 						Vdrsize:   0,
 					})
-					mutex.Unlock()
+					self.runListMutex.Unlock()
 				}
 			} else {
 				// If it is not done, step and keep it running.
-				mutex.Lock()
+				self.runListMutex.Lock()
 				continueToRunList = append(continueToRunList, pipestance)
-				mutex.Unlock()
+				self.runListMutex.Unlock()
 				for _, node := range nodes {
 					node.Step()
 				}
 			}
 			wg.Done()
-		}(pipestance, &wg, &mutex)
+		}(pipestance, &wg)
 	}
 	wg.Wait()
 
 	// Remove completed and failed pipestances by omission.
+	self.runListMutex.Lock()
 	self.runList = continueToRunList
+	self.runListMutex.Unlock()
 }
 
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
@@ -282,8 +289,10 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	}
 	fqname := pipestance.GetFQName()
 	core.LogInfo("pipeman", "Instantiating and pushing to runList: %s.", fqname)
+	self.runListMutex.Lock()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
+	self.runListMutex.Unlock()
 	self.containerTable[fqname] = container
 	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
 	os.Remove(headPath)
@@ -309,8 +318,10 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	pipestance.Unimmortalize()
 	delete(self.failed, pipestance.GetFQName())
 	self.writeCache()
+	self.runListMutex.Lock()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[pipestance.GetFQName()] = pipestance
+	self.runListMutex.Unlock()
 }
 
 func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (string, bool) {
