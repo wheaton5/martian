@@ -156,7 +156,7 @@ Options:
 	pipestancesPath := env["MARSOC_PIPESTANCES_PATH"]
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
 	lenaAuthToken := envPrivate["LENA_AUTH_TOKEN"]
-	lenaDownloadUrl := envPrivate["LENA_DOWNLOAD_URL"]
+	lenaDownloadUrl := env["LENA_DOWNLOAD_URL"]
 	emailHost := env["MARSOC_EMAIL_HOST"]
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
