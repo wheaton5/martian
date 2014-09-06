@@ -99,10 +99,10 @@ type Lena struct {
 	fcidTable   map[string][]*Sample
 	spidTable   map[string]*Sample
 	sbagTable   map[string]interface{}
-	mailer      *core.Mailer
+	mailer      *Mailer
 }
 
-func NewLena(downloadUrl string, authToken string, cachePath string, mailer *core.Mailer) *Lena {
+func NewLena(downloadUrl string, authToken string, cachePath string, mailer *Mailer) *Lena {
 	self := &Lena{}
 	self.downloadUrl = downloadUrl
 	self.authToken = authToken
