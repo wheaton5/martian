@@ -253,9 +253,26 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	})
 
 	// Get graph nodes.
-	app.Get("/api/get-nodes/:container/:pname/:psid", func(p martini.Params) string {
-		ser, _ := pman.GetPipestanceSerialization(p["container"], p["pname"], p["psid"])
-		return makeJSON(ser)
+	app.Get("/api/get-state/:container/:pname/:psid", func(p martini.Params) string {
+		container := p["container"]
+		pname := p["pname"]
+		psid := p["psid"]
+		state := map[string]interface{}{}
+		state["error"] = nil
+		if pipestance, ok := pman.GetPipestance(container, pname, psid); ok {
+			if pipestance.GetOverallState() == "failed" {
+				fqname, errpath, summary, log := pipestance.GetFatalError()
+				state["error"] = map[string]string{
+					"fqname":  fqname,
+					"path":    errpath,
+					"summary": summary,
+					"log":     log,
+				}
+			}
+		}
+		ser, _ := pman.GetPipestanceSerialization(container, pname, psid)
+		state["nodes"] = ser
+		return makeJSON(state)
 	})
 
 	// Get metadata file contents.
