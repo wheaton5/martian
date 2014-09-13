@@ -65,13 +65,17 @@ Usage:
     mrp -h | --help | --version
 
 Options:
-    --port=<num>  Serve UI at http://localhost:<num>
-                    Overrides $MROPORT environment variable.
-                    Defaults to 3600 if not otherwise specified.
-    --cores=<num> Maximum number of cores to use in local mode.
-    --noui        Disable UI.
-    --novdr       Disable Volatile Data Removal.
-    --sge         Run jobs on Sun Grid Engine instead of locally.
-    -h --help     Show this message.
-    --version     Show version.
+    --port=<num>     Serve UI at http://localhost:<num>
+                       Overrides $MROPORT environment variable.
+                       Defaults to 3600 if not otherwise specified.
+    --noexit         Keep UI running after pipestance completes or fails.
+    --noui           Disable UI.
+    --novdr          Disable Volatile Data Removal.
+    --profile        Enable stage performance profiling.
+    --maxcores=<num> Set max cores the pipeline may request at one time.
+    --maxmem=<num>   Set max GB the pipeline may request at one time.
+    --sge            Run jobs on Sun Grid Engine instead of locally.
+                     (--maxcores and --maxmem will be ignored)
+    -h --help        Show this message.
+    --version        Show version.
 ```
