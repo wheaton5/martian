@@ -60,7 +60,7 @@ func (self *Mailer) Sendmail(to []string, subject string, body string) error {
 
 	// If debug mode, put name of instance in subject line.
 	if self.debug {
-		subject = fmt.Sprintf("[DEBUG - %s] %s", strings.ToUpper(self.InstanceName), subject)
+		subject = fmt.Sprintf("DEBUG - %s %s", strings.ToUpper(self.InstanceName), subject)
 	}
 
 	// Only add individual recipients if not in debug mode.

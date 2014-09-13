@@ -169,12 +169,15 @@ func parseFQName(fqname string) (string, string) {
 }
 
 func (self *PipestanceManager) processRunList() {
+	// Lock the runList while we launch concurrent goroutines
+	// to step its contents.
+	self.runListMutex.Lock()
+
 	continueToRunList := []*core.Pipestance{}
 
+	// Concurrently step all pipestances in the runlist.
 	var wg sync.WaitGroup
-	self.runListMutex.Lock()
 	wg.Add(len(self.runList))
-	self.runListMutex.Unlock()
 
 	for _, pipestance := range self.runList {
 		go func(pipestance *core.Pipestance, wg *sync.WaitGroup) {
@@ -273,6 +276,9 @@ func (self *PipestanceManager) processRunList() {
 			wg.Done()
 		}(pipestance, &wg)
 	}
+	self.runListMutex.Unlock()
+
+	// Wait for this round of processing to complete.
 	wg.Wait()
 
 	// Remove completed and failed pipestances by omission.
@@ -288,15 +294,16 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		return err
 	}
 	fqname := pipestance.GetFQName()
+	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
+	os.Remove(headPath)
+	os.Symlink(self.rt.CodeVersion, headPath)
+
 	core.LogInfo("pipeman", "Instantiating and pushing to runList: %s.", fqname)
 	self.runListMutex.Lock()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
 	self.runListMutex.Unlock()
 	self.containerTable[fqname] = container
-	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
-	os.Remove(headPath)
-	os.Symlink(self.rt.CodeVersion, headPath)
 
 	return nil
 }

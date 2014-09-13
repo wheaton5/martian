@@ -16,3 +16,6 @@
 [submodule "github.com/10XDev/osext"]
 	path = github.com/10XDev/osext
 	url = git@github.com:10XDev/osext.git
+[submodule "github.com/cloudfoundry/gosigar"]
+	path = github.com/cloudfoundry/gosigar
+	url = https://github.com/cloudfoundry/gosigar
