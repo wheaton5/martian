@@ -208,7 +208,8 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 				sample.Pname = pname
 				sample.Psstate, _ = pman.GetPipestanceState(fcid, pname, strconv.Itoa(sample.Id))
 				if preprocPipestance != nil {
-					sample.Callsrc = argshim.buildCallSourceForSample(rt, preprocPipestance, run, sample)
+					sample.Callsrc = argshim.buildCallSourceForSample(rt, preprocPipestance,
+						run, lena.getSampleBagWithId(strconv.Itoa(sample.Id)))
 				}
 				wg.Done()
 			}(&wg, sample)
@@ -332,7 +333,8 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		for _, sample := range samples {
 			// Use argshim to pick pipeline and build MRO call source.
 			pname := argshim.getPipelineForSample(sample)
-			src := argshim.buildCallSourceForSample(rt, preprocPipestance, run, lena.getSampleBagWithId(strconv.Itoa(sample.Id)))
+			src := argshim.buildCallSourceForSample(rt, preprocPipestance, run,
+				lena.getSampleBagWithId(strconv.Itoa(sample.Id)))
 
 			// Invoke the pipestance.
 			if err := pman.Invoke(fcid, pname, strconv.Itoa(sample.Id), src); err != nil {
