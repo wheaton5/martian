@@ -38,6 +38,7 @@ Options:
     --version     Show version.`
 	opts, _ := docopt.Parse(doc, nil, true, __VERSION__, false)
 	core.LogInfo("*", "Mario MRO Editor")
+	core.LogInfo("version", __VERSION__)
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	// Compute UI port.
