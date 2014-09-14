@@ -57,6 +57,7 @@ func makeJSON(data interface{}) string {
 type MainPage struct {
 	InstanceName     string
 	Admin            bool
+	MarsocVersion    string
 	PipelinesVersion string
 }
 type GraphPage struct {
@@ -77,8 +78,9 @@ type MetadataForm struct {
 	Name string
 }
 
-func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *SequencerPool,
-	pman *PipestanceManager, lena *Lena, argshim *ArgShim) {
+func runWebServer(uiport string, instanceName string, marsocVersion string,
+	rt *core.Runtime, pool *SequencerPool, pman *PipestanceManager,
+	lena *Lena, argshim *ArgShim) {
 
 	//=========================================================================
 	// Configure server.
@@ -104,6 +106,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
+				MarsocVersion:    marsocVersion,
 				PipelinesVersion: rt.CodeVersion,
 			})
 	})
@@ -112,6 +115,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
+				MarsocVersion:    marsocVersion,
 				PipelinesVersion: rt.CodeVersion,
 			})
 	})

@@ -214,7 +214,7 @@ Options:
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	runWebServer(uiport, instanceName, rt, pool, pman, lena, argshim)
+	runWebServer(uiport, instanceName, __VERSION__, rt, pool, pman, lena, argshim)
 
 	// Let daemons take over.
 	done := make(chan bool)
