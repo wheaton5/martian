@@ -60,7 +60,7 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 
 			// Build a table of users to lists of notifications.
 			// Also, collect all the notices that don't have a user associated.
-			userTable := map[string][]*PipestanceNotification{}
+			emailTable := map[string][]*PipestanceNotification{}
 			userlessNotices := []*PipestanceNotification{}
 			for _, notice := range notifyQueue {
 				// Get the sample with the psid in the notice.
@@ -73,17 +73,17 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 				}
 
 				// Otherwise, build a list of notices for each user.
-				nlist, ok := userTable[sample.User.Username]
+				nlist, ok := emailTable[sample.User.Email]
 				if ok {
-					userTable[sample.User.Username] = append(nlist, notice)
+					emailTable[sample.User.Email] = append(nlist, notice)
 				} else {
-					userTable[sample.User.Username] = []*PipestanceNotification{notice}
+					emailTable[sample.User.Email] = []*PipestanceNotification{notice}
 				}
 			}
 
 			// Send emails to all users associated with samples.
-			for user, notices := range userTable {
-				sendNotificationMail([]string{user + "@10xtechnologies.com"}, mailer, notices)
+			for email, notices := range emailTable {
+				sendNotificationMail([]string{email}, mailer, notices)
 			}
 
 			// Send userless notices to the admins.
