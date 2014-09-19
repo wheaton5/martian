@@ -71,6 +71,11 @@ type User struct {
 	Email    string `json:"email"`
 }
 
+type CellLine struct {
+	Name string `json:"name"`
+	Sex  string `json:"sex"`
+}
+
 type Sample struct {
 	Id                       int            `json:"id"`
 	Description              string         `json:"description"`
@@ -87,7 +92,7 @@ type Sample struct {
 	Template_input_mass      float32        `json:"template_input_mass"`
 	User                     *User          `json:"user"`
 	Lane                     interface{}    `json:"lane"`
-	Cell_line                string         `json:"cell_line"`
+	Cell_line                *CellLine      `json:"cell_line"`
 	Pname                    string         `json:"pname"`
 	Psstate                  string         `json:"psstate"`
 	Callsrc                  string         `json:"callsrc"`
