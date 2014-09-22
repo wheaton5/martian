@@ -180,7 +180,6 @@ type SequencerPool struct {
 	runList     []*Run
 	runTable    map[string]*Run
 	folderCache map[string]*Run
-	mailer      *core.Mailer
 }
 
 func NewSequencerPool(p string, cachePath string) *SequencerPool {
