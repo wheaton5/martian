@@ -15,8 +15,6 @@ import (
 	"strings"
 )
 
-var __VERSION__ string = "<version not embedded>"
-
 func main() {
 	runtime.GOMAXPROCS(2)
 
@@ -36,9 +34,9 @@ Options:
                     Defaults to 3601 if not otherwise specified.
     -h --help     Show this message.
     --version     Show version.`
-	opts, _ := docopt.Parse(doc, nil, true, __VERSION__, false)
+	opts, _ := docopt.Parse(doc, nil, true, core.GetVersion(), false)
 	core.LogInfo("*", "Mario MRO Editor")
-	core.LogInfo("version", __VERSION__)
+	core.LogInfo("version", core.GetVersion())
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	// Compute UI port.
@@ -62,7 +60,7 @@ Options:
 	//=========================================================================
 	// Configure Mario runtime.
 	//=========================================================================
-	rt := core.NewRuntime("local", mroPath, __VERSION__, false)
+	rt := core.NewRuntime("local", mroPath, core.GetVersion(), false)
 
 	//=========================================================================
 	// Start web server.

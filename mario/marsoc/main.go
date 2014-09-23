@@ -17,8 +17,6 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-var __VERSION__ string = "<version not embedded>"
-
 func sendNotificationMail(users []string, mailer *Mailer, notices []*PipestanceNotification) {
 	// Build summary of the notices.
 	results := []string{}
@@ -115,8 +113,11 @@ Usage:
 Options:
     -h --help     Show this message.
     --version     Show version.`
-	opts, _ := docopt.Parse(doc, nil, true, __VERSION__, false)
+	opts, _ := docopt.Parse(doc, nil, true, core.GetVersion(), false)
 	_ = opts
+	core.LogInfo("*", "MARSOC")
+	core.LogInfo("version", core.GetVersion())
+	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	// Required Mario environment variables.
 	env := core.EnvRequire([][]string{
@@ -171,7 +172,7 @@ Options:
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
 	//=========================================================================
-	rt := core.NewRuntime("sge", mroPath, __VERSION__, true)
+	rt := core.NewRuntime("sge", mroPath, core.GetVersion(), true)
 	_, err := rt.CompileAll()
 	core.DieIf(err)
 	core.LogInfo("configs", "CODE_VERSION = %s", rt.CodeVersion)
@@ -214,7 +215,7 @@ Options:
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	runWebServer(uiport, instanceName, __VERSION__, rt, pool, pman, lena, argshim)
+	runWebServer(uiport, instanceName, core.GetVersion(), rt, pool, pman, lena, argshim)
 
 	// Let daemons take over.
 	done := make(chan bool)

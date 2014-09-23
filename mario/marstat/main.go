@@ -27,7 +27,7 @@ func main() {
 		`Usage: 
     marsoc 
     marsoc -h | --help | --version`
-	opts, _ := docopt.Parse(doc, nil, true, "marsoc", false)
+	opts, _ := docopt.Parse(doc, nil, true, core.GetVersion(), false)
 	_ = opts
 
 	// Required Mario environment variables.

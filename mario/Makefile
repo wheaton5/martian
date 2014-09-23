@@ -6,7 +6,7 @@
 
 EXECUTABLES = marsoc marstat mrc mre mrf mrp mrs
 
-VERSION = $(shell git describe --tags --always --dirty)
+MODVER = $(shell git describe --tags --always --dirty)
 
 .PHONY: all grammar $(EXECUTABLES)
 
@@ -18,4 +18,4 @@ grammar:
 
 $(EXECUTABLES):
 	@echo "Building $@."
-	go install -ldflags "-X main.__VERSION__ $(VERSION)" mario/$@
+	go install -ldflags "-X mario/core.__MODVER__ $(MODVER)" mario/$@
