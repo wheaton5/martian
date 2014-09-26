@@ -131,19 +131,19 @@ func runWebServer(uiport string, instanceName string, marsocVersion string,
 			go func(wg *sync.WaitGroup, run *Run) {
 				defer wg.Done()
 
-				// Get the state of the PREPROCESS pipeline for this run.
+				// Get the state of the BCL_PROCESSOR_PD pipeline for this run.
 				run.Preprocess = nil
-				if state, ok := pman.GetPipestanceState(run.Fcid, "PREPROCESS", run.Fcid); ok {
+				if state, ok := pman.GetPipestanceState(run.Fcid, "BCL_PROCESSOR_PD", run.Fcid); ok {
 					run.Preprocess = state
 				}
 
-				// If PREPROCESS is not complete yet, neither is ANALYTICS.
+				// If BCL_PROCESSOR_PD is not complete yet, neither is ANALYZER_PD.
 				run.Analysis = nil
 				if run.Preprocess != "complete" {
 					return
 				}
 
-				// Get the state of ANALYTICS for each sample in this run.
+				// Get the state of ANALYZER_PD for each sample in this run.
 				samples, err := lena.getSamplesForFlowcell(run.Fcid)
 				if err != nil {
 					core.LogError(err, "webserv", "Error getting samples for flowcell id %s.", run.Fcid)
@@ -153,7 +153,7 @@ func runWebServer(uiport string, instanceName string, marsocVersion string,
 					return
 				}
 
-				// Gather the states of ANALYTICS for each sample.
+				// Gather the states of ANALYZER_PD for each sample.
 				states := []string{}
 				run.Analysis = "running"
 				for _, sample := range samples {
@@ -202,7 +202,7 @@ func runWebServer(uiport string, instanceName string, marsocVersion string,
 			return makeJSON(err.Error())
 		}
 		run := pool.find(fcid)
-		preprocPipestance, _ := pman.GetPipestance(fcid, "PREPROCESS", fcid)
+		preprocPipestance, _ := pman.GetPipestance(fcid, "BCL_PROCESSOR_PD", fcid)
 
 		var wg sync.WaitGroup
 		wg.Add(len(samples))
@@ -222,7 +222,7 @@ func runWebServer(uiport string, instanceName string, marsocVersion string,
 		return makeJSON(samples)
 	})
 
-	// Build PREPROCESS call source.
+	// Build BCL_PROCESSOR_PD call source.
 	app.Post("/api/get-callsrc", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
 		run, ok := pool.runTable[body.Fcid]
 		if ok {
@@ -302,28 +302,28 @@ func runWebServer(uiport string, instanceName string, marsocVersion string,
 	// Pipestance invocation API.
 	//=========================================================================
 
-	// Invoke PREPROCESS.
+	// Invoke BCL_PROCESSOR_PD.
 	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		fcid := body.Fcid
 		run := pool.find(fcid)
 
 		// Use argshim to build MRO call source and invoke.
-		if err := pman.Invoke(fcid, "PREPROCESS", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
+		if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
 			return err.Error()
 		}
 		return ""
 	})
 
-	// Invoke ANALYTICS.
+	// Invoke ANALYZER_PD.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		// Get the seq run with this fcid.
 		fcid := body.Fcid
 		run := pool.find(fcid)
 
-		// Get the PREPROCESS pipestance for this fcid/seq run.
-		preprocPipestance, ok := pman.GetPipestance(fcid, "PREPROCESS", fcid)
+		// Get the BCL_PROCESSOR_PD pipestance for this fcid/seq run.
+		preprocPipestance, ok := pman.GetPipestance(fcid, "BCL_PROCESSOR_PD", fcid)
 		if !ok {
-			return fmt.Sprintf("Could not get PREPROCESS pipestance %s.", fcid)
+			return fmt.Sprintf("Could not get BCL_PROCESSOR_PD pipestance %s.", fcid)
 		}
 
 		// Get all the samples for this fcid.

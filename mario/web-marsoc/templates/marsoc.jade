@@ -38,8 +38,8 @@ html(ng-app="app")
                         th Sequencer
                         th.col-flowcell Flowcell ID
                         th.align-center Sequencing
-                        th.align-center Preprocess
-                        th.align-center Analysis
+                        th.align-center BCL Processor
+                        th.align-center Analyzer
                 tbody
                     tr(ng-repeat="run in runs" ng-click="selectRun(run)" ng-class="{tablehover:run.selected}")
                         td.col-date(ng-if="run.fdate" style="padding-left: 20px") {{run.fdate | momentFormat:'MMM D'}}
@@ -88,7 +88,7 @@ html(ng-app="app")
                         td(ng-if="selrun.preprocess")
                             div(style="margin-top: 5px; margin-bottom: 15px")
                                 .minibox(ng-class="selrun.preprocess" style="text-align:center; width: 85px") 
-                                    a(href="{{urlprefix}}/pipestance/{{selrun.fcid}}/PREPROCESS/{{selrun.fcid}}") {{selrun.fcid}}<br>{{selrun.preprocess}}
+                                    a(href="{{urlprefix}}/pipestance/{{selrun.fcid}}/BCL_PROCESSOR_PD/{{selrun.fcid}}") {{selrun.fcid}}<br>{{selrun.preprocess}}
 
                         td(ng-if="selrun.state == 'complete' && !selrun.preprocess && admin && showbutton") 
                             pre {{selrun.callsrc}}

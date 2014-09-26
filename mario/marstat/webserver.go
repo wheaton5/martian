@@ -98,7 +98,7 @@ func runWebServer(uiport string, instanceName string, pool *SequencerPool) {
 		return ""
 	})
 
-	// Build PREPROCESS call source.
+	// Build BCL_PROCESSOR_PD call source.
 	app.Post("/api/get-callsrc", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
 		return ""
 	})
