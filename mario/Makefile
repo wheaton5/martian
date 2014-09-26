@@ -17,5 +17,11 @@ grammar:
 	go tool yacc -p "mm" -o core/grammar.go core/grammar.y && rm y.output
 
 $(EXECUTABLES):
+	rm -f $(GOPATH)/adapters
+	rm -f $(GOPATH)/web
+	rm -f $(GOPATH)/web-marsoc
+	ln -s src/mario/adapters $(GOPATH)/adapters
+	ln -s src/mario/web $(GOPATH)/web
+	ln -s src/mario/web-marsoc $(GOPATH)/web-marsoc
 	@echo "Building $@."
 	go install -ldflags "-X mario/core.__VERSION__ $(VERSION)" mario/$@
