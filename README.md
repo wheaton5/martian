@@ -19,13 +19,15 @@ Mario Executables Usage
 Mario Compiler.
 
 Usage:
-    mrc <file.mro>... | --all
+    mrc <file.mro>... [--checksrcpath]
+    mrc --all [--checksrcpath]
     mrc -h | --help | --version
 
 Options:
-    --all         Compile all files in $MROPATH.
-    -h --help     Show this message.
-    --version     Show version.`
+    --all           Compile all files in $MROPATH.
+    --checksrcpath  Check that stage source paths exist.
+    -h --help       Show this message.
+    --version       Show version.
 ```
 
 ```
