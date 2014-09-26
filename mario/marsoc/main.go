@@ -173,7 +173,7 @@ Options:
 	// Setup Mario Runtime with pipelines path.
 	//=========================================================================
 	rt := core.NewRuntime("sge", mroPath, core.GetVersion(), true)
-	_, err := rt.CompileAll()
+	_, err := rt.CompileAll(true)
 	core.DieIf(err)
 	core.LogInfo("configs", "CODE_VERSION = %s", rt.CodeVersion)
 

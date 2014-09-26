@@ -106,7 +106,7 @@ func runWebServer(uiport string, rt *core.Runtime) {
 
 	// Compile file.
 	app.Post("/build", binding.Bind(LoadForm{}), func(body LoadForm, p martini.Params) string {
-		global, err := rt.Compile(body.Fname)
+		global, err := rt.Compile(body.Fname, false)
 		if err != nil {
 			return err.Error()
 		}
