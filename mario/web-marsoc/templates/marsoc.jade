@@ -38,8 +38,8 @@ html(ng-app="app")
                         th Sequencer
                         th.col-flowcell Flowcell ID
                         th.align-center Sequencing
-                        th.align-center BCL Processor
-                        th.align-center Analyzer
+                        th.align-center Demultiplex 
+                        th.align-center Analysis
                 tbody
                     tr(ng-repeat="run in runs" ng-click="selectRun(run)" ng-class="{tablehover:run.selected}")
                         td.col-date(ng-if="run.fdate" style="padding-left: 20px") {{run.fdate | momentFormat:'MMM D'}}
