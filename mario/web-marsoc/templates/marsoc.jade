@@ -104,7 +104,7 @@ html(ng-app="app")
                             div(ng-if="!samples") Loading from Lena...
                             div(ng-if="samples")
                                 button.btn.btn-default(ng-if="!samples[sampi].psstate && admin && showbutton" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke All
-                                button.btn.btn-default(ng-if="allDone() && admin && showbutton" ng-click="archiveSamples()" style="margin-bottom: 15px; display:none") Archive All
+                                button.btn.btn-default(ng-if="allDone() && admin && showbutton" ng-click="archiveSamples()" style="margin-bottom: 15px") Archive All
                                 div(style="margin-top: 5px")
                                     .minibox(ng-repeat="sample in samples" ng-class="sample.psstate" ng-mouseover="sampi=$index"
                                         style="text-align:center; margin-right:2px; margin-bottom: 2px; width: 85px; ") 
