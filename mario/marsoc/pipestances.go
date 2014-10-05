@@ -54,7 +54,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath st
 	self.path = pipestancesPath
 	self.cachePath = path.Join(cachePath, "pipestances")
 	self.stepms = stepms
-	self.pipelines = rt.GetPipelineNames()
+	self.pipelines = rt.PipelineNames
 	self.completed = map[string]bool{}
 	self.failed = map[string]bool{}
 	self.runList = []*core.Pipestance{}
@@ -133,7 +133,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 				if self.completed[fqname] || self.failed[fqname] {
 					continue
 				}
-				pipestance, err := self.rt.Reattach(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
+				pipestance, err := self.rt.ReattachToPipestance(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
 				if err != nil {
 					core.LogError(err, "pipeman", "%s was previously cached but no longer exists.", fqname)
 					self.writeCache()
@@ -289,7 +289,7 @@ func (self *PipestanceManager) processRunList() {
 
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
 	psPath := path.Join(self.path, container, pipeline, psid, self.rt.CodeVersion)
-	pipestance, err := self.rt.InvokeWithSource(src, "./argshim", psid, psPath)
+	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
 	if err != nil {
 		return err
 	}
@@ -375,7 +375,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	}
 
 	// Reattach to the pipestance.
-	pipestance, err := self.rt.Reattach(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
+	pipestance, err := self.rt.ReattachToPipestance(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
 	if err != nil {
 		return nil, false
 	}
