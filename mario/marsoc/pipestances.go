@@ -289,7 +289,7 @@ func (self *PipestanceManager) processRunList() {
 
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
 	psPath := path.Join(self.path, container, pipeline, psid, self.rt.CodeVersion)
-	pipestance, err := self.rt.InvokeWithSource(psid, src, psPath)
+	pipestance, err := self.rt.InvokeWithSource(src, "./argshim", psid, psPath)
 	if err != nil {
 		return err
 	}
