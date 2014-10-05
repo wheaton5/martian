@@ -8,6 +8,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"mario/core"
 	"os/exec"
 	"sync"
@@ -39,17 +40,25 @@ func NewArgShim(argshimPath string) *ArgShim {
 }
 
 func (self *ArgShim) invoke(function string, arguments []interface{}) interface{} {
+	logging := false
+
 	input := map[string]interface{}{
 		"function":  function,
 		"arguments": arguments,
 	}
 	bytes, _ := json.Marshal(input)
+	if logging {
+		fmt.Printf("%s\n", string(bytes))
+	}
 
 	self.mutex.Lock()
 	self.writer.Write([]byte(string(bytes) + "\n"))
 	self.writer.Flush()
 
 	line, _, _ := self.reader.ReadLine()
+	if logging {
+		fmt.Println(line)
+	}
 	self.mutex.Unlock()
 
 	var v interface{}
