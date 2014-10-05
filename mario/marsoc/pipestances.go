@@ -34,6 +34,8 @@ type PipestanceNotification struct {
 
 type PipestanceManager struct {
 	rt             *core.Runtime
+	marioVersion   string
+	mroVersion     string
 	path           string
 	cachePath      string
 	stepms         int
@@ -48,9 +50,13 @@ type PipestanceManager struct {
 	mailer         *Mailer
 }
 
-func NewPipestanceManager(rt *core.Runtime, pipestancesPath string, cachePath string, stepms int, mailer *Mailer) *PipestanceManager {
+func NewPipestanceManager(rt *core.Runtime, marioVersion string,
+	mroVersion string, pipestancesPath string, cachePath string, stepms int,
+	mailer *Mailer) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
+	self.marioVersion = marioVersion
+	self.mroVersion = mroVersion
 	self.path = pipestancesPath
 	self.cachePath = path.Join(cachePath, "pipestances")
 	self.stepms = stepms
@@ -181,15 +187,9 @@ func (self *PipestanceManager) processRunList() {
 
 	for _, pipestance := range self.runList {
 		go func(pipestance *core.Pipestance, wg *sync.WaitGroup) {
-			nodes := pipestance.Node().AllNodes()
+			pipestance.RefreshMetadata()
 
-			// We used to make this concurrent but ended up with too many
-			// goroutines (Pranav's 96-sample run).
-			for _, node := range nodes {
-				node.RefreshMetadata()
-			}
-
-			state := pipestance.GetOverallState()
+			state := pipestance.GetState()
 			fqname := pipestance.GetFQName()
 			if state == "complete" {
 				// If pipestance is done, remove from runTable, mark it in the
@@ -269,9 +269,7 @@ func (self *PipestanceManager) processRunList() {
 				self.runListMutex.Lock()
 				continueToRunList = append(continueToRunList, pipestance)
 				self.runListMutex.Unlock()
-				for _, node := range nodes {
-					node.Step()
-				}
+				pipestance.StepNodes()
 			}
 			wg.Done()
 		}(pipestance, &wg)
@@ -288,7 +286,7 @@ func (self *PipestanceManager) processRunList() {
 }
 
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
-	psPath := path.Join(self.path, container, pipeline, psid, self.rt.CodeVersion)
+	psPath := path.Join(self.path, container, pipeline, psid, self.mroVersion)
 	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
 	if err != nil {
 		return err
@@ -296,7 +294,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	fqname := pipestance.GetFQName()
 	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
 	os.Remove(headPath)
-	os.Symlink(self.rt.CodeVersion, headPath)
+	os.Symlink(self.mroVersion, headPath)
 
 	core.LogInfo("pipeman", "Instantiating and pushing to runList: %s.", fqname)
 	self.runListMutex.Lock()
@@ -320,8 +318,7 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	if !ok {
 		return
 	}
-	node := pipestance.Node().Find(nodeFQname)
-	node.RestartFromFailed()
+	pipestance.RestartFailedNode(nodeFQname)
 	pipestance.Unimmortalize()
 	delete(self.failed, pipestance.GetFQName())
 	self.writeCache()
@@ -340,7 +337,7 @@ func (self *PipestanceManager) GetPipestanceState(container string, pipeline str
 		return "failed", true
 	}
 	if run, ok := self.runTable[fqname]; ok {
-		return run.GetOverallState(), true
+		return run.GetState(), true
 	}
 	return "", false
 }
@@ -354,11 +351,7 @@ func (self *PipestanceManager) GetPipestanceSerialization(container string, pipe
 	if !ok {
 		return nil, false
 	}
-	data := []interface{}{}
-	for _, node := range pipestance.Node().AllNodes() {
-		data = append(data, node.Serialize())
-	}
-	return data, true
+	return pipestance.Serialize(), true
 }
 
 func (self *PipestanceManager) GetPipestance(container string, pipeline string, psid string) (*core.Pipestance, bool) {
@@ -381,15 +374,6 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	}
 
 	// Refresh its metadata state and return.
-	nodes := pipestance.Node().AllNodes()
-	var wg sync.WaitGroup
-	for _, node := range nodes {
-		wg.Add(1)
-		go func(node *core.Node) {
-			node.RefreshMetadata()
-			wg.Done()
-		}(node)
-	}
-	wg.Wait()
+	pipestance.RefreshMetadata()
 	return pipestance, true
 }

@@ -78,9 +78,9 @@ type MetadataForm struct {
 	Name string
 }
 
-func runWebServer(uiport string, instanceName string, marsocVersion string,
-	rt *core.Runtime, pool *SequencerPool, pman *PipestanceManager,
-	lena *Lena, argshim *ArgShim) {
+func runWebServer(uiport string, instanceName string, marioVersion string,
+	mroVersion string, rt *core.Runtime, pool *SequencerPool,
+	pman *PipestanceManager, lena *Lena, argshim *ArgShim) {
 
 	//=========================================================================
 	// Configure server.
@@ -106,8 +106,8 @@ func runWebServer(uiport string, instanceName string, marsocVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
-				MarsocVersion:    marsocVersion,
-				PipelinesVersion: rt.CodeVersion,
+				MarsocVersion:    marioVersion,
+				PipelinesVersion: mroVersion,
 			})
 	})
 	app.Get("/admin", func() string {
@@ -115,8 +115,8 @@ func runWebServer(uiport string, instanceName string, marsocVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
-				MarsocVersion:    marsocVersion,
-				PipelinesVersion: rt.CodeVersion,
+				MarsocVersion:    marioVersion,
+				PipelinesVersion: mroVersion,
 			})
 	})
 
@@ -265,7 +265,7 @@ func runWebServer(uiport string, instanceName string, marsocVersion string,
 		state := map[string]interface{}{}
 		state["error"] = nil
 		if pipestance, ok := pman.GetPipestance(container, pname, psid); ok {
-			if pipestance.GetOverallState() == "failed" {
+			if pipestance.GetState() == "failed" {
 				fqname, errpath, summary, log := pipestance.GetFatalError()
 				state["error"] = map[string]string{
 					"fqname":  fqname,

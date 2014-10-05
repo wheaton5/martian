@@ -34,9 +34,10 @@ Options:
                     Defaults to 3601 if not otherwise specified.
     -h --help     Show this message.
     --version     Show version.`
-	opts, _ := docopt.Parse(doc, nil, true, core.GetVersion(), false)
+	marioVersion := core.GetVersion()
+	opts, _ := docopt.Parse(doc, nil, true, marioVersion, false)
 	core.LogInfo("*", "Mario MRO Editor")
-	core.LogInfo("version", core.GetVersion())
+	core.LogInfo("version", marioVersion)
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	// Compute UI port.
@@ -55,17 +56,19 @@ Options:
 	if value := os.Getenv("MROPATH"); len(value) > 0 {
 		mroPath = value
 	}
+	mroVersion := core.GetGitTag(mroPath)
+	core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
 	core.LogInfo("environ", "MROPATH = %s", mroPath)
 
 	//=========================================================================
 	// Configure Mario runtime.
 	//=========================================================================
-	rt := core.NewRuntime("local", mroPath, core.GetVersion(), false)
+	rt := core.NewRuntime("local", mroPath, marioVersion, mroVersion, false)
 
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	go runWebServer(uiport, rt)
+	go runWebServer(uiport, rt, mroPath)
 
 	// Let daemons take over.
 	done := make(chan bool)
