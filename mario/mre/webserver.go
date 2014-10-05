@@ -37,7 +37,7 @@ type SaveForm struct {
 	Contents string
 }
 
-func runWebServer(uiport string, rt *core.Runtime) {
+func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 	//=========================================================================
 	// Configure server.
 	//=========================================================================
@@ -66,7 +66,7 @@ func runWebServer(uiport string, rt *core.Runtime) {
 
 	// Get list of names of MRO files in the runtime's MRO path.
 	app.Get("/files", func() string {
-		filePaths, _ := filepath.Glob(path.Join(rt.MroPath, "*"))
+		filePaths, _ := filepath.Glob(path.Join(mroPath, "*"))
 		fnames := []string{}
 		for _, filePath := range filePaths {
 			fnames = append(fnames, filepath.Base(filePath))
@@ -79,7 +79,7 @@ func runWebServer(uiport string, rt *core.Runtime) {
 	re := regexp.MustCompile("@include \"([^\"]+)")
 	app.Post("/load", binding.Bind(LoadForm{}), func(body LoadForm, p martini.Params) string {
 		// Load contents of selected file.
-		bytes, _ := ioutil.ReadFile(path.Join(rt.MroPath, body.Fname))
+		bytes, _ := ioutil.ReadFile(path.Join(mroPath, body.Fname))
 		contents := string(bytes)
 
 		// Parse the first @include line.
@@ -88,7 +88,7 @@ func runWebServer(uiport string, rt *core.Runtime) {
 
 			// Load contents of included file.
 			includeFname := submatches[1]
-			includeBytes, _ := ioutil.ReadFile(path.Join(rt.MroPath, includeFname))
+			includeBytes, _ := ioutil.ReadFile(path.Join(mroPath, includeFname))
 			return makeJSON(map[string]string{
 				"contents":        contents,
 				"includeFname":    includeFname,
@@ -100,13 +100,13 @@ func runWebServer(uiport string, rt *core.Runtime) {
 
 	// Save file.
 	app.Post("/save", binding.Bind(SaveForm{}), func(body SaveForm, p martini.Params) string {
-		ioutil.WriteFile(path.Join(rt.MroPath, body.Fname), []byte(body.Contents), 0600)
+		ioutil.WriteFile(path.Join(mroPath, body.Fname), []byte(body.Contents), 0600)
 		return ""
 	})
 
 	// Compile file.
 	app.Post("/build", binding.Bind(LoadForm{}), func(body LoadForm, p martini.Params) string {
-		global, err := rt.Compile(body.Fname, false)
+		_, global, err := rt.Compile(path.Join(mroPath, body.Fname), false)
 		if err != nil {
 			return err.Error()
 		}

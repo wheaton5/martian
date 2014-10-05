@@ -113,10 +113,11 @@ Usage:
 Options:
     -h --help     Show this message.
     --version     Show version.`
-	opts, _ := docopt.Parse(doc, nil, true, core.GetVersion(), false)
+	marioVersion := core.GetVersion()
+	opts, _ := docopt.Parse(doc, nil, true, marioVersion, false)
 	_ = opts
 	core.LogInfo("*", "MARSOC")
-	core.LogInfo("version", core.GetVersion())
+	core.LogInfo("version", marioVersion)
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	// Required Mario environment variables.
@@ -162,6 +163,7 @@ Options:
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	stepSecs := 5
+	mroVersion := core.GetGitTag(mroPath)
 
 	//=========================================================================
 	// Setup Mailer.
@@ -172,10 +174,8 @@ Options:
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
 	//=========================================================================
-	rt := core.NewRuntime("sge", mroPath, core.GetVersion(), true)
-	_, err := rt.CompileAll(true)
-	core.DieIf(err)
-	core.LogInfo("configs", "CODE_VERSION = %s", rt.CodeVersion)
+	rt := core.NewRuntime("sge", mroPath, marioVersion, mroVersion, true)
+	core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
 
 	//=========================================================================
 	// Setup SequencerPool, add sequencers, and load seq run cache.
@@ -189,7 +189,8 @@ Options:
 	//=========================================================================
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
-	pman := NewPipestanceManager(rt, pipestancesPath, cachePath, stepSecs, mailer)
+	pman := NewPipestanceManager(rt, marioVersion, mroVersion, pipestancesPath,
+		cachePath, stepSecs, mailer)
 	pman.loadCache()
 	pman.inventoryPipestances()
 
@@ -215,7 +216,8 @@ Options:
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	runWebServer(uiport, instanceName, core.GetVersion(), rt, pool, pman, lena, argshim)
+	runWebServer(uiport, instanceName, marioVersion, mroVersion, rt, pool, pman,
+		lena, argshim)
 
 	// Let daemons take over.
 	done := make(chan bool)
