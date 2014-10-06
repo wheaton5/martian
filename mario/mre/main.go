@@ -11,12 +11,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
 
 func main() {
-	runtime.GOMAXPROCS(2)
+	core.SetupSignalHandlers()
 
 	//=========================================================================
 	// Commandline argument and environment variables.

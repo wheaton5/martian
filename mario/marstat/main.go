@@ -8,14 +8,14 @@ package main
 import (
 	"mario/core"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/docopt/docopt-go"
 )
 
 func main() {
-	runtime.GOMAXPROCS(2)
+	core.SetupSignalHandlers()
+
 	core.LogInfo("*", "MARSOC")
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 

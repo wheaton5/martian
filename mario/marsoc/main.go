@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"mario/core"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 
@@ -96,7 +95,6 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 }
 
 func main() {
-	runtime.GOMAXPROCS(2)
 	core.LogInfo("*", "MARSOC")
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
