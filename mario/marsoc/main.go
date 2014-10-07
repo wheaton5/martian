@@ -105,12 +105,13 @@ func main() {
 	doc := `MARSOC: Mario SeqOps Command
 
 Usage: 
-    marsoc 
+    marsoc [--debugargshim]
     marsoc -h | --help | --version
 
 Options:
-    -h --help     Show this message.
-    --version     Show version.`
+    --debugargshim  Enable debug printing for argshim.
+    -h --help       Show this message.
+    --version       Show version.`
 	marioVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, marioVersion, false)
 	_ = opts
@@ -162,6 +163,7 @@ Options:
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	stepSecs := 5
 	mroVersion := core.GetGitTag(mroPath)
+	debugArgshim := opts["--debugargshim"].(bool)
 
 	//=========================================================================
 	// Setup Mailer.
@@ -201,7 +203,7 @@ Options:
 	//=========================================================================
 	// Setup argshim.
 	//=========================================================================
-	argshim := NewArgShim(argshimPath)
+	argshim := NewArgShim(argshimPath, debugArgshim)
 
 	//=========================================================================
 	// Start all daemon loops.

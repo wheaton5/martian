@@ -16,15 +16,17 @@ import (
 
 type ArgShim struct {
 	cmdPath            string
+	debug              bool
 	samplePipelinesMap map[string]string
 	writer             *bufio.Writer
 	reader             *bufio.Reader
 	mutex              *sync.Mutex
 }
 
-func NewArgShim(argshimPath string) *ArgShim {
+func NewArgShim(argshimPath string, debug bool) *ArgShim {
 	self := &ArgShim{}
 	self.cmdPath = argshimPath
+	self.debug = debug
 	self.mutex = &sync.Mutex{}
 
 	cmd := exec.Command(self.cmdPath)
@@ -40,15 +42,13 @@ func NewArgShim(argshimPath string) *ArgShim {
 }
 
 func (self *ArgShim) invoke(function string, arguments []interface{}) interface{} {
-	logging := false
-
 	input := map[string]interface{}{
 		"function":  function,
 		"arguments": arguments,
 	}
 	bytes, _ := json.Marshal(input)
-	if logging {
-		fmt.Printf("%s\n", string(bytes))
+	if self.debug {
+		fmt.Printf("%s\n\n", string(bytes))
 	}
 
 	self.mutex.Lock()
@@ -56,8 +56,8 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 	self.writer.Flush()
 
 	line, _, _ := self.reader.ReadLine()
-	if logging {
-		fmt.Println(string(line))
+	if self.debug {
+		fmt.Printf("%s\n\n", string(line))
 	}
 	self.mutex.Unlock()
 
