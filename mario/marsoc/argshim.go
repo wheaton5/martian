@@ -55,9 +55,9 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 	self.writer.Write([]byte(string(bytes) + "\n"))
 	self.writer.Flush()
 
-	line, _, _ := self.reader.ReadLine()
+	data, _, _ := self.reader.ReadLine()
 	if logging {
-		fmt.Println(line)
+		fmt.Println(string(data))
 	}
 	self.mutex.Unlock()
 
