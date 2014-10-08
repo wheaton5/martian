@@ -99,6 +99,10 @@ func NewHiSeqSequencer(pool *SequencerPool, name string) *Sequencer {
 	return NewSequencer(pool, name, "^(\\d{6})_(\\w+)_(\\d+)_[AB]([A-Z0-9]{9})$")
 }
 
+func NewNextSeqSequencer(pool *SequencerPool, name string) *Sequencer {
+	return NewSequencer(pool, name, "^(\\d{6})_(\\w+)_(\\d+)_[AB]([A-Z0-9]{9})$")
+}
+
 // Parse the folder name into info fields and get various file mod times.
 func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, error) {
 	// Parse folder name for basic info.
@@ -328,6 +332,9 @@ func (self *SequencerPool) add(name string) {
 	} else if strings.HasPrefix(name, "hiseq") {
 		self.seqcers = append(self.seqcers, NewHiSeqSequencer(self, name))
 		core.LogInfo("seqpool", "Add HiSeq %s.", name)
+	} else if strings.HasPrefix(name, "nextseq") {
+		self.seqcers = append(self.seqcers, NewNextSeqSequencer(self, name))
+		core.LogInfo("seqpool", "Add NextSeq %s.", name)
 	}
 }
 
