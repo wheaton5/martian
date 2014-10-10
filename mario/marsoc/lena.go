@@ -56,13 +56,13 @@ type BarcodeSet struct {
 }
 
 type SequencingRun struct {
-	Id                    int     `json:"id"`
-	State                 string  `json:"state"`
-	Name                  string  `json:"name"`
-	Date                  string  `json:"date"`
-	Loading_concentration float32 `json:"loading_concentration"`
-	Failure_reason        string  `json:"failure_reason"`
-	Samples               []int   `json:"samples"`
+	Id                    int      `json:"id"`
+	State                 string   `json:"state"`
+	Name                  string   `json:"name"`
+	Date                  string   `json:"date"`
+	Loading_concentration float32  `json:"loading_concentration"`
+	Failure_reason        string   `json:"failure_reason"`
+	Samples               []string `json:"samples"`
 }
 
 type User struct {
