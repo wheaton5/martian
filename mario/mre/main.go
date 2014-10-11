@@ -62,7 +62,7 @@ Options:
 	//=========================================================================
 	// Configure Mario runtime.
 	//=========================================================================
-	rt := core.NewRuntime("local", mroPath, marioVersion, mroVersion, false)
+	rt := core.NewRuntime("local", mroPath, marioVersion, mroVersion, false, false)
 
 	//=========================================================================
 	// Start web server.

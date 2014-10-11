@@ -105,13 +105,13 @@ func main() {
 	doc := `MARSOC: Mario SeqOps Command
 
 Usage: 
-    marsoc [--debugargshim]
+    marsoc [--debug]
     marsoc -h | --help | --version
 
 Options:
-    --debugargshim  Enable debug printing for argshim.
-    -h --help       Show this message.
-    --version       Show version.`
+    --debug    Enable debug printing for argshim.
+    -h --help  Show this message.
+    --version  Show version.`
 	marioVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, marioVersion, false)
 	_ = opts
@@ -163,7 +163,7 @@ Options:
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	stepSecs := 5
 	mroVersion := core.GetGitTag(mroPath)
-	debugArgshim := opts["--debugargshim"].(bool)
+	debug := opts["--debug"].(bool)
 
 	//=========================================================================
 	// Setup Mailer.
@@ -174,7 +174,7 @@ Options:
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
 	//=========================================================================
-	rt := core.NewRuntime("sge", mroPath, marioVersion, mroVersion, true)
+	rt := core.NewRuntime("sge", mroPath, marioVersion, mroVersion, true, debug)
 	core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
 
 	//=========================================================================
@@ -203,7 +203,7 @@ Options:
 	//=========================================================================
 	// Setup argshim.
 	//=========================================================================
-	argshim := NewArgShim(argshimPath, debugArgshim)
+	argshim := NewArgShim(argshimPath, debug)
 
 	//=========================================================================
 	// Start all daemon loops.
