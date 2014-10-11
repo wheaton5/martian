@@ -21,4 +21,4 @@ To view commandline usage and options for any executable, give the `--help` opti
 - `mrf` Commandline canonical code formatter for MRO files.
 - `mrp` Pipeline runner.
 - `mrs` Single-stage runner.
-- - `marsoc` MARSOC (aka Mario Sequencing Operations Command)
+- `marsoc` MARSOC (aka Mario Sequencing Operations Command)
