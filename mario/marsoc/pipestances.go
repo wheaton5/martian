@@ -179,17 +179,17 @@ func parseFQName(fqname string) (string, string) {
 }
 
 func (self *PipestanceManager) processRunList() {
-	// Lock the runList while we launch concurrent goroutines
-	// to step its contents.
+	// Copy the current runlist, then clear it.
 	self.runListMutex.Lock()
+	runListCopy := self.runList
+	self.runList = []*core.Pipestance{}
+	self.runListMutex.Unlock()
 
-	continueToRunList := []*core.Pipestance{}
-
-	// Concurrently step all pipestances in the runlist.
+	// Concurrently step all pipestances in the runlist copy.
 	var wg sync.WaitGroup
-	wg.Add(len(self.runList))
+	wg.Add(len(runListCopy))
 
-	for _, pipestance := range self.runList {
+	for _, pipestance := range runListCopy {
 		go func(pipestance *core.Pipestance, wg *sync.WaitGroup) {
 			pipestance.RefreshMetadata()
 
@@ -202,7 +202,6 @@ func (self *PipestanceManager) processRunList() {
 				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
 				self.completed[fqname] = true
-				self.writeCache()
 				self.runListMutex.Unlock()
 
 				// Immortalization.
@@ -241,7 +240,6 @@ func (self *PipestanceManager) processRunList() {
 				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
 				self.failed[fqname] = true
-				self.writeCache()
 				self.runListMutex.Unlock()
 
 				// Immortalization.
@@ -269,23 +267,22 @@ func (self *PipestanceManager) processRunList() {
 					self.runListMutex.Unlock()
 				}
 			} else {
-				// If it is not done, step and keep it running.
+				// If it is not done, put it back on the run list and step the nodes.
 				self.runListMutex.Lock()
-				continueToRunList = append(continueToRunList, pipestance)
+				self.runList = append(self.runList, pipestance)
 				self.runListMutex.Unlock()
 				pipestance.StepNodes()
 			}
 			wg.Done()
 		}(pipestance, &wg)
 	}
-	self.runListMutex.Unlock()
 
-	// Wait for this round of processing to complete.
+	// Wait for this round of processing to complete, then write
+	// out any changes to the complete/fail cache.
 	wg.Wait()
 
-	// Remove completed and failed pipestances by omission.
 	self.runListMutex.Lock()
-	self.runList = continueToRunList
+	self.writeCache()
 	self.runListMutex.Unlock()
 }
 
@@ -304,8 +301,8 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	self.runListMutex.Lock()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
-	self.runListMutex.Unlock()
 	self.containerTable[fqname] = container
+	self.runListMutex.Unlock()
 
 	return nil
 }
