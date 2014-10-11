@@ -116,6 +116,8 @@ func (self *PipestanceManager) writeCache() {
 func (self *PipestanceManager) inventoryPipestances() {
 	// Look for pipestances that are not marked as completed, reattach to them
 	// and put them in the runlist.
+	core.LogInfo("pipeman", "Begin pipestance inventory.")
+	pscount := 0
 
 	// Iterate over top level containers (flowcells).
 	containerInfos, _ := ioutil.ReadDir(self.path)
@@ -128,6 +130,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 
 			// Iterate over psids under this pipeline.
 			for _, psidInfo := range psidInfos {
+				pscount += 1
 				psid := psidInfo.Name()
 
 				fqname := makeFQName(pipeline, psid)
@@ -153,6 +156,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 			}
 		}
 	}
+	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
 }
 
 // Start an infinite process loop.
