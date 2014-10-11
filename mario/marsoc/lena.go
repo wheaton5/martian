@@ -56,13 +56,13 @@ type BarcodeSet struct {
 }
 
 type SequencingRun struct {
-	Id                    int     `json:"id"`
-	State                 string  `json:"state"`
-	Name                  string  `json:"name"`
-	Date                  string  `json:"date"`
-	Loading_concentration float32 `json:"loading_concentration"`
-	Failure_reason        string  `json:"failure_reason"`
-	Samples               []int   `json:"samples"`
+	Id                    int      `json:"id"`
+	State                 string   `json:"state"`
+	Name                  string   `json:"name"`
+	Date                  string   `json:"date"`
+	Loading_concentration float32  `json:"loading_concentration"`
+	Failure_reason        string   `json:"failure_reason"`
+	Samples               []string `json:"samples"`
 }
 
 type User struct {
@@ -76,26 +76,36 @@ type CellLine struct {
 	Sex  string `json:"sex"`
 }
 
+type SampleDef struct {
+	Sequencing_run   *SequencingRun `json:"sequencing_run"`
+	Sequencer        string         `json:"sequencer"`
+	Sample_indexes   []*Oligo       `json:"sample_indexes"`
+	Sample_index_set []int          `json:"sample_index_set"`
+	Read1_length     int            `json:"read1_length"`
+	Read2_length     int            `json:"read2_length"`
+	Lane             string         `json:"lane"`
+}
+
 type Sample struct {
-	Id                       int            `json:"id"`
-	Description              string         `json:"description"`
-	Name                     string         `json:"name"`
-	State                    string         `json:"state"`
-	Genome                   *Genome        `json:"genome"`
-	Target_set               *TargetSet     `json:"target_set"`
-	Sample_indexes           []*Oligo       `json:"sample_indexes"`
-	Primers                  []*Oligo       `json:"primers"`
-	Workflow                 *Workflow      `json:"workflow"`
-	Sequencing_run           *SequencingRun `json:"sequencing_run"`
-	Degenerate_primer_length int            `json:"degenerate_primer_length"`
-	Barcode_set              *BarcodeSet    `json:"barcode_set"`
-	Template_input_mass      float32        `json:"template_input_mass"`
-	User                     *User          `json:"user"`
-	Lane                     interface{}    `json:"lane"`
-	Cell_line                *CellLine      `json:"cell_line"`
-	Pname                    string         `json:"pname"`
-	Psstate                  string         `json:"psstate"`
-	Callsrc                  string         `json:"callsrc"`
+	Id                       int          `json:"id"`
+	Description              string       `json:"description"`
+	Name                     string       `json:"name"`
+	State                    string       `json:"state"`
+	Genome                   *Genome      `json:"genome"`
+	Target_set               *TargetSet   `json:"target_set"`
+	Primers                  []*Oligo     `json:"primers"`
+	Workflow                 *Workflow    `json:"workflow"`
+	Degenerate_primer_length int          `json:"degenerate_primer_length"`
+	Barcode_set              *BarcodeSet  `json:"barcode_set"`
+	Template_input_mass      float32      `json:"template_input_mass"`
+	User                     *User        `json:"user"`
+	Cell_line                *CellLine    `json:"cell_line"`
+	Exclude_non_bc_reads     bool         `json:"exclude_non_bc_reads"`
+	Sample_defs              []*SampleDef `json:"sample_defs"`
+	Sample_group             string       `json:"sample_group"`
+	Pname                    string       `json:"pname"`
+	Psstate                  string       `json:"psstate"`
+	Callsrc                  string       `json:"callsrc"`
 }
 
 type Lena struct {
@@ -148,19 +158,21 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	self.fcidTable = map[string][]*Sample{}
 	self.spidTable = map[string]*Sample{}
 	for _, sample := range samples {
-		if sample.Sequencing_run == nil {
-			continue
-		}
+		for _, sample_def := range sample.Sample_defs {
+			if sample_def.Sequencing_run == nil {
+				continue
+			}
 
-		// Store them into lists indexed by flowcell id.
-		fcid := sample.Sequencing_run.Name
-		slist, ok := self.fcidTable[fcid]
-		if ok {
-			self.fcidTable[fcid] = append(slist, sample)
-		} else {
-			self.fcidTable[fcid] = []*Sample{sample}
+			// Store them into lists indexed by flowcell id.
+			fcid := sample_def.Sequencing_run.Name
+			slist, ok := self.fcidTable[fcid]
+			if ok {
+				self.fcidTable[fcid] = append(slist, sample)
+			} else {
+				self.fcidTable[fcid] = []*Sample{sample}
+			}
+			self.spidTable[strconv.Itoa(sample.Id)] = sample
 		}
-		self.spidTable[strconv.Itoa(sample.Id)] = sample
 	}
 	// Now parse the JSON into unstructured interface{} bags,
 	// which is only used as input into argshim.buildCallSourceForSample.
