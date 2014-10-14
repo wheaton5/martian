@@ -319,7 +319,7 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	if !ok {
 		return
 	}
-	pipestance.RestartFailedNode(nodeFQname)
+	pipestance.ResetNode(nodeFQname)
 	pipestance.Unimmortalize()
 	delete(self.failed, pipestance.GetFQName())
 	self.writeCache()
