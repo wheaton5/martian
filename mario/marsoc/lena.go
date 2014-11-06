@@ -14,6 +14,7 @@ import (
 	"mario/core"
 	"net/http"
 	"path"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -63,6 +64,7 @@ type SequencingRun struct {
 	Loading_concentration float32  `json:"loading_concentration"`
 	Failure_reason        string   `json:"failure_reason"`
 	Samples               []string `json:"samples"`
+	Fastq_path            string   `json:"fastq_path"`
 }
 
 type User struct {
@@ -262,9 +264,14 @@ func (self *Lena) lenaAPI() ([]byte, error) {
 
 func (self *Lena) getSamplesForFlowcell(fcid string) ([]*Sample, error) {
 	if sampleMap, ok := self.fcidTable[fcid]; ok {
+		sampleIds := []int{}
+		for sampleId := range sampleMap {
+			sampleIds = append(sampleIds, sampleId)
+		}
+		sort.Ints(sampleIds)
 		sampleList := []*Sample{}
-		for _, sample := range sampleMap {
-			sampleList = append(sampleList, sample)
+		for sampleId := range sampleIds {
+			sampleList = append(sampleList, sampleMap[sampleId])
 		}
 		return sampleList, nil
 	}

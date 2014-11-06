@@ -201,8 +201,6 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		if err != nil {
 			return makeJSON(err.Error())
 		}
-		run := pool.find(fcid)
-		preprocPipestance, _ := pman.GetPipestance(fcid, "BCL_PROCESSOR_PD", fcid)
 
 		var wg sync.WaitGroup
 		wg.Add(len(samples))
@@ -211,10 +209,17 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 				pname := argshim.getPipelineForSample(sample)
 				sample.Pname = pname
 				sample.Psstate, _ = pman.GetPipestanceState(fcid, pname, strconv.Itoa(sample.Id))
-				if preprocPipestance != nil {
-					sample.Callsrc = argshim.buildCallSourceForSample(rt, preprocPipestance,
-						run, lena.getSampleBagWithId(strconv.Itoa(sample.Id)))
+				for _, sample_def := range sample.Sample_defs {
+					sd_fcid := sample_def.Sequencing_run.Name
+					if preprocPipestance, _ := pman.GetPipestance(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid); preprocPipestance != nil {
+						if outs, ok := preprocPipestance.GetOuts(0).(map[string]interface{}); ok {
+							if fastq_path, ok := outs["fastq_path"].(string); ok {
+								sample_def.Sequencing_run.Fastq_path = fastq_path
+							}
+						}
+					}
 				}
+				sample.Callsrc = argshim.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)))
 				wg.Done()
 			}(&wg, sample)
 		}
@@ -322,13 +327,6 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		// Get the seq run with this fcid.
 		fcid := body.Fcid
-		run := pool.find(fcid)
-
-		// Get the BCL_PROCESSOR_PD pipestance for this fcid/seq run.
-		preprocPipestance, ok := pman.GetPipestance(fcid, "BCL_PROCESSOR_PD", fcid)
-		if !ok {
-			return fmt.Sprintf("Could not get BCL_PROCESSOR_PD pipestance %s.", fcid)
-		}
 
 		// Get all the samples for this fcid.
 		samples, err := lena.getSamplesForFlowcell(fcid)
@@ -341,8 +339,20 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		for _, sample := range samples {
 			// Use argshim to pick pipeline and build MRO call source.
 			pname := argshim.getPipelineForSample(sample)
-			src := argshim.buildCallSourceForSample(rt, preprocPipestance, run,
-				lena.getSampleBagWithId(strconv.Itoa(sample.Id)))
+
+			for _, sample_def := range sample.Sample_defs {
+				sd_fcid := sample_def.Sequencing_run.Name
+				// Get the BCL_PROCESSOR_PD pipestance for this fcid/seq run.
+				if preprocPipestance, _ := pman.GetPipestance(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid); preprocPipestance != nil {
+					if outs, ok := preprocPipestance.GetOuts(0).(map[string]interface{}); ok {
+						if fastq_path, ok := outs["fastq_path"].(string); ok {
+							sample_def.Sequencing_run.Fastq_path = fastq_path
+						}
+					}
+				}
+			}
+
+			src := argshim.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)))
 
 			// Invoke the pipestance.
 			if err := pman.Invoke(fcid, pname, strconv.Itoa(sample.Id), src); err != nil {
