@@ -84,6 +84,7 @@ type SampleDef struct {
 	Read1_length     int            `json:"read1_length"`
 	Read2_length     int            `json:"read2_length"`
 	Lane             string         `json:"lane"`
+	Gem_group        int            `json:"gem_group"`
 }
 
 type Sample struct {
@@ -112,7 +113,7 @@ type Lena struct {
 	downloadUrl string
 	authToken   string
 	dbPath      string
-	fcidTable   map[string][]*Sample
+	fcidTable   map[string]map[int]*Sample
 	spidTable   map[string]*Sample
 	sbagTable   map[string]interface{}
 	mailer      *Mailer
@@ -123,7 +124,7 @@ func NewLena(downloadUrl string, authToken string, cachePath string, mailer *Mai
 	self.downloadUrl = downloadUrl
 	self.authToken = authToken
 	self.dbPath = path.Join(cachePath, "lena.json")
-	self.fcidTable = map[string][]*Sample{}
+	self.fcidTable = map[string]map[int]*Sample{}
 	self.spidTable = map[string]*Sample{}
 	self.sbagTable = map[string]interface{}{}
 	self.mailer = mailer
@@ -155,7 +156,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	}
 
 	// Create a new, empty cache.
-	self.fcidTable = map[string][]*Sample{}
+	self.fcidTable = map[string]map[int]*Sample{}
 	self.spidTable = map[string]*Sample{}
 	for _, sample := range samples {
 		for _, sample_def := range sample.Sample_defs {
@@ -165,11 +166,11 @@ func (self *Lena) ingestDatabase(data []byte) error {
 
 			// Store them into lists indexed by flowcell id.
 			fcid := sample_def.Sequencing_run.Name
-			slist, ok := self.fcidTable[fcid]
+			smap, ok := self.fcidTable[fcid]
 			if ok {
-				self.fcidTable[fcid] = append(slist, sample)
+				smap[sample.Id] = sample
 			} else {
-				self.fcidTable[fcid] = []*Sample{sample}
+				self.fcidTable[fcid] = map[int]*Sample{sample.Id: sample}
 			}
 			self.spidTable[strconv.Itoa(sample.Id)] = sample
 		}
@@ -260,8 +261,12 @@ func (self *Lena) lenaAPI() ([]byte, error) {
 }
 
 func (self *Lena) getSamplesForFlowcell(fcid string) ([]*Sample, error) {
-	if samples, ok := self.fcidTable[fcid]; ok {
-		return samples, nil
+	if sampleMap, ok := self.fcidTable[fcid]; ok {
+		sampleList := []*Sample{}
+		for _, sample := range sampleMap {
+			sampleList = append(sampleList, sample)
+		}
+		return sampleList, nil
 	}
 	return []*Sample{}, nil
 }
