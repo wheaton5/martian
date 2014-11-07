@@ -92,8 +92,8 @@ func (self *ArgShim) buildArgsForRun(run *Run) map[string]interface{} {
 	return map[string]interface{}{}
 }
 
-func (self *ArgShim) buildArgsForSample(sbag interface{}) map[string]interface{} {
-	v := self.invoke("buildArgsForSample", []interface{}{sbag})
+func (self *ArgShim) buildArgsForSample(sbag interface{}, fastqPaths map[string]string) map[string]interface{} {
+	v := self.invoke("buildArgsForSample", []interface{}{sbag, fastqPaths})
 	if tv, ok := v.(map[string]interface{}); ok {
 		return tv
 	}
@@ -116,6 +116,6 @@ func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
 	return self.buildCallSource(rt, self.buildArgsForRun(run))
 }
 
-func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, sbag interface{}) string {
-	return self.buildCallSource(rt, self.buildArgsForSample(sbag))
+func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string) string {
+	return self.buildCallSource(rt, self.buildArgsForSample(sbag, fastqPaths))
 }

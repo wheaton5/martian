@@ -1,0 +1,76 @@
+//- 
+    Copyright (c) 2014 10X Genomics, Inc. All rights reserved.
+    
+    Main UI for mario seqruns.
+
+doctype html
+html(ng-app="app")
+    head
+        title [[.InstanceName]] / Metasamples
+        link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/marsoc.css")
+        link(rel="stylesheet" href="/css/main.css")
+        script(src="/js/angular.min.js")
+        script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="/js/lodash.min.js")
+        script(src="/js/moment.min.js")
+    body(ng-controller="MarioRunCtrl")
+        header.navbar.navbar-inverse.navbar-fixed-top(ng-class="{admin: admin}")
+            .navbar-header 
+                .navbar-brand
+                    |10
+                    span.logo-color X
+                    | &nbsp;[[.InstanceName]] / Metasamples
+                    span(ng-if="admin")
+                        | &nbsp;(
+                        a.admin-exit(href="/") exit admin mode
+                        | )
+                    span.code-version
+                        | Mario&nbsp;
+                        a(href="https://github.com/10XDev/mario/releases") [[.MarsocVersion]]
+                        | &nbsp;Pipelines&nbsp;
+                        a(href="https://10xtech.atlassian.net/wiki/display/COMPBIO/Pipelines+Version+Tracking") [[.PipelinesVersion]]
+        #runs.detail
+            table.table.table-striped#run-table
+                thead
+                    tr
+                        th Metasample 
+                tbody
+                    tr(ng-repeat="sample in samples" ng-click="selectSample(sample)" ng-class="{tablehover:sample.selected}")
+                        td.col-flowcell {{sample.id}}
+
+        #one-run(ng-if="selsample" style="left: 150px")
+            table.table
+                thead
+                    tr
+                        th(colspan="2") Details
+                tbody
+                    tr
+                        td User
+                        td {{selsample.user.username}}
+                    tr
+                        td Description
+                        td {{selsample.description}}
+                    tr
+                        td Prerequisites
+                        td
+                            .minibox(ng-repeat="pr in selsample.metasample_prereqs" ng-class="pr.state" style="margin-right: 2px")
+                                | {{pr.fcid}}
+                            pre(style="margin-top: 15px") {{selsample.callsrc}}
+
+            //table.table(ng-if="selsample.preprocess=='complete'")
+            table.table(ng-if="selsample.ready=='true'")
+                thead
+                    tr
+                        th Samples
+                tbody
+                    tr
+                        td
+                            button.btn.btn-default(ng-if="admin && showbutton" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke 
+                            div(style="margin-top: 5px")
+                                .minibox(ng-class="selsample.psstate" style="text-align:center; margin-right:2px; margin-bottom: 2px; width: 85px; ") 
+                                    a(href="{{urlprefix}}/pipestance/{{selsample.sample_group}}/{{selsample.pname}}/{{selsample.id}}" style="" ng-mouseover="$parent.sampi=$index") {{selsample.id}}<br>{{selsample.psstate}}
+                            div(style="margin-top: 15px; font-weight: bold") {{selsample.description}} by {{selsample.user.username}}
+    script        
+        | admin = [[.Admin]]
+    script(src="/metasamples.js")
