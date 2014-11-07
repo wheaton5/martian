@@ -61,10 +61,10 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 			userlessNotices := []*PipestanceNotification{}
 			for _, notice := range notifyQueue {
 				// Get the sample with the psid in the notice.
-				sample, ok := lena.getSampleWithId(notice.Psid)
+				sample := lena.getSampleWithId(notice.Psid)
 
 				// If no sample, add to the userless table.
-				if !ok {
+				if sample == nil {
 					userlessNotices = append(userlessNotices, notice)
 					continue
 				}

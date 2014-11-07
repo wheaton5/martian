@@ -73,12 +73,49 @@ type GraphPage struct {
 type FcidForm struct {
 	Fcid string
 }
+
 type MetasampleIdForm struct {
 	Id string
 }
+
 type MetadataForm struct {
 	Path string
 	Name string
+}
+
+// For a given sample, update the following fields:
+// Pname    The analysis pipeline to be run on it, according to argshim
+// Psstate  Current state of the sample's pipestance, if any
+// Callsrc  MRO invoke source to analyze this sample, per argshim
+func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
+	argshim *ArgShim, pman *PipestanceManager) {
+	pname := argshim.getPipelineForSample(sample)
+	sample.Pname = pname
+	sample.Psstate, _ = pman.GetPipestanceState(sample.Pscontainer, pname, strconv.Itoa(sample.Id))
+	sample.Ready_to_invoke = true
+
+	// From each def in the sample_defs, if the BCL_PROCESSOR pipestance
+	// exists, add a mapping from the fcid to that pipestance's fastq_path.
+	// This map will be used by the argshim to build the MRO invocation.
+	fastqPaths := map[string]string{}
+	for _, sample_def := range sample.Sample_defs {
+		sd_fcid := sample_def.Sequencing_run.Name
+		sd_state, ok := pman.GetPipestanceState(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid)
+		if !ok || sd_state != "complete" {
+			sample.Ready_to_invoke = false
+		}
+		if ok {
+			sample_def.Sequencing_run.Psstate = sd_state
+		}
+		if preprocPipestance, _ := pman.GetPipestance(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid); preprocPipestance != nil {
+			if outs, ok := preprocPipestance.GetOuts(0).(map[string]interface{}); ok {
+				if fastq_path, ok := outs["fastq_path"].(string); ok {
+					fastqPaths[sd_fcid] = fastq_path
+				}
+			}
+		}
+	}
+	sample.Callsrc = argshim.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths)
 }
 
 func runWebServer(uiport string, instanceName string, marioVersion string,
@@ -131,19 +168,6 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 				PipelinesVersion: mroVersion,
 			})
 	})
-	app.Get("/api/get-metasamples", func() string {
-		metasamples := lena.getMetasamples()
-		for _, metasample := range metasamples {
-			for _, metasample_prereq := range metasample.Metasample_prereqs {
-				// Get the state of the BCL_PROCESSOR_PD pipeline for this run.
-				fcid := metasample_prereq.Fcid
-				if state, ok := pman.GetPipestanceState(fcid, "BCL_PROCESSOR_PD", fcid); ok {
-					metasample_prereq.State = state
-				}
-			}
-		}
-		return makeJSON(lena.getMetasamples())
-	})
 
 	// Get all sequencing runs.
 	app.Get("/api/get-runs", func() string {
@@ -169,11 +193,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 				}
 
 				// Get the state of ANALYZER_PD for each sample in this run.
-				samples, err := lena.getSamplesForFlowcell(run.Fcid)
-				if err != nil {
-					core.LogError(err, "webserv", "Error getting samples for flowcell id %s.", run.Fcid)
-					return
-				}
+				samples := lena.getSamplesForFlowcell(run.Fcid)
 				if len(samples) == 0 {
 					return
 				}
@@ -221,31 +241,13 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 
 	// Get samples for a given flowcell id.
 	app.Post("/api/get-samples", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
-		fcid := body.Fcid
-		samples, err := lena.getSamplesForFlowcell(fcid)
-		if err != nil {
-			return makeJSON(err.Error())
-		}
+		samples := lena.getSamplesForFlowcell(body.Fcid)
 
 		var wg sync.WaitGroup
 		wg.Add(len(samples))
 		for _, sample := range samples {
 			go func(wg *sync.WaitGroup, sample *Sample) {
-				pname := argshim.getPipelineForSample(sample)
-				sample.Pname = pname
-				sample.Psstate, _ = pman.GetPipestanceState(fcid, pname, strconv.Itoa(sample.Id))
-				fastqPaths := map[string]string{}
-				for _, sample_def := range sample.Sample_defs {
-					sd_fcid := sample_def.Sequencing_run.Name
-					if preprocPipestance, _ := pman.GetPipestance(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid); preprocPipestance != nil {
-						if outs, ok := preprocPipestance.GetOuts(0).(map[string]interface{}); ok {
-							if fastq_path, ok := outs["fastq_path"].(string); ok {
-								fastqPaths[sd_fcid] = fastq_path
-							}
-						}
-					}
-				}
-				sample.Callsrc = argshim.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths)
+				updateSampleState(sample, rt, lena, argshim, pman)
 				wg.Done()
 			}(&wg, sample)
 		}
@@ -255,36 +257,31 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 
 	// Build BCL_PROCESSOR_PD call source.
 	app.Post("/api/get-callsrc", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
-		run, ok := pool.runTable[body.Fcid]
-		if ok {
+		if run, ok := pool.runTable[body.Fcid]; ok {
 			return argshim.buildCallSourceForRun(rt, run)
 		}
-		return "could not build call source"
+		return fmt.Sprintf("Could not find run with fcid %s.", body.Fcid)
 	})
 
-	// Build analysis call source for a metasample.
-	app.Post("/api/get-metasample-callsrc", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, params martini.Params) string {
-		fmt.Printf("%s\n", body.Id)
-		sample, ok := lena.getSampleWithId(body.Id)
-		if !ok {
-			return ""
-		}
-		pname := argshim.getPipelineForSample(sample)
-		sample.Pname = pname
-		sample.Psstate, _ = pman.GetPipestanceState(sample.Sample_group, pname, strconv.Itoa(sample.Id))
-		fastqPaths := map[string]string{}
-		for _, sample_def := range sample.Sample_defs {
-			sd_fcid := sample_def.Sequencing_run.Name
-			if preprocPipestance, _ := pman.GetPipestance(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid); preprocPipestance != nil {
-				if outs, ok := preprocPipestance.GetOuts(0).(map[string]interface{}); ok {
-					if fastq_path, ok := outs["fastq_path"].(string); ok {
-						fastqPaths[sd_fcid] = fastq_path
-					}
-				}
+	// Get all metasamples.
+	app.Get("/api/get-metasamples", func() string {
+		metasamples := lena.getMetasamples()
+		for _, metasample := range metasamples {
+			state, ok := pman.GetPipestanceState(metasample.Pscontainer, argshim.getPipelineForSample(metasample), strconv.Itoa(metasample.Id))
+			if ok {
+				metasample.Psstate = state
 			}
 		}
-		sample.Callsrc = argshim.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths)
-		return sample.Callsrc
+		return makeJSON(lena.getMetasamples())
+	})
+
+	// Build analysis call source for a metasample with given id.
+	app.Post("/api/get-metasample-callsrc", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, params martini.Params) string {
+		if sample := lena.getSampleWithId(body.Id); sample != nil {
+			updateSampleState(sample, rt, lena, argshim, pman)
+			return makeJSON(sample)
+		}
+		return fmt.Sprintf("Could not find metasample with id %s.", body.Id)
 	})
 
 	//=========================================================================
@@ -364,10 +361,9 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 
 	// Invoke BCL_PROCESSOR_PD.
 	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		// Use argshim to build MRO call source and invoke.
 		fcid := body.Fcid
 		run := pool.find(fcid)
-
-		// Use argshim to build MRO call source and invoke.
 		if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
 			return err.Error()
 		}
@@ -376,42 +372,33 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 
 	// Invoke ANALYZER_PD.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Get the seq run with this fcid.
-		fcid := body.Fcid
-
 		// Get all the samples for this fcid.
-		samples, err := lena.getSamplesForFlowcell(fcid)
-		if err != nil {
-			return err.Error()
-		}
+		samples := lena.getSamplesForFlowcell(body.Fcid)
 
 		// Invoke the appropriate pipeline on each sample.
 		errors := []string{}
 		for _, sample := range samples {
-			// Use argshim to pick pipeline and build MRO call source.
-			pname := argshim.getPipelineForSample(sample)
-
-			fastqPaths := map[string]string{}
-			for _, sample_def := range sample.Sample_defs {
-				sd_fcid := sample_def.Sequencing_run.Name
-				// Get the BCL_PROCESSOR_PD pipestance for this fcid/seq run.
-				if preprocPipestance, _ := pman.GetPipestance(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid); preprocPipestance != nil {
-					if outs, ok := preprocPipestance.GetOuts(0).(map[string]interface{}); ok {
-						if fastq_path, ok := outs["fastq_path"].(string); ok {
-							fastqPaths[sd_fcid] = fastq_path
-						}
-					}
-				}
-			}
-
-			src := argshim.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths)
-
 			// Invoke the pipestance.
-			if err := pman.Invoke(fcid, pname, strconv.Itoa(sample.Id), src); err != nil {
+			if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
 				errors = append(errors, err.Error())
 			}
 		}
 		return strings.Join(errors, "\n")
+	})
+
+	// Invoke metasample ANALYZER_PD.
+	app.Post("/api/invoke-metasample-analysis", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
+		// Get the sample with this id.
+		sample := lena.getSampleWithId(body.Id)
+		if sample == nil {
+			return fmt.Sprintf("Sample '%s' not found.", body.Id)
+		}
+
+		// Invoke the pipestance.
+		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
+			return err.Error()
+		}
+		return ""
 	})
 
 	//=========================================================================
@@ -421,17 +408,12 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 	// Archive pipestances.
 	app.Post("/api/archive-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		// Get all the samples for this fcid.
-		fcid := body.Fcid
-		samples, err := lena.getSamplesForFlowcell(fcid)
-		if err != nil {
-			return err.Error()
-		}
+		samples := lena.getSamplesForFlowcell(body.Fcid)
 
 		// Archive the samples.
 		errors := []string{}
 		for _, sample := range samples {
-			pname := argshim.getPipelineForSample(sample)
-			if err := pman.ArchivePipestanceHead(fcid, pname, strconv.Itoa(sample.Id)); err != nil {
+			if err := pman.ArchivePipestanceHead(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
 				errors = append(errors, err.Error())
 			}
 		}

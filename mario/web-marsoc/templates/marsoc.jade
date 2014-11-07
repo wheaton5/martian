@@ -108,7 +108,7 @@ html(ng-app="app")
                                 div(style="margin-top: 5px")
                                     .minibox(ng-repeat="sample in samples" ng-class="sample.psstate" ng-mouseover="sampi=$index"
                                         style="text-align:center; margin-right:2px; margin-bottom: 2px; width: 85px; ") 
-                                        a(href="{{urlprefix}}/pipestance/{{selrun.fcid}}/{{sample.pname}}/{{sample.id}}" style="" ng-mouseover="$parent.sampi=$index") {{sample.id}}<br>{{sample.psstate}}                                
+                                        a(href="{{urlprefix}}/pipestance/{{sample.pscontainer}}/{{sample.pname}}/{{sample.id}}" style="" ng-mouseover="$parent.sampi=$index") {{sample.id}}<br>{{sample.psstate}}                                
                                 div(style="margin-top: 15px; font-weight: bold") {{samples[sampi].description}} by {{samples[sampi].user.username}}
                                 pre(style="margin-top: 15px") {{samples[sampi].callsrc}}
     script        

@@ -12,26 +12,21 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
 
     $scope.selsample = null
     $scope.showbutton = true
-    
+   
     $http.get('/api/get-metasamples').success((data) ->
         $scope.samples = data
-        #$scope.runTable = _.indexBy($scope.runs, 'fcid')
     )
 
     $scope.selectSample = (sample) ->
         $scope.selsample = sample
         $scope.selsample.selected = true
-        console.log($scope.selsample.id)
-        $http.post('/api/get-metasample-callsrc', { id: "" + $scope.selsample?.id }).success((data) ->
-            console.log(data)
-            $scope.selsample?.callsrc = data
+        $http.post('/api/get-metasample-callsrc', { id: $scope.selsample?.id.toString() }).success((data) ->
+            if $scope.selsample? then  _.assign($scope.selsample, data)
         )
 
     $scope.invokeAnalysis = () ->
         $scope.showbutton = false
-        $http.post('/api/invoke-analysis', { fcid: $scope.selrun.fcid }).success((data) ->
-            $scope.refreshRuns()
+        $http.post('/api/invoke-metasample-analysis', { id: "" + $scope.selsample?.id.toString() }).success((data) ->
             if data then window.alert(data.toString())
         )
 )
-

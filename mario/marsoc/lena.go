@@ -16,7 +16,6 @@ import (
 	"path"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -65,7 +64,7 @@ type SequencingRun struct {
 	Loading_concentration float32  `json:"loading_concentration"`
 	Failure_reason        string   `json:"failure_reason"`
 	Samples               []string `json:"samples"`
-	Fastq_path            string   `json:"fastq_path"`
+	Psstate               string   `json:"psstate"`
 }
 
 type User struct {
@@ -96,26 +95,26 @@ type MetasamplePrereq struct {
 }
 
 type Sample struct {
-	Id                       int                 `json:"id"`
-	Description              string              `json:"description"`
-	Name                     string              `json:"name"`
-	State                    string              `json:"state"`
-	Genome                   *Genome             `json:"genome"`
-	Target_set               *TargetSet          `json:"target_set"`
-	Primers                  []*Oligo            `json:"primers"`
-	Workflow                 *Workflow           `json:"workflow"`
-	Degenerate_primer_length int                 `json:"degenerate_primer_length"`
-	Barcode_set              *BarcodeSet         `json:"barcode_set"`
-	Template_input_mass      float32             `json:"template_input_mass"`
-	User                     *User               `json:"user"`
-	Cell_line                *CellLine           `json:"cell_line"`
-	Exclude_non_bc_reads     bool                `json:"exclude_non_bc_reads"`
-	Sample_defs              []*SampleDef        `json:"sample_defs"`
-	Sample_group             string              `json:"sample_group"`
-	Metasample_prereqs       []*MetasamplePrereq `json:"metasample_prereqs"`
-	Pname                    string              `json:"pname"`
-	Psstate                  string              `json:"psstate"`
-	Callsrc                  string              `json:"callsrc"`
+	Id                       int          `json:"id"`
+	Description              string       `json:"description"`
+	Name                     string       `json:"name"`
+	State                    string       `json:"state"`
+	Genome                   *Genome      `json:"genome"`
+	Target_set               *TargetSet   `json:"target_set"`
+	Primers                  []*Oligo     `json:"primers"`
+	Workflow                 *Workflow    `json:"workflow"`
+	Degenerate_primer_length int          `json:"degenerate_primer_length"`
+	Barcode_set              *BarcodeSet  `json:"barcode_set"`
+	Template_input_mass      float32      `json:"template_input_mass"`
+	User                     *User        `json:"user"`
+	Cell_line                *CellLine    `json:"cell_line"`
+	Exclude_non_bc_reads     bool         `json:"exclude_non_bc_reads"`
+	Sample_defs              []*SampleDef `json:"sample_defs"`
+	Pname                    string       `json:"pname"`
+	Pscontainer              string       `json:"pscontainer"`
+	Psstate                  string       `json:"psstate"`
+	Ready_to_invoke          bool         `json:"ready_to_invoke"`
+	Callsrc                  string       `json:"callsrc"`
 }
 
 type Lena struct {
@@ -171,6 +170,9 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	self.spidTable = map[int]*Sample{}
 	self.metasamples = []*Sample{}
 	for _, sample := range samples {
+		// Collect list of fcids referenced in the sample_defs
+		uniqueFcids := map[string]bool{}
+
 		for _, sample_def := range sample.Sample_defs {
 			if sample_def.Sequencing_run == nil {
 				continue
@@ -178,6 +180,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 
 			// Store them into lists indexed by flowcell id.
 			fcid := sample_def.Sequencing_run.Name
+			uniqueFcids[fcid] = true
 			smap, ok := self.fcidTable[fcid]
 			if ok {
 				smap[sample.Id] = sample
@@ -187,14 +190,22 @@ func (self *Lena) ingestDatabase(data []byte) error {
 			self.spidTable[sample.Id] = sample
 		}
 
-		// Build list of metasamples.
-		// Update this when sample_group becomes an array. Remove the range filtering too.
-		fcids := strings.Split(sample.Sample_group, "-")
-		if len(fcids) > 1 && sample.Id > 800 {
-			for _, fcid := range fcids {
-				sample.Metasample_prereqs = append(sample.Metasample_prereqs, &MetasamplePrereq{fcid, ""})
-			}
+		// Sort the uniquified fcids, and build the pscontainer
+		// name from it(them).
+		fcids := []string{}
+		for fcid, _ := range uniqueFcids {
+			fcids = append(fcids, fcid)
+		}
+		sort.Strings(fcids)
+		if len(fcids) > 1 {
+			// It's a metasample, add to list, set container to sample id.
+			sample.Pscontainer = strconv.Itoa(sample.Id)
 			self.metasamples = append(self.metasamples, sample)
+		} else if len(fcids) == 1 {
+			// Single-flowcell sample.
+			sample.Pscontainer = fcids[0]
+		} else {
+			sample.Pscontainer = "ungrouped"
 		}
 	}
 	// Now parse the JSON into unstructured interface{} bags,
@@ -281,35 +292,41 @@ func (self *Lena) lenaAPI() ([]byte, error) {
 	return body, nil
 }
 
-func (self *Lena) getSamplesForFlowcell(fcid string) ([]*Sample, error) {
-	if sampleMap, ok := self.fcidTable[fcid]; ok {
-		sampleIds := []int{}
-		for sampleId := range sampleMap {
-			sampleIds = append(sampleIds, sampleId)
-		}
-		sort.Ints(sampleIds)
-		sampleList := []*Sample{}
-		for _, sampleId := range sampleIds {
-			sample := sampleMap[sampleId]
-			if sample.Sample_group == fcid {
-				sampleList = append(sampleList, sample)
-			}
-		}
-		return sampleList, nil
+func (self *Lena) getSamplesForFlowcell(fcid string) []*Sample {
+	// Get sample map for this fcid.
+	sampleMap, ok := self.fcidTable[fcid]
+	if !ok {
+		return []*Sample{}
 	}
-	return []*Sample{}, nil
+
+	// Sort the samples by id and only include single-flowcell samples.
+	sampleIds := []int{}
+	for sampleId := range sampleMap {
+		sampleIds = append(sampleIds, sampleId)
+	}
+	sort.Ints(sampleIds)
+
+	sampleList := []*Sample{}
+	for _, sampleId := range sampleIds {
+		sample := sampleMap[sampleId]
+		// Include only single-flowcell samples (no metasamples).
+		if sample.Pscontainer == fcid {
+			sampleList = append(sampleList, sample)
+		}
+	}
+	return sampleList
 }
 
 func (self *Lena) getMetasamples() []*Sample {
 	return self.metasamples
 }
 
-func (self *Lena) getSampleWithId(sampleId string) (*Sample, bool) {
+func (self *Lena) getSampleWithId(sampleId string) *Sample {
 	if spid, err := strconv.Atoi(sampleId); err == nil {
-		sample, ok := self.spidTable[spid]
-		return sample, ok
+		sample, _ := self.spidTable[spid]
+		return sample
 	}
-	return nil, false
+	return nil
 }
 
 func (self *Lena) getSampleBagWithId(sampleId string) interface{} {

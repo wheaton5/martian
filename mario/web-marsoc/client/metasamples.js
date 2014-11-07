@@ -15,21 +15,20 @@
       var _ref;
       $scope.selsample = sample;
       $scope.selsample.selected = true;
-      console.log($scope.selsample.id);
       return $http.post('/api/get-metasample-callsrc', {
-        id: "" + ((_ref = $scope.selsample) != null ? _ref.id : void 0)
+        id: (_ref = $scope.selsample) != null ? _ref.id.toString() : void 0
       }).success(function(data) {
-        var _ref;
-        console.log(data);
-        return (_ref = $scope.selsample) != null ? _ref.callsrc = data : void 0;
+        if ($scope.selsample != null) {
+          return _.assign($scope.selsample, data);
+        }
       });
     };
     return $scope.invokeAnalysis = function() {
+      var _ref;
       $scope.showbutton = false;
-      return $http.post('/api/invoke-analysis', {
-        fcid: $scope.selrun.fcid
+      return $http.post('/api/invoke-metasample-analysis', {
+        id: "" + ((_ref = $scope.selsample) != null ? _ref.id.toString() : void 0)
       }).success(function(data) {
-        $scope.refreshRuns();
         if (data) {
           return window.alert(data.toString());
         }

@@ -35,42 +35,31 @@ html(ng-app="app")
                 thead
                     tr
                         th Metasample 
+                        th Analysis
                 tbody
                     tr(ng-repeat="sample in samples" ng-click="selectSample(sample)" ng-class="{tablehover:sample.selected}")
                         td.col-flowcell {{sample.id}}
+                        td.align-center
+                            .minibox(ng-if="sample.psstate" ng-class="sample.psstate" style="width:75px") {{sample.psstate}}
 
-        #one-run(ng-if="selsample" style="left: 150px")
+        #one-run(ng-if="selsample" style="left: 225px")
             table.table
                 thead
                     tr
-                        th(colspan="2") Details
-                tbody
-                    tr
-                        td User
-                        td {{selsample.user.username}}
-                    tr
-                        td Description
-                        td {{selsample.description}}
-                    tr
-                        td Prerequisites
-                        td
-                            .minibox(ng-repeat="pr in selsample.metasample_prereqs" ng-class="pr.state" style="margin-right: 2px")
-                                | {{pr.fcid}}
-                            pre(style="margin-top: 15px") {{selsample.callsrc}}
-
-            //table.table(ng-if="selsample.preprocess=='complete'")
-            table.table(ng-if="selsample.ready=='true'")
-                thead
-                    tr
-                        th Samples
+                        th Details
                 tbody
                     tr
                         td
-                            button.btn.btn-default(ng-if="admin && showbutton" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke 
+                            .minibox(ng-repeat="sd in selsample.sample_defs" ng-class="sd.sequencing_run.psstate" style="margin-right: 2px")
+                                | {{sd.sequencing_run.name}}
+                            br
+                            br
+                            button.btn.btn-default(ng-if="admin && showbutton && selsample.ready_to_invoke" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke 
                             div(style="margin-top: 5px")
                                 .minibox(ng-class="selsample.psstate" style="text-align:center; margin-right:2px; margin-bottom: 2px; width: 85px; ") 
-                                    a(href="{{urlprefix}}/pipestance/{{selsample.sample_group}}/{{selsample.pname}}/{{selsample.id}}" style="" ng-mouseover="$parent.sampi=$index") {{selsample.id}}<br>{{selsample.psstate}}
+                                    a(href="{{urlprefix}}/pipestance/{{selsample.pscontainer}}/{{selsample.pname}}/{{selsample.id}}" style="" ng-mouseover="$parent.sampi=$index") {{selsample.id}}<br>{{selsample.psstate}}
                             div(style="margin-top: 15px; font-weight: bold") {{selsample.description}} by {{selsample.user.username}}
+                            pre(style="margin-top: 15px") {{selsample.callsrc}}
     script        
         | admin = [[.Admin]]
     script(src="/metasamples.js")
