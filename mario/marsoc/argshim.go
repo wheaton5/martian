@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"mario/core"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -109,7 +110,8 @@ func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interf
 	if !ok {
 		return ""
 	}
-	return rt.BuildCallSource(pipeline, args)
+	incpath := fmt.Sprintf("%s.mro", strings.ToLower(pipeline))
+	return rt.BuildCallSource([]string{incpath}, pipeline, args)
 }
 
 func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
