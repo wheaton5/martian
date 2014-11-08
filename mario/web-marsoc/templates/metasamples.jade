@@ -54,7 +54,7 @@ html(ng-app="app")
                                 | {{sd.sequencing_run.name}}
                             br
                             br
-                            button.btn.btn-default(ng-if="admin && showbutton && selsample.ready_to_invoke" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke 
+                            button.btn.btn-default(ng-if="admin && showbutton && selsample.ready_to_invoke && !selsample.psstate" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke 
                             div(style="margin-top: 5px")
                                 .minibox(ng-class="selsample.psstate" style="text-align:center; margin-right:2px; margin-bottom: 2px; width: 85px; ") 
                                     a(href="{{urlprefix}}/pipestance/{{selsample.pscontainer}}/{{selsample.pname}}/{{selsample.id}}" style="" ng-mouseover="$parent.sampi=$index") {{selsample.id}}<br>{{selsample.psstate}}
