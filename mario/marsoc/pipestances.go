@@ -108,7 +108,7 @@ func (self *PipestanceManager) writeCache() {
 		"failed":    self.failed,
 	}
 	bytes, _ := json.MarshalIndent(cache, "", "    ")
-	if err := ioutil.WriteFile(self.cachePath, bytes, 0600); err != nil {
+	if err := ioutil.WriteFile(self.cachePath, bytes, 0644); err != nil {
 		core.LogError(err, "pipeman", "Could not write cache file %s.", self.cachePath)
 	}
 }

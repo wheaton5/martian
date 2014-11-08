@@ -304,7 +304,7 @@ func (self *SequencerPool) inventorySequencers() {
 
 	// Update the on-disk cache.
 	bytes, _ := json.MarshalIndent(self.folderCache, "", "    ")
-	ioutil.WriteFile(self.cachePath, bytes, 0600)
+	ioutil.WriteFile(self.cachePath, bytes, 0644)
 
 	// Note if total number of runs increased.
 	if len(self.runList) > oldRunCount {

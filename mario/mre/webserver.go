@@ -100,7 +100,7 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 
 	// Save file.
 	app.Post("/save", binding.Bind(SaveForm{}), func(body SaveForm, p martini.Params) string {
-		ioutil.WriteFile(path.Join(mroPath, body.Fname), []byte(body.Contents), 0600)
+		ioutil.WriteFile(path.Join(mroPath, body.Fname), []byte(body.Contents), 0644)
 		return ""
 	})
 

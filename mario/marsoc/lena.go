@@ -253,7 +253,7 @@ func (self *Lena) goDownloadLoop() {
 				err := self.ingestDatabase(data)
 				if err == nil {
 					// If JSON parsed properly, save it.
-					ioutil.WriteFile(self.dbPath, data, 0600)
+					ioutil.WriteFile(self.dbPath, data, 0644)
 					//core.LogInfo("lenaapi", "Database ingested and saved to %s.", self.dbPath)
 				} else {
 					core.LogError(err, "lenaapi", "Could not parse JSON from downloaded data.")
