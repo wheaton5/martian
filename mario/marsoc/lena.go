@@ -14,6 +14,7 @@ import (
 	"mario/core"
 	"net/http"
 	"path"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -63,6 +64,7 @@ type SequencingRun struct {
 	Loading_concentration float32  `json:"loading_concentration"`
 	Failure_reason        string   `json:"failure_reason"`
 	Samples               []string `json:"samples"`
+	Psstate               string   `json:"psstate"`
 }
 
 type User struct {
@@ -87,6 +89,11 @@ type SampleDef struct {
 	Gem_group        int            `json:"gem_group"`
 }
 
+type MetasamplePrereq struct {
+	Fcid  string `json:"fcid"`
+	State string `json:"state"`
+}
+
 type Sample struct {
 	Id                       int          `json:"id"`
 	Description              string       `json:"description"`
@@ -103,9 +110,10 @@ type Sample struct {
 	Cell_line                *CellLine    `json:"cell_line"`
 	Exclude_non_bc_reads     bool         `json:"exclude_non_bc_reads"`
 	Sample_defs              []*SampleDef `json:"sample_defs"`
-	Sample_group             string       `json:"sample_group"`
 	Pname                    string       `json:"pname"`
+	Pscontainer              string       `json:"pscontainer"`
 	Psstate                  string       `json:"psstate"`
+	Ready_to_invoke          bool         `json:"ready_to_invoke"`
 	Callsrc                  string       `json:"callsrc"`
 }
 
@@ -114,8 +122,9 @@ type Lena struct {
 	authToken   string
 	dbPath      string
 	fcidTable   map[string]map[int]*Sample
-	spidTable   map[string]*Sample
-	sbagTable   map[string]interface{}
+	spidTable   map[int]*Sample
+	sbagTable   map[int]interface{}
+	metasamples []*Sample
 	mailer      *Mailer
 }
 
@@ -125,8 +134,9 @@ func NewLena(downloadUrl string, authToken string, cachePath string, mailer *Mai
 	self.authToken = authToken
 	self.dbPath = path.Join(cachePath, "lena.json")
 	self.fcidTable = map[string]map[int]*Sample{}
-	self.spidTable = map[string]*Sample{}
-	self.sbagTable = map[string]interface{}{}
+	self.spidTable = map[int]*Sample{}
+	self.sbagTable = map[int]interface{}{}
+	self.metasamples = []*Sample{}
 	self.mailer = mailer
 	return self
 }
@@ -157,8 +167,12 @@ func (self *Lena) ingestDatabase(data []byte) error {
 
 	// Create a new, empty cache.
 	self.fcidTable = map[string]map[int]*Sample{}
-	self.spidTable = map[string]*Sample{}
+	self.spidTable = map[int]*Sample{}
+	self.metasamples = []*Sample{}
 	for _, sample := range samples {
+		// Collect list of fcids referenced in the sample_defs
+		uniqueFcids := map[string]bool{}
+
 		for _, sample_def := range sample.Sample_defs {
 			if sample_def.Sequencing_run == nil {
 				continue
@@ -166,13 +180,32 @@ func (self *Lena) ingestDatabase(data []byte) error {
 
 			// Store them into lists indexed by flowcell id.
 			fcid := sample_def.Sequencing_run.Name
+			uniqueFcids[fcid] = true
 			smap, ok := self.fcidTable[fcid]
 			if ok {
 				smap[sample.Id] = sample
 			} else {
 				self.fcidTable[fcid] = map[int]*Sample{sample.Id: sample}
 			}
-			self.spidTable[strconv.Itoa(sample.Id)] = sample
+			self.spidTable[sample.Id] = sample
+		}
+
+		// Sort the uniquified fcids, and build the pscontainer
+		// name from it(them).
+		fcids := []string{}
+		for fcid, _ := range uniqueFcids {
+			fcids = append(fcids, fcid)
+		}
+		sort.Strings(fcids)
+		if len(fcids) > 1 {
+			// It's a metasample, add to list, set container to sample id.
+			sample.Pscontainer = strconv.Itoa(sample.Id)
+			self.metasamples = append(self.metasamples, sample)
+		} else if len(fcids) == 1 {
+			// Single-flowcell sample.
+			sample.Pscontainer = fcids[0]
+		} else {
+			sample.Pscontainer = "ungrouped"
 		}
 	}
 	// Now parse the JSON into unstructured interface{} bags,
@@ -189,7 +222,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	}
 
 	// Create new, empty sample bag.
-	self.sbagTable = map[string]interface{}{}
+	self.sbagTable = map[int]interface{}{}
 	for _, iface := range bagIfaces {
 		spbag, ok := iface.(map[string]interface{})
 		if !ok {
@@ -200,8 +233,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 		if !ok {
 			return errors.New(fmt.Sprintf("JSON object contains value for id that is not a number %v.", idIface))
 		}
-		spid := strconv.Itoa(int(fspid))
-		self.sbagTable[spid] = iface
+		self.sbagTable[int(fspid)] = iface
 	}
 
 	core.LogInfo("lenaapi", "%d samples, %d bags loaded from %s.", len(samples), len(self.sbagTable), self.dbPath)
@@ -260,22 +292,46 @@ func (self *Lena) lenaAPI() ([]byte, error) {
 	return body, nil
 }
 
-func (self *Lena) getSamplesForFlowcell(fcid string) ([]*Sample, error) {
-	if sampleMap, ok := self.fcidTable[fcid]; ok {
-		sampleList := []*Sample{}
-		for _, sample := range sampleMap {
+func (self *Lena) getSamplesForFlowcell(fcid string) []*Sample {
+	// Get sample map for this fcid.
+	sampleMap, ok := self.fcidTable[fcid]
+	if !ok {
+		return []*Sample{}
+	}
+
+	// Sort the samples by id and only include single-flowcell samples.
+	sampleIds := []int{}
+	for sampleId := range sampleMap {
+		sampleIds = append(sampleIds, sampleId)
+	}
+	sort.Ints(sampleIds)
+
+	sampleList := []*Sample{}
+	for _, sampleId := range sampleIds {
+		sample := sampleMap[sampleId]
+		// Include only single-flowcell samples (no metasamples).
+		if sample.Pscontainer == fcid {
 			sampleList = append(sampleList, sample)
 		}
-		return sampleList, nil
 	}
-	return []*Sample{}, nil
+	return sampleList
 }
 
-func (self *Lena) getSampleWithId(sampleId string) (*Sample, bool) {
-	sample, ok := self.spidTable[sampleId]
-	return sample, ok
+func (self *Lena) getMetasamples() []*Sample {
+	return self.metasamples
+}
+
+func (self *Lena) getSampleWithId(sampleId string) *Sample {
+	if spid, err := strconv.Atoi(sampleId); err == nil {
+		sample, _ := self.spidTable[spid]
+		return sample
+	}
+	return nil
 }
 
 func (self *Lena) getSampleBagWithId(sampleId string) interface{} {
-	return self.sbagTable[sampleId]
+	if spid, err := strconv.Atoi(sampleId); err == nil {
+		return self.sbagTable[spid]
+	}
+	return nil
 }

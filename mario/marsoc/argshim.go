@@ -85,56 +85,37 @@ func (self *ArgShim) getPipelineForSample(sample *Sample) string {
 }
 
 func (self *ArgShim) buildArgsForRun(run *Run) map[string]interface{} {
-	v := self.invoke("buildArgsForRun", []interface{}{
-		run,
-	})
+	v := self.invoke("buildArgsForRun", []interface{}{run})
 	if tv, ok := v.(map[string]interface{}); ok {
 		return tv
 	}
 	return map[string]interface{}{}
 }
 
-func (self *ArgShim) buildArgsForSample(run *Run, sbag interface{}, preprocessOuts interface{}) map[string]interface{} {
-	v := self.invoke("buildArgsForSample", []interface{}{
-		run,
-		sbag,
-		preprocessOuts,
-	})
+func (self *ArgShim) buildArgsForSample(sbag interface{}, fastqPaths map[string]string) map[string]interface{} {
+	v := self.invoke("buildArgsForSample", []interface{}{sbag, fastqPaths})
 	if tv, ok := v.(map[string]interface{}); ok {
 		return tv
 	}
 	return map[string]interface{}{}
+}
+
+func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interface{}) string {
+	pipeline, ok := shimout["pipeline"].(string)
+	if !ok {
+		return ""
+	}
+	args, ok := shimout["args"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	return rt.BuildCallSource(pipeline, args)
 }
 
 func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
-	shimout := self.buildArgsForRun(run)
-	pipeline, ok := shimout["pipeline"].(string)
-	if !ok {
-		return ""
-	}
-	args, ok := shimout["args"].(map[string]interface{})
-	if !ok {
-		return ""
-	}
-	return rt.BuildCallSource(pipeline, args)
+	return self.buildCallSource(rt, self.buildArgsForRun(run))
 }
 
-func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, preprocPipestance *core.Pipestance, run *Run, sbag interface{}) string {
-	var preprocessOuts interface{}
-	if preprocPipestance != nil {
-		preprocessOuts = preprocPipestance.GetOuts(0)
-	} else {
-		preprocessOuts = map[string]interface{}{}
-	}
-	shimout := self.buildArgsForSample(run, sbag, preprocessOuts)
-	pipeline, ok := shimout["pipeline"].(string)
-	if !ok {
-		return ""
-	}
-	args, ok := shimout["args"].(map[string]interface{})
-	if !ok {
-		return ""
-	}
-	return rt.BuildCallSource(pipeline, args)
-
+func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string) string {
+	return self.buildCallSource(rt, self.buildArgsForSample(sbag, fastqPaths))
 }
