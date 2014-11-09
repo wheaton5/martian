@@ -132,20 +132,29 @@ func (self *PipestanceManager) inventoryPipestances() {
 			for _, psidInfo := range psidInfos {
 				pscount += 1
 				psid := psidInfo.Name()
-
 				fqname := makeFQName(pipeline, psid)
 
 				// Cache the fqname to container mapping so we know what container
 				// an analysis pipestance is in for notification emails.
 				self.containerTable[fqname] = container
 
+				// If we already know the state of this pipestance, move on.
 				if self.completed[fqname] || self.failed[fqname] {
 					continue
 				}
+
+				// If pipestance has _finalstate, consider it complete.
+				if _, err := os.Stat(path.Join(self.path, container, pipeline, psid, "HEAD", "_finalstate")); err == nil {
+					self.completed[fqname] = true
+					continue
+				}
+
 				pipestance, err := self.rt.ReattachToPipestance(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
 				if err != nil {
-					core.LogError(err, "pipeman", "%s was previously cached but no longer exists.", fqname)
-					self.writeCache()
+					// If we could not reattach, it's because _invocation was
+					// missing, or will no longer parse due to changes in MRO
+					// definitions. Consider the pipestance failed.
+					self.failed[fqname] = true
 					continue
 				}
 				core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
@@ -156,6 +165,9 @@ func (self *PipestanceManager) inventoryPipestances() {
 			}
 		}
 	}
+	self.runListMutex.Lock()
+	self.writeCache()
+	self.runListMutex.Unlock()
 	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
 }
 
