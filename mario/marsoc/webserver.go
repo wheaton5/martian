@@ -12,6 +12,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"mario/core"
+	"mario/gzip"
 	"net/http"
 	"os"
 	"path"
@@ -135,6 +136,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
 	app := &martini.ClassicMartini{m, r}
+	app.Use(gzip.All())
 
 	//=========================================================================
 	// MARSOC renderers and API.
@@ -317,6 +319,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		psid := p["psid"]
 		state := map[string]interface{}{}
 		state["error"] = nil
+		core.LogInfo("pipeman", "> GetPipestance")
 		if pipestance, ok := pman.GetPipestance(container, pname, psid); ok {
 			if pipestance.GetState() == "failed" {
 				fqname, summary, log, errpaths := pipestance.GetFatalError()
@@ -332,9 +335,13 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 				}
 			}
 		}
+		core.LogInfo("pipeman", "< GetPipestance")
+		core.LogInfo("pipeman", "> GetPipestanceSerialization")
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid)
 		state["nodes"] = ser
-		return makeJSON(state)
+		js := makeJSON(state)
+		core.LogInfo("pipeman", "< GetPipestanceSerialization (%d bytes)", len(js))
+		return js
 	})
 
 	// Get metadata file contents.
