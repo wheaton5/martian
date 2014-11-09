@@ -119,6 +119,9 @@ func (self *PipestanceManager) inventoryPipestances() {
 	core.LogInfo("pipeman", "Begin pipestance inventory.")
 	pscount := 0
 
+	// Concurrently step all pipestances in the runlist copy.
+	var wg sync.WaitGroup
+
 	// Iterate over top level containers (flowcells).
 	containerInfos, _ := ioutil.ReadDir(self.path)
 	for _, containerInfo := range containerInfos {
@@ -130,41 +133,53 @@ func (self *PipestanceManager) inventoryPipestances() {
 
 			// Iterate over psids under this pipeline.
 			for _, psidInfo := range psidInfos {
+				wg.Add(1)
 				pscount += 1
-				psid := psidInfo.Name()
-				fqname := makeFQName(pipeline, psid)
+				go func(psidInfo os.FileInfo, pipeline string, container string) {
+					psid := psidInfo.Name()
+					fqname := makeFQName(pipeline, psid)
+					defer wg.Done()
 
-				// Cache the fqname to container mapping so we know what container
-				// an analysis pipestance is in for notification emails.
-				self.containerTable[fqname] = container
+					// Cache the fqname to container mapping so we know what container
+					// an analysis pipestance is in for notification emails.
+					self.runListMutex.Lock()
+					self.containerTable[fqname] = container
+					self.runListMutex.Unlock()
 
-				// If we already know the state of this pipestance, move on.
-				if self.completed[fqname] || self.failed[fqname] {
-					continue
-				}
+					// If we already know the state of this pipestance, move on.
+					if self.completed[fqname] || self.failed[fqname] {
+						return
+					}
 
-				// If pipestance has _finalstate, consider it complete.
-				if _, err := os.Stat(path.Join(self.path, container, pipeline, psid, "HEAD", "_finalstate")); err == nil {
-					self.completed[fqname] = true
-					continue
-				}
+					// If pipestance has _finalstate, consider it complete.
+					if _, err := os.Stat(path.Join(self.path, container, pipeline, psid, "HEAD", "_finalstate")); err == nil {
+						self.runListMutex.Lock()
+						self.completed[fqname] = true
+						self.runListMutex.Unlock()
+						return
+					}
 
-				pipestance, err := self.rt.ReattachToPipestance(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
-				if err != nil {
-					// If we could not reattach, it's because _invocation was
-					// missing, or will no longer parse due to changes in MRO
-					// definitions. Consider the pipestance failed.
-					self.failed[fqname] = true
-					continue
-				}
-				core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
-				self.runListMutex.Lock()
-				self.runList = append(self.runList, pipestance)
-				self.runTable[fqname] = pipestance
-				self.runListMutex.Unlock()
+					pipestance, err := self.rt.ReattachToPipestance(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
+					if err != nil {
+						// If we could not reattach, it's because _invocation was
+						// missing, or will no longer parse due to changes in MRO
+						// definitions. Consider the pipestance failed.
+						self.runListMutex.Lock()
+						self.failed[fqname] = true
+						self.runListMutex.Unlock()
+						return
+					}
+
+					core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
+					self.runListMutex.Lock()
+					self.runList = append(self.runList, pipestance)
+					self.runTable[fqname] = pipestance
+					self.runListMutex.Unlock()
+				}(psidInfo, pipeline, container)
 			}
 		}
 	}
+	wg.Wait()
 	self.runListMutex.Lock()
 	self.writeCache()
 	self.runListMutex.Unlock()
