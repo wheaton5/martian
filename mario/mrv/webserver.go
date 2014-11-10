@@ -100,7 +100,7 @@ func runWebServer(uiport string, usermap interface{}) {
 	// Get pipestance state: nodes and fatal error (if any).
 	app.Get("/register", func(req *http.Request, p martini.Params) string {
 		req.ParseForm()
-		i := 3600
+		i := 5600
 		port := ""
 		for {
 			port = strconv.Itoa(i)
