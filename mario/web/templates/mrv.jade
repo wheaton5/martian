@@ -41,5 +41,5 @@ html(ng-app="app" ng-controller="MarioRunCtrl" ng-cloak)
                         td.col-flowcell 
                             a(href="https://github.com/10XDev/pipelines/tree/{{pipestance.branch}}") {{pipestance.branch}}
                         td.col-flowcell 
-                            a(href="/{{pipestance.port}}/") {{pipestance.psid}} ({{pipestance.port}})
+                            a(href="/{{pipestance.port}}/") ({{pipestance.port}}) {{pipestance.psid}}
     script(src="/mrv.js")
