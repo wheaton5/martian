@@ -39,7 +39,7 @@ html(ng-app="app" ng-controller="MarioRunCtrl" ng-cloak)
                             img(ng-src="{{usermap[pipestance.user].avatar}}" style="height: 20px; margin-right: 15px")
                             | {{usermap[pipestance.user].name}}
                         td.col-flowcell 
-                            a(href="https://github.com/10XDev/mario/tree/{{pipestance.branch}}") {{pipestance.branch}}
+                            a(href="https://github.com/10XDev/pipelines/tree/{{pipestance.branch}}") {{pipestance.branch}}
                         td.col-flowcell 
                             a(href="/{{pipestance.port}}/") {{pipestance.psid}} ({{pipestance.port}})
     script(src="/mrv.js")
