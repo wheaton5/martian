@@ -31,15 +31,18 @@ html(ng-app="app" ng-controller="MarioRunCtrl" ng-cloak)
                 thead
                     tr
                         th.col-date(style="padding-left: 20px") User
+                        th Pipestance                        
                         th Branch
-                        th.col-flowcell Pipestance                        
+                        th Bug
                 tbody
                     tr(ng-repeat="pipestance in pipestances")
                         td.col-date(style="padding-left: 20px")
                             img(ng-src="{{usermap[pipestance.user].avatar}}" style="height: 20px; margin-right: 15px")
                             | {{usermap[pipestance.user].name}}
-                        td.col-flowcell 
-                            a(href="https://github.com/10XDev/pipelines/tree/{{pipestance.branch}}") {{pipestance.branch}}
-                        td.col-flowcell 
+                        td
                             a(href="/{{pipestance.port}}/") ({{pipestance.port}}) {{pipestance.psid}}
+                        td
+                            a(href="https://github.com/10XDev/pipelines/tree/{{pipestance.branch}}") {{pipestance.branch}}
+                        td
+                            a(href="https://10xtech.atlassian.net/browse/{{pipestance.bugid}}" ng-if="pipestance.bugid.length > 0") {{pipestance.bugid}}
     script(src="/mrv.js")

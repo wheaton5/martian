@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/go-martini/martini"
 	"html/template"
 	"mario/core"
 	"net/http"
@@ -18,6 +17,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/go-martini/martini"
 )
 
 type Pipestance struct {
@@ -25,10 +26,19 @@ type Pipestance struct {
 	Port   string `json:"port"`
 	User   string `json:"user"`
 	Branch string `json:"branch"`
+	Bugid  string `json:"bugid"`
 	Psid   string `json:"psid"`
 }
 
 type IndexPage struct{}
+
+func extractBugidFromBranch(branch string) string {
+	parts := strings.Split(branch, "/")
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
+}
 
 func runWebServer(uiport string, usermap interface{}) {
 	lastport := ""
@@ -114,6 +124,7 @@ func runWebServer(uiport string, usermap interface{}) {
 			Port:   port,
 			User:   req.Form.Get("username"),
 			Branch: req.Form.Get("branch"),
+			Bugid:  extractBugidFromBranch(req.Form.Get("branch")),
 			Psid:   req.Form.Get("psid"),
 		}
 		return port
