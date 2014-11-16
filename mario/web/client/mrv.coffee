@@ -8,10 +8,10 @@ app = angular.module('app', ['ui.bootstrap'])
 
 app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
     $scope.pipestances = []
-    $scope.usermap = {}
+    $scope.config = {}
 
     $http.get('/api/get-pipestances').success((data) ->
         $scope.pipestances = data.pipestances
-        $scope.usermap = data.usermap
+        $scope.config = data.config
     )
 )

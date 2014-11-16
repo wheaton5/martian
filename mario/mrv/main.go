@@ -8,12 +8,86 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/docopt/docopt-go"
 	"io/ioutil"
 	"mario/core"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/docopt/docopt-go"
 )
+
+func extractBugidFromBranch(branch string) string {
+	parts := strings.Split(branch, "/")
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
+}
+
+type Directory struct {
+	startPort int
+	pstances  map[string]map[string]string
+	config    map[string]interface{}
+	mutex     sync.Mutex
+}
+
+func NewDirectory(startPort int, config interface{}) *Directory {
+	self := &Directory{}
+	self.startPort = startPort
+	self.config = config.(map[string]interface{})
+	self.pstances = map[string]map[string]string{}
+	return self
+}
+
+func (self *Directory) deregister(port string) {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
+	delete(self.pstances, port)
+}
+
+func (self *Directory) register(info map[string]string) string {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
+	// Pick first available port starting from 5600.
+	i := self.startPort
+	port := ""
+	for {
+		port = strconv.Itoa(i)
+		if _, ok := self.pstances[port]; !ok {
+			break
+		}
+		i += 1
+	}
+
+	// Register the info block.
+	info["port"] = port
+	info["mrobug_id"] = extractBugidFromBranch(info["mrobranch"])
+	self.pstances[port] = info
+
+	return port
+}
+
+func (self *Directory) getConfig() map[string]interface{} {
+	return self.config
+}
+
+func (self *Directory) getSortedPipestances() []map[string]string {
+	sortedPorts := []string{}
+	for port, _ := range self.pstances {
+		sortedPorts = append(sortedPorts, port)
+	}
+	sort.Strings(sortedPorts)
+	sortedPstances := []map[string]string{}
+	for _, port := range sortedPorts {
+		sortedPstances = append(sortedPstances, self.pstances[port])
+	}
+	return sortedPstances
+}
 
 func main() {
 	core.SetupSignalHandlers()
@@ -30,7 +104,7 @@ Usage:
 
 Options:
     --port=<num>     Serve UI at http://localhost:<num>
-    --usermap=<file> JSON file with user names and avatar URLs.
+    --config=<file>  JSON file with user names and avatar URLs.
     -h --help        Show this message.
     --version        Show version.`
 	marioVersion := core.GetVersion()
@@ -45,16 +119,25 @@ Options:
 		uiport = value.(string)
 	}
 
-	var usermap interface{}
-	if umapfile := opts["--usermap"]; umapfile != nil {
-		if bytes, err := ioutil.ReadFile(umapfile.(string)); err == nil {
-			json.Unmarshal(bytes, &usermap)
+	// Load the configuration file.
+	var config interface{}
+	if configfile := opts["--config"]; configfile != nil {
+		if bytes, err := ioutil.ReadFile(configfile.(string)); err == nil {
+			if err := json.Unmarshal(bytes, &config); err != nil {
+				fmt.Printf("%s\n", err.Error())
+				os.Exit(1)
+			}
 		} else {
 			fmt.Printf("%s\n", err.Error())
+			os.Exit(1)
 		}
 	}
 
-	runWebServer(uiport, usermap)
+	// Create the directory.
+	directory := NewDirectory(5600, config)
+
+	// Start web server.
+	runWebServer(uiport, directory)
 
 	// Let daemons take over.
 	done := make(chan bool)

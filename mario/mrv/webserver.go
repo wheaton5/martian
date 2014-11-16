@@ -21,26 +21,9 @@ import (
 	"github.com/go-martini/martini"
 )
 
-type Pipestance struct {
-	Host   string `json:"host"`
-	Port   string `json:"port"`
-	User   string `json:"user"`
-	Branch string `json:"branch"`
-	Bugid  string `json:"bugid"`
-	Psid   string `json:"psid"`
-}
-
 type IndexPage struct{}
 
-func extractBugidFromBranch(branch string) string {
-	parts := strings.Split(branch, "/")
-	if len(parts) > 1 {
-		return parts[1]
-	}
-	return ""
-}
-
-func runWebServer(uiport string, usermap interface{}) {
+func runWebServer(uiport string, dir *Directory) {
 	lastport := ""
 
 	proxy := &httputil.ReverseProxy{
@@ -66,9 +49,6 @@ func runWebServer(uiport string, usermap interface{}) {
 		},
 	}
 
-	ptable := map[string]*Pipestance{}
-	_ = ptable
-
 	//=========================================================================
 	// Configure server.
 	//=========================================================================
@@ -84,21 +64,12 @@ func runWebServer(uiport string, usermap interface{}) {
 	app := &martini.ClassicMartini{m, r}
 
 	//=========================================================================
-	// Page renderers.
-	//=========================================================================
-
-	//=========================================================================
 	// API endpoints.
 	//=========================================================================
-
 	app.Get("/api/get-pipestances", func(p martini.Params) string {
-		plist := []*Pipestance{}
-		for _, pipestance := range ptable {
-			plist = append(plist, pipestance)
-		}
 		res := map[string]interface{}{
-			"pipestances": plist,
-			"usermap":     usermap,
+			"pipestances": dir.getSortedPipestances(),
+			"config":      dir.getConfig(),
 		}
 		bytes, err := json.Marshal(res)
 		if err != nil {
@@ -108,26 +79,16 @@ func runWebServer(uiport string, usermap interface{}) {
 	})
 
 	// Get pipestance state: nodes and fatal error (if any).
-	app.Get("/register", func(req *http.Request, p martini.Params) string {
+	app.Post("/register", func(req *http.Request, p martini.Params) string {
+		// Copy info block from the HTTP form.
 		req.ParseForm()
-		i := 5600
-		port := ""
-		for {
-			port = strconv.Itoa(i)
-			if _, ok := ptable[port]; !ok {
-				break
-			}
-			i += 1
+		info := map[string]string{}
+		for k, v := range req.Form {
+			info[k] = v[0]
 		}
-		ptable[port] = &Pipestance{
-			Host:   strings.Split(req.RemoteAddr, ":")[0],
-			Port:   port,
-			User:   req.Form.Get("username"),
-			Branch: req.Form.Get("branch"),
-			Bugid:  extractBugidFromBranch(req.Form.Get("branch")),
-			Psid:   req.Form.Get("psid"),
-		}
-		return port
+
+		// Register the info block and return port to client mrp.
+		return dir.register(info)
 	})
 
 	app.Get("/**", func(rw http.ResponseWriter, req *http.Request) {
@@ -141,7 +102,7 @@ func runWebServer(uiport string, usermap interface{}) {
 			if len(rw.Header()) == 0 {
 				port := strings.Split(req.URL.Host, ":")[1]
 				fmt.Printf("FAIL %s\n", port)
-				delete(ptable, port)
+				dir.deregister(port)
 			}
 		}
 	})
@@ -151,7 +112,7 @@ func runWebServer(uiport string, usermap interface{}) {
 		if len(rw.Header()) == 0 {
 			port := strings.Split(req.URL.Host, ":")[1]
 			fmt.Printf("FAIL %s\n", port)
-			delete(ptable, port)
+			dir.deregister(port)
 		}
 	})
 
