@@ -115,12 +115,19 @@ func (self *Directory) probe(hostname string, port string, wg *sync.WaitGroup) {
 	u := fmt.Sprintf("http://%s:%s/api/get-info", hostname, port)
 	if res, err := http.Get(u); err == nil {
 		if content, err := ioutil.ReadAll(res.Body); err == nil {
+			fmt.Printf("%d %s\n", res.StatusCode, string(content))
 			if res.StatusCode == 200 {
 				var info map[string]string
 				if err := json.Unmarshal(content, &info); err == nil {
 					self.upsert(port, info)
 					return
 				}
+			} else {
+				// For old mrp's that don't have get-info, we still
+				// want to consume the port so we don't give out a
+				// used port to new mrp's.
+				self.upsert(port, map[string]string{})
+				return
 			}
 		}
 	}
@@ -167,6 +174,7 @@ Usage:
 
 Options:
     --port=<num>     Serve UI at http://localhost:<num>
+    --dport=<num>    Starting port number available to mrp's.
     --config=<file>  JSON file with user names and avatar URLs.
     -h --help        Show this message.
     --version        Show version.`
@@ -180,6 +188,14 @@ Options:
 	uiport := "8080"
 	if value := opts["--port"]; value != nil {
 		uiport = value.(string)
+	}
+
+	// Compute distributed port.
+	dport := 5600
+	if value := opts["--dport"]; value != nil {
+		if num, err := strconv.Atoi(value.(string)); err == nil {
+			dport = num
+		}
 	}
 
 	// Load the configuration file.
@@ -197,7 +213,7 @@ Options:
 	}
 
 	// Create the directory.
-	dir := NewDirectory(5600, config)
+	dir := NewDirectory(dport, config)
 
 	// Discover existing mrps.
 	dir.discover()
