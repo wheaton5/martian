@@ -89,7 +89,7 @@ type MetadataForm struct {
 // Psstate  Current state of the sample's pipestance, if any
 // Callsrc  MRO invoke source to analyze this sample, per argshim
 func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
-	argshim *ArgShim, pman *PipestanceManager) {
+	argshim *ArgShim, pman *PipestanceManager) map[string]string {
 	pname := argshim.getPipelineForSample(sample)
 	sample.Pname = pname
 	sample.Psstate, _ = pman.GetPipestanceState(sample.Pscontainer, pname, strconv.Itoa(sample.Id))
@@ -117,6 +117,7 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 		}
 	}
 	sample.Callsrc = argshim.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths)
+	return fastqPaths
 }
 
 func runWebServer(uiport string, instanceName string, marioVersion string,
@@ -139,10 +140,9 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 	app.Use(gzip.All())
 
 	//=========================================================================
-	// MARSOC renderers and API.
+	// Main run/sample UI.
 	//=========================================================================
-
-	// Page renderers.
+	// Render: main UI.
 	app.Get("/", func() string {
 		return render("web-marsoc/templates", "marsoc.html",
 			&MainPage{
@@ -152,6 +152,8 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 				PipelinesVersion: mroVersion,
 			})
 	})
+
+	// Render: admin mode main UI.
 	app.Get("/admin", func() string {
 		return render("web-marsoc/templates", "marsoc.html",
 			&MainPage{
@@ -161,19 +163,9 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 				PipelinesVersion: mroVersion,
 			})
 	})
-	app.Get("/metasamples", func() string {
-		return render("web-marsoc/templates", "metasamples.html",
-			&MainPage{
-				InstanceName:     instanceName,
-				Admin:            true,
-				MarsocVersion:    marioVersion,
-				PipelinesVersion: mroVersion,
-			})
-	})
 
-	// Get all sequencing runs.
+	// API: Get all sequencing runs and state.
 	app.Get("/api/get-runs", func() string {
-
 		// Iterate concurrently over all sequencing runs and populate or
 		// update the state fields in each run before sending to client.
 		var wg sync.WaitGroup
@@ -241,7 +233,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		return makeJSON(pool.runList)
 	})
 
-	// Get samples for a given flowcell id.
+	// API: Get samples for a given flowcell id.
 	app.Post("/api/get-samples", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
 		samples := lena.getSamplesForFlowcell(body.Fcid)
 
@@ -257,7 +249,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		return makeJSON(samples)
 	})
 
-	// Build BCL_PROCESSOR_PD call source.
+	// API: Build BCL_PROCESSOR_PD call source.
 	app.Post("/api/get-callsrc", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
 		if run, ok := pool.runTable[body.Fcid]; ok {
 			return argshim.buildCallSourceForRun(rt, run)
@@ -265,7 +257,21 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		return fmt.Sprintf("Could not find run with fcid %s.", body.Fcid)
 	})
 
-	// Get all metasamples.
+	//=========================================================================
+	// Metasamples UI.
+	//=========================================================================
+	// Render: main metasample UI.
+	app.Get("/metasamples", func() string {
+		return render("web-marsoc/templates", "metasamples.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            true,
+				MarsocVersion:    marioVersion,
+				PipelinesVersion: mroVersion,
+			})
+	})
+
+	// API: Get all metasamples and state.
 	app.Get("/api/get-metasamples", func() string {
 		metasamples := lena.getMetasamples()
 		for _, metasample := range metasamples {
@@ -277,7 +283,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		return makeJSON(lena.getMetasamples())
 	})
 
-	// Build analysis call source for a metasample with given id.
+	// API: Build analysis call source for a metasample with given id.
 	app.Post("/api/get-metasample-callsrc", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, params martini.Params) string {
 		if sample := lena.getSampleWithId(body.Id); sample != nil {
 			updateSampleState(sample, rt, lena, argshim, pman)
@@ -286,11 +292,25 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		return fmt.Sprintf("Could not find metasample with id %s.", body.Id)
 	})
 
-	//=========================================================================
-	// Pipestance graph renderers and display API.
-	//=========================================================================
+	// API: Invoke metasample analysis.
+	app.Post("/api/invoke-metasample-analysis", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
+		// Get the sample with this id.
+		sample := lena.getSampleWithId(body.Id)
+		if sample == nil {
+			return fmt.Sprintf("Sample '%s' not found.", body.Id)
+		}
 
-	// Page renderers.
+		// Invoke the pipestance.
+		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
+	//=========================================================================
+	// Pipestance graph UI.
+	//=========================================================================
+	// Render: pipestance graph UI.
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
 		return render("web/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
@@ -301,6 +321,8 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 			AdminStyle:   false,
 		})
 	})
+
+	// Render: admin mode pipestance graph UI.
 	app.Get("/admin/pipestance/:container/:pname/:psid", func(p martini.Params) string {
 		return render("web/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
@@ -312,7 +334,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		})
 	})
 
-	// Get graph nodes.
+	// API: Get graph nodes and state.
 	app.Get("/api/get-state/:container/:pname/:psid", func(p martini.Params) string {
 		container := p["container"]
 		pname := p["pname"]
@@ -323,7 +345,6 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		for k, v := range info {
 			psinfo[k] = v
 		}
-		//core.LogInfo("pipeman", "> GetPipestance")
 		if pipestance, ok := pman.GetPipestance(container, pname, psid); ok {
 			psstate := pipestance.GetState()
 			psinfo["state"] = psstate
@@ -344,17 +365,14 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 				}
 			}
 		}
-		//core.LogInfo("pipeman", "< GetPipestance")
-		//core.LogInfo("pipeman", "> GetPipestanceSerialization")
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid)
 		state["nodes"] = ser
 		state["info"] = psinfo
 		js := makeJSON(state)
-		//core.LogInfo("pipeman", "< GetPipestanceSerialization (%d bytes)", len(js))
 		return js
 	})
 
-	// Get metadata file contents.
+	// API: Get metadata file contents.
 	app.Post("/api/get-metadata/:container/:pname/:psid", binding.Bind(MetadataForm{}), func(body MetadataForm, p martini.Params) string {
 		if strings.Index(body.Path, "..") > -1 {
 			return "'..' not allowed in path."
@@ -366,17 +384,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		return string(data)
 	})
 
-	// Restart failed stage.
-	app.Post("/api/restart/:container/:pname/:psid/:fqname", func(p martini.Params) string {
-		pman.UnfailPipestance(p["container"], p["pname"], p["psid"], p["fqname"])
-		return ""
-	})
-
-	//=========================================================================
-	// Pipestance invocation API.
-	//=========================================================================
-
-	// Invoke BCL_PROCESSOR_PD.
+	// API: Invoke BCL_PROCESSOR_PD.
 	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		// Use argshim to build MRO call source and invoke.
 		fcid := body.Fcid
@@ -387,7 +395,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		return ""
 	})
 
-	// Invoke ANALYZER_PD.
+	// API: Invoke analysis.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		// Get all the samples for this fcid.
 		samples := lena.getSamplesForFlowcell(body.Fcid)
@@ -403,26 +411,13 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		return strings.Join(errors, "\n")
 	})
 
-	// Invoke metasample ANALYZER_PD.
-	app.Post("/api/invoke-metasample-analysis", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
-		// Get the sample with this id.
-		sample := lena.getSampleWithId(body.Id)
-		if sample == nil {
-			return fmt.Sprintf("Sample '%s' not found.", body.Id)
-		}
-
-		// Invoke the pipestance.
-		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
-			return err.Error()
-		}
+	// API: Restart failed stage.
+	app.Post("/api/restart/:container/:pname/:psid/:fqname", func(p martini.Params) string {
+		pman.UnfailPipestance(p["container"], p["pname"], p["psid"], p["fqname"])
 		return ""
 	})
 
-	//=========================================================================
-	// Pipestance archival API.
-	//=========================================================================
-
-	// Archive pipestances.
+	// API: Archive pipestance.
 	app.Post("/api/archive-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		// Get all the samples for this fcid.
 		samples := lena.getSamplesForFlowcell(body.Fcid)
@@ -435,6 +430,23 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 			}
 		}
 		return strings.Join(errors, "\n")
+	})
+
+	//=========================================================================
+	// Shimulator API.
+	//=========================================================================
+	app.Get("/api/shimulate/:sid", func(p martini.Params) string {
+		sid := p["sid"]
+		sample := lena.getSampleWithId(sid)
+		if sample == nil {
+			return fmt.Sprintf("Sample %s not found in Lena.", sid)
+		}
+		return makeJSON(map[string]interface{}{
+			"ready_to_invoke": sample.Ready_to_invoke,
+			"workflow":        sample.Workflow.Name,
+			"sample_bag":      lena.getSampleBagWithId(sid),
+			"fastq_paths":     updateSampleState(sample, rt, lena, argshim, pman),
+		})
 	})
 
 	//=========================================================================
