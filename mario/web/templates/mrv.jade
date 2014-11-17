@@ -27,7 +27,7 @@ html(ng-app="app" ng-controller="MarioRunCtrl" ng-cloak)
                     a(href="" style="color:#555") 10
                         span.logo-color X
                         | &nbsp;Mario Pipestance Viewer                 
-        table.table#run-table(style="margin-top: 50px; width: 1000px")
+        table.table#run-table(style="margin-top: 50px")
                 thead
                     tr
                         th.col-date(style="padding-left: 20px") User
@@ -39,8 +39,8 @@ html(ng-app="app" ng-controller="MarioRunCtrl" ng-cloak)
                         th Port
                         th PID
                 tbody
-                    tr(ng-repeat="p in pipestances")
-                        td.col-date(style="padding-left: 20px")
+                    tr(ng-repeat="p in pipestances")  
+                        td.col-date(style="padding-left: 20px")  
                             img(ng-src="{{config.usermap[p.username].avatar}}" style="height: 20px; margin-right: 15px")
                             | {{config.usermap[p.username].name}}
                         td
