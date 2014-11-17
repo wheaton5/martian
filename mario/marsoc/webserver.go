@@ -121,7 +121,7 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 
 func runWebServer(uiport string, instanceName string, marioVersion string,
 	mroVersion string, rt *core.Runtime, pool *SequencerPool,
-	pman *PipestanceManager, lena *Lena, argshim *ArgShim) {
+	pman *PipestanceManager, lena *Lena, argshim *ArgShim, info map[string]string) {
 
 	//=========================================================================
 	// Configure server.
@@ -319,9 +319,18 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		psid := p["psid"]
 		state := map[string]interface{}{}
 		state["error"] = nil
-		core.LogInfo("pipeman", "> GetPipestance")
+		psinfo := map[string]string{}
+		for k, v := range info {
+			psinfo[k] = v
+		}
+		//core.LogInfo("pipeman", "> GetPipestance")
 		if pipestance, ok := pman.GetPipestance(container, pname, psid); ok {
-			if pipestance.GetState() == "failed" {
+			psstate := pipestance.GetState()
+			psinfo["state"] = psstate
+			psinfo["pname"] = pname
+			psinfo["psid"] = psid
+			psinfo["invokesrc"] = pipestance.GetInvokeSrc()
+			if psstate == "failed" {
 				fqname, summary, log, errpaths := pipestance.GetFatalError()
 				errpath := ""
 				if len(errpaths) > 0 {
@@ -335,12 +344,13 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 				}
 			}
 		}
-		core.LogInfo("pipeman", "< GetPipestance")
-		core.LogInfo("pipeman", "> GetPipestanceSerialization")
+		//core.LogInfo("pipeman", "< GetPipestance")
+		//core.LogInfo("pipeman", "> GetPipestanceSerialization")
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid)
 		state["nodes"] = ser
+		state["info"] = psinfo
 		js := makeJSON(state)
-		core.LogInfo("pipeman", "< GetPipestanceSerialization (%d bytes)", len(js))
+		//core.LogInfo("pipeman", "< GetPipestanceSerialization (%d bytes)", len(js))
 		return js
 	})
 

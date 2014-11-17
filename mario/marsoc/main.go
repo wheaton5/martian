@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"mario/core"
 	"os"
+	"os/user"
+	"strconv"
 	"strings"
 	"time"
 
@@ -174,7 +176,9 @@ Options:
 	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
 	//=========================================================================
-	rt := core.NewRuntime("sge", mroPath, marioVersion, mroVersion, true, debug)
+	jobMode := "sge"
+	profile := true
+	rt := core.NewRuntime(jobMode, mroPath, marioVersion, mroVersion, profile, debug)
 	core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
 
 	//=========================================================================
@@ -214,10 +218,45 @@ Options:
 	emailNotifierLoop(pman, lena, mailer)
 
 	//=========================================================================
+	// Collect pipestance static info.
+	//=========================================================================
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
+	user, err := user.Current()
+	username := "unknown"
+	if err == nil {
+		username = user.Username
+	}
+	info := map[string]string{
+		"hostname":   hostname,
+		"username":   username,
+		"cwd":        "",
+		"binpath":    core.RelPath(os.Args[0]),
+		"cmdline":    strings.Join(os.Args, " "),
+		"pid":        strconv.Itoa(os.Getpid()),
+		"version":    marioVersion,
+		"pname":      "",
+		"psid":       "",
+		"jobmode":    jobMode,
+		"maxcores":   strconv.Itoa(rt.Scheduler.GetMaxCores()),
+		"maxmemgb":   strconv.Itoa(rt.Scheduler.GetMaxMemGB()),
+		"invokepath": "",
+		"invokesrc":  "",
+		"MROPATH":    mroPath,
+		"MRONODUMP":  "false",
+		"MROPROFILE": fmt.Sprintf("%v", profile),
+		"MROPORT":    uiport,
+		"mroversion": mroVersion,
+		"mrobranch":  core.GetGitBranch(mroPath),
+	}
+
+	//=========================================================================
 	// Start web server.
 	//=========================================================================
 	runWebServer(uiport, instanceName, marioVersion, mroVersion, rt, pool, pman,
-		lena, argshim)
+		lena, argshim, info)
 
 	// Let daemons take over.
 	done := make(chan bool)

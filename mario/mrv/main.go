@@ -8,12 +8,149 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/docopt/docopt-go"
 	"io/ioutil"
 	"mario/core"
+	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
+	"sync"
+	"time"
+
+	"github.com/docopt/docopt-go"
 )
+
+func runReprobeLoop(dir *Directory) {
+	for {
+		dir.reprobe()
+
+		// Wait for a bit.
+		time.Sleep(time.Second * time.Duration(5))
+	}
+}
+
+func extractBugidFromBranch(branch string) string {
+	parts := strings.Split(branch, "/")
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
+}
+
+type Directory struct {
+	startPort int
+	pstances  map[string]map[string]string
+	config    map[string]interface{}
+	mutex     sync.Mutex
+}
+
+func NewDirectory(startPort int, config interface{}) *Directory {
+	self := &Directory{}
+	self.startPort = startPort
+	self.config = config.(map[string]interface{})
+	self.pstances = map[string]map[string]string{}
+	return self
+}
+
+func (self *Directory) register(info map[string]string) string {
+	// Pick first available port starting from 5600.
+	self.mutex.Lock()
+	i := self.startPort
+	port := ""
+	for {
+		port = strconv.Itoa(i)
+		if _, ok := self.pstances[port]; !ok {
+			break
+		}
+		i += 1
+	}
+	self.mutex.Unlock()
+
+	// Register the info block.
+	self.upsert(port, info)
+
+	return port
+}
+
+func (self *Directory) getConfig() map[string]interface{} {
+	return self.config
+}
+
+func (self *Directory) getSortedPipestances() []map[string]string {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
+	sortedPorts := []string{}
+	for port, _ := range self.pstances {
+		sortedPorts = append(sortedPorts, port)
+	}
+	sort.Strings(sortedPorts)
+	sortedPstances := []map[string]string{}
+	for _, port := range sortedPorts {
+		sortedPstances = append(sortedPstances, self.pstances[port])
+	}
+	return sortedPstances
+}
+
+func (self *Directory) upsert(port string, info map[string]string) {
+	//fmt.Printf("upsert %s\n", port)
+	self.mutex.Lock()
+	info["port"] = port
+	info["mrobug_id"] = extractBugidFromBranch(info["mrobranch"])
+	self.pstances[port] = info
+	self.mutex.Unlock()
+}
+
+func (self *Directory) remove(port string) {
+	//fmt.Printf("remove %s\n", port)
+	self.mutex.Lock()
+	delete(self.pstances, port)
+	self.mutex.Unlock()
+}
+
+func (self *Directory) probe(hostname string, port string, wg *sync.WaitGroup) {
+	//fmt.Printf("probing %s:%s\n", hostname, port)
+	defer wg.Done()
+	u := fmt.Sprintf("http://%s:%s/api/get-info", hostname, port)
+	if res, err := http.Get(u); err == nil {
+		if content, err := ioutil.ReadAll(res.Body); err == nil {
+			if res.StatusCode == 200 {
+				var info map[string]string
+				if err := json.Unmarshal(content, &info); err == nil {
+					self.upsert(port, info)
+					return
+				}
+			}
+		}
+	}
+	self.remove(port)
+}
+
+func (self *Directory) reprobe() {
+	self.mutex.Lock()
+	pstances := map[string]map[string]string{}
+	for port, pstance := range self.pstances {
+		pstances[port] = pstance
+	}
+	self.mutex.Unlock()
+
+	var wg sync.WaitGroup
+	for port, pstance := range pstances {
+		wg.Add(1)
+		go self.probe(pstance["hostname"], port, &wg)
+	}
+	wg.Wait()
+}
+
+func (self *Directory) discover() {
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go self.probe("localhost", strconv.Itoa(i+self.startPort), &wg)
+	}
+	wg.Wait()
+}
 
 func main() {
 	core.SetupSignalHandlers()
@@ -30,7 +167,7 @@ Usage:
 
 Options:
     --port=<num>     Serve UI at http://localhost:<num>
-    --usermap=<file> JSON file with user names and avatar URLs.
+    --config=<file>  JSON file with user names and avatar URLs.
     -h --help        Show this message.
     --version        Show version.`
 	marioVersion := core.GetVersion()
@@ -45,16 +182,31 @@ Options:
 		uiport = value.(string)
 	}
 
-	var usermap interface{}
-	if umapfile := opts["--usermap"]; umapfile != nil {
-		if bytes, err := ioutil.ReadFile(umapfile.(string)); err == nil {
-			json.Unmarshal(bytes, &usermap)
+	// Load the configuration file.
+	var config interface{}
+	if configfile := opts["--config"]; configfile != nil {
+		if bytes, err := ioutil.ReadFile(configfile.(string)); err == nil {
+			if err := json.Unmarshal(bytes, &config); err != nil {
+				fmt.Printf("%s\n", err.Error())
+				os.Exit(1)
+			}
 		} else {
 			fmt.Printf("%s\n", err.Error())
+			os.Exit(1)
 		}
 	}
 
-	runWebServer(uiport, usermap)
+	// Create the directory.
+	dir := NewDirectory(5600, config)
+
+	// Discover existing mrps.
+	dir.discover()
+
+	// Start web server.
+	go runWebServer(uiport, dir)
+
+	// Start reprobe loop.
+	go runReprobeLoop(dir)
 
 	// Let daemons take over.
 	done := make(chan bool)

@@ -5,10 +5,10 @@
 
   app.controller('MarioRunCtrl', function($scope, $http, $interval) {
     $scope.pipestances = [];
-    $scope.usermap = {};
+    $scope.config = {};
     return $http.get('/api/get-pipestances').success(function(data) {
       $scope.pipestances = data.pipestances;
-      return $scope.usermap = data.usermap;
+      return $scope.config = data.config;
     });
   });
 
