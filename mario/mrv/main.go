@@ -115,7 +115,7 @@ func (self *Directory) probe(hostname string, port string, wg *sync.WaitGroup) {
 	u := fmt.Sprintf("http://%s:%s/api/get-info", hostname, port)
 	if res, err := http.Get(u); err == nil {
 		if content, err := ioutil.ReadAll(res.Body); err == nil {
-			fmt.Printf("%d %s\n", res.StatusCode, string(content))
+			//fmt.Printf("%d %s\n", res.StatusCode, string(content))
 			if res.StatusCode == 200 {
 				var info map[string]string
 				if err := json.Unmarshal(content, &info); err == nil {
