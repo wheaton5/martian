@@ -4,7 +4,7 @@
 # Build a Go package with git version embedding.
 #
 
-EXECUTABLES = marsoc marstat mrc mre mrf mrp mrs mrv
+EXECUTABLES = marsoc marstat mrc mre mrf mrg mrp mrs mrv
 
 VERSION = $(shell git describe --tags --always --dirty)
 

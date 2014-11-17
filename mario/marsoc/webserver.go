@@ -171,6 +171,36 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 			})
 	})
 
+	// Shimulator.
+	app.Get("/api/shimulate/:sid", func(p martini.Params) string {
+		sid := p["sid"]
+		sample := lena.getSampleWithId(sid)
+		sbag := lena.getSampleBagWithId(sid)
+		if sample == nil {
+			return "Sample not found."
+		}
+
+		// From each def in the sample_defs, if the BCL_PROCESSOR pipestance
+		// exists, add a mapping from the fcid to that pipestance's fastq_path.
+		// This map will be used by the argshim to build the MRO invocation.
+		fastqPaths := map[string]string{}
+		for _, sample_def := range sample.Sample_defs {
+			sd_fcid := sample_def.Sequencing_run.Name
+			if preprocPipestance, _ := pman.GetPipestance(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid); preprocPipestance != nil {
+				if outs, ok := preprocPipestance.GetOuts(0).(map[string]interface{}); ok {
+					if fastq_path, ok := outs["fastq_path"].(string); ok {
+						fastqPaths[sd_fcid] = fastq_path
+					}
+				}
+			}
+		}
+		return makeJSON(map[string]interface{}{
+			"workflow":    sample.Workflow.Name,
+			"sample_bag":  sbag,
+			"fastq_paths": fastqPaths,
+		})
+	})
+
 	// Get all sequencing runs.
 	app.Get("/api/get-runs", func() string {
 
