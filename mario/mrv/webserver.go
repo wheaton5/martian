@@ -101,8 +101,7 @@ func runWebServer(uiport string, dir *Directory) {
 			proxy.ServeHTTP(rw, req)
 			if len(rw.Header()) == 0 {
 				port := strings.Split(req.URL.Host, ":")[1]
-				fmt.Printf("FAIL %s\n", port)
-				dir.deregister(port)
+				dir.remove(port)
 			}
 		}
 	})
@@ -111,8 +110,7 @@ func runWebServer(uiport string, dir *Directory) {
 		proxy.ServeHTTP(rw, req)
 		if len(rw.Header()) == 0 {
 			port := strings.Split(req.URL.Host, ":")[1]
-			fmt.Printf("FAIL %s\n", port)
-			dir.deregister(port)
+			dir.remove(port)
 		}
 	})
 

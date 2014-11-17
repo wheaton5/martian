@@ -10,14 +10,25 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mario/core"
+	"net/http"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/docopt/docopt-go"
 )
+
+func runReprobeLoop(dir *Directory) {
+	for {
+		dir.reprobe()
+
+		// Wait for a bit.
+		time.Sleep(time.Second * time.Duration(5))
+	}
+}
 
 func extractBugidFromBranch(branch string) string {
 	parts := strings.Split(branch, "/")
@@ -42,18 +53,9 @@ func NewDirectory(startPort int, config interface{}) *Directory {
 	return self
 }
 
-func (self *Directory) deregister(port string) {
-	self.mutex.Lock()
-	defer self.mutex.Unlock()
-
-	delete(self.pstances, port)
-}
-
 func (self *Directory) register(info map[string]string) string {
-	self.mutex.Lock()
-	defer self.mutex.Unlock()
-
 	// Pick first available port starting from 5600.
+	self.mutex.Lock()
 	i := self.startPort
 	port := ""
 	for {
@@ -63,11 +65,10 @@ func (self *Directory) register(info map[string]string) string {
 		}
 		i += 1
 	}
+	self.mutex.Unlock()
 
 	// Register the info block.
-	info["port"] = port
-	info["mrobug_id"] = extractBugidFromBranch(info["mrobranch"])
-	self.pstances[port] = info
+	self.upsert(port, info)
 
 	return port
 }
@@ -77,6 +78,9 @@ func (self *Directory) getConfig() map[string]interface{} {
 }
 
 func (self *Directory) getSortedPipestances() []map[string]string {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
 	sortedPorts := []string{}
 	for port, _ := range self.pstances {
 		sortedPorts = append(sortedPorts, port)
@@ -87,6 +91,65 @@ func (self *Directory) getSortedPipestances() []map[string]string {
 		sortedPstances = append(sortedPstances, self.pstances[port])
 	}
 	return sortedPstances
+}
+
+func (self *Directory) upsert(port string, info map[string]string) {
+	//fmt.Printf("upsert %s\n", port)
+	self.mutex.Lock()
+	info["port"] = port
+	info["mrobug_id"] = extractBugidFromBranch(info["mrobranch"])
+	self.pstances[port] = info
+	self.mutex.Unlock()
+}
+
+func (self *Directory) remove(port string) {
+	//fmt.Printf("remove %s\n", port)
+	self.mutex.Lock()
+	delete(self.pstances, port)
+	self.mutex.Unlock()
+}
+
+func (self *Directory) probe(hostname string, port string, wg *sync.WaitGroup) {
+	//fmt.Printf("probing %s:%s\n", hostname, port)
+	defer wg.Done()
+	u := fmt.Sprintf("http://%s:%s/api/get-info", hostname, port)
+	if res, err := http.Get(u); err == nil {
+		if content, err := ioutil.ReadAll(res.Body); err == nil {
+			if res.StatusCode == 200 {
+				var info map[string]string
+				if err := json.Unmarshal(content, &info); err == nil {
+					self.upsert(port, info)
+					return
+				}
+			}
+		}
+	}
+	self.remove(port)
+}
+
+func (self *Directory) reprobe() {
+	self.mutex.Lock()
+	pstances := map[string]map[string]string{}
+	for port, pstance := range self.pstances {
+		pstances[port] = pstance
+	}
+	self.mutex.Unlock()
+
+	var wg sync.WaitGroup
+	for port, pstance := range pstances {
+		wg.Add(1)
+		go self.probe(pstance["hostname"], port, &wg)
+	}
+	wg.Wait()
+}
+
+func (self *Directory) discover() {
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go self.probe("localhost", strconv.Itoa(i+self.startPort), &wg)
+	}
+	wg.Wait()
 }
 
 func main() {
@@ -134,10 +197,16 @@ Options:
 	}
 
 	// Create the directory.
-	directory := NewDirectory(5600, config)
+	dir := NewDirectory(5600, config)
+
+	// Discover existing mrps.
+	dir.discover()
 
 	// Start web server.
-	runWebServer(uiport, directory)
+	go runWebServer(uiport, dir)
+
+	// Start reprobe loop.
+	go runReprobeLoop(dir)
 
 	// Let daemons take over.
 	done := make(chan bool)
