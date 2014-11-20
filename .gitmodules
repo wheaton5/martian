@@ -19,3 +19,6 @@
 [submodule "github.com/cloudfoundry/gosigar"]
 	path = github.com/cloudfoundry/gosigar
 	url = https://github.com/cloudfoundry/gosigar
+[submodule "github.com/stretchr/testify"]
+	path = github.com/stretchr/testify
+	url = https://github.com/stretchr/testify
