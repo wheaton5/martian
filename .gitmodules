@@ -22,3 +22,6 @@
 [submodule "github.com/stretchr/testify"]
 	path = github.com/stretchr/testify
 	url = https://github.com/stretchr/testify
+[submodule "github.com/martini-contrib/gzip"]
+	path = github.com/martini-contrib/gzip
+	url = https://github.com/martini-contrib/gzip.git
