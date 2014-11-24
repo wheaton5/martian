@@ -35,3 +35,29 @@ web:
 $(EXECUTABLES):	
 	@echo [$@]
 	go install -ldflags "-X mario/core.__VERSION__ $(VERSION)" mario/$@
+
+
+ifdef SAKE_VERSION
+VERSION = $(SAKE_VERSION)
+endif
+sake-build: mrc mre mrf mrg mrp mrs sake-finish
+
+sake-finish:
+	# Hoist adapters
+	rm -rf $(GOPATH)/adapters
+	cp -rf adapters $(GOPATH)
+
+	# Hoist web; remove dev files
+	rm -rf $(GOPATH)/web
+	cp -rf web $(GOPATH)
+	rm -f $(GOPATH)/web/gulpfile.js
+	rm -f $(GOPATH)/web/package.json
+	rm -f $(GOPATH)/web/client/*.coffee
+	rm -f $(GOPATH)/web/templates/*.jade
+
+	# Hoist .version
+	cp -f .version $(GOPATH)/.version
+
+	# Remove source code and build intermediates
+	rm -rf $(GOPATH)/pkg
+	rm -rf $(GOPATH)/src
