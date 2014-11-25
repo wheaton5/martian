@@ -77,5 +77,5 @@ sake-marsoc-hoist:
 
 sake-clean:
 	# Remove source code and build intermediates
-	#rm -rf $(GOPATH)/pkg
-	#rm -rf $(GOPATH)/src
+	rm -rf $(GOPATH)/pkg
+	rm -rf $(GOPATH)/src
