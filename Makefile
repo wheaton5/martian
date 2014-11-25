@@ -10,7 +10,7 @@ TESTRULES := $(addprefix test-,$(TESTABLES))
 
 VERSION = $(shell git describe --tags --always --dirty)
 
-.PHONY: all $(EXECUTABLES) test grammar web hoist ${test-executables}
+.PHONY: all $(EXECUTABLES) test grammar web hoist $(TESTRULES)
 
 marsoc-deploy: marsoc hoist
 
@@ -45,9 +45,15 @@ $(EXECUTABLES):
 ifdef SAKE_VERSION
 VERSION = $(SAKE_VERSION)
 endif
-sake-build: mrc mre mrf mrg mrp mrs sake-finish
 
-sake-finish:
+sake-mario: mrc mre mrf mrg mrp mrs sake-hoist sake-clean
+
+sake-marsoc: marsoc mrc mrp sake-hoist sake-marsoc-hoist sake-clean
+
+sake-hoist:
+	# Hoist .version
+	cp -f .version $(GOPATH)/.version
+
 	# Hoist adapters
 	rm -rf $(GOPATH)/adapters
 	cp -rf mario/adapters $(GOPATH)
@@ -60,9 +66,16 @@ sake-finish:
 	rm -f $(GOPATH)/web/client/*.coffee
 	rm -f $(GOPATH)/web/templates/*.jade
 
-	# Hoist .version
-	cp -f .version $(GOPATH)/.version
+sake-marsoc-hoist:
+	# Hoist web; remove dev files
+	rm -rf $(GOPATH)/web-marsoc
+	cp -rf mario/web-marsoc $(GOPATH)
+	rm -f $(GOPATH)/web-marsoc/gulpfile.js
+	rm -f $(GOPATH)/web-marsoc/package.json
+	rm -f $(GOPATH)/web-marsoc/client/*.coffee
+	rm -f $(GOPATH)/web-marsoc/templates/*.jade
 
+sake-clean:
 	# Remove source code and build intermediates
-	rm -rf $(GOPATH)/pkg
-	rm -rf $(GOPATH)/src
+	#rm -rf $(GOPATH)/pkg
+	#rm -rf $(GOPATH)/src
