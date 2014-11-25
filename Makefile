@@ -14,7 +14,7 @@ VERSION = $(shell git describe --tags --always --dirty)
 
 marsoc-deploy: marsoc hoist
 
-all: grammar test $(EXECUTABLES) web hoist 
+all: grammar $(EXECUTABLES) web hoist test
 
 test: $(TESTRULES)
 $(TESTRULES): test-%:
