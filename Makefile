@@ -50,11 +50,11 @@ sake-build: mrc mre mrf mrg mrp mrs sake-finish
 sake-finish:
 	# Hoist adapters
 	rm -rf $(GOPATH)/adapters
-	cp -rf adapters $(GOPATH)
+	cp -rf mario/adapters $(GOPATH)
 
 	# Hoist web; remove dev files
 	rm -rf $(GOPATH)/web
-	cp -rf web $(GOPATH)
+	cp -rf mario/web $(GOPATH)
 	rm -f $(GOPATH)/web/gulpfile.js
 	rm -f $(GOPATH)/web/package.json
 	rm -f $(GOPATH)/web/client/*.coffee
