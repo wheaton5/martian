@@ -6,24 +6,23 @@
 
 EXECUTABLES = marsoc marstat mrc mre mrf mrg mrp mrs mrv
 TESTABLES = marsoc marstat core mrc mre mrf mrg mrp mrs mrv
+TESTRULES := $(addprefix test-,$(TESTABLES))
 
 VERSION = $(shell git describe --tags --always --dirty)
 
-.PHONY: all $(EXECUTABLES) test grammar web hoist 
+.PHONY: all $(EXECUTABLES) test grammar web hoist ${test-executables}
 
 marsoc-deploy: marsoc hoist
 
-all: grammar $(EXECUTABLES) web hoist test
+all: grammar test $(EXECUTABLES) web hoist 
 
-test:
-	for testable in $(TESTABLES) ; do \
-		echo [test - $$testable] ; \
-		go test mario/$$testable ; \
-	done
+test: $(TESTRULES)
+$(TESTRULES): test-%:
+	go test mario/$*
 
 grammar:
 	@echo [$@]
-	go tool yacc -p "mm" -o core/grammar.go core/grammar.y && rm y.output
+	go tool yacc -p "mm" -o mario/core/grammar.go mario/core/grammar.y && rm y.output
 
 hoist:
 	@echo [$@]
@@ -36,8 +35,8 @@ hoist:
 
 web:
 	@echo [$@]
-	cd web; gulp; cd ..
-	cd web-marsoc; gulp; cd ..
+	cd mario/web; gulp; cd $(GOPATH)/src
+	cd mario/web-marsoc; gulp; cd $(GOPATH)/src
 	
 $(EXECUTABLES):
 	@echo [bin - $@]
