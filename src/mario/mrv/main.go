@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docopt/docopt-go"
+	"github.com/docopt/docopt.go"
 )
 
 func runReprobeLoop(dir *Directory) {

@@ -32,8 +32,8 @@ $(EXECUTABLES):
 
 web:
 	@echo [$@]
-	cd src/mario/web; gulp; cd $(GOPATH)
-	cd src/mario/web-marsoc; gulp; cd $(GOPATH)
+	cd web; gulp; cd $(GOPATH)
+	cd web-marsoc; gulp; cd $(GOPATH)
 
 $(TESTABLES): test-%:
 	go test mario/$*

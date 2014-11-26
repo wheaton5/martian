@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/docopt/docopt-go"
+	"github.com/docopt/docopt.go"
 )
 
 func main() {

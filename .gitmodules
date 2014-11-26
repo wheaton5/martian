@@ -1,8 +1,8 @@
 [submodule "src/github.com/codegangsta/inject"]
 	path = src/github.com/codegangsta/inject
 	url = https://github.com/codegangsta/inject
-[submodule "src/github.com/docopt/docopt-go"]
-	path = src/github.com/docopt/docopt-go
+[submodule "src/github.com/docopt/docopt.go"]
+	path = src/github.com/docopt/docopt.go
 	url = https://github.com/docopt/docopt.go.git
 [submodule "src/github.com/dustin/go-humanize"]
 	path = src/github.com/dustin/go-humanize
@@ -25,3 +25,6 @@
 [submodule "src/github.com/martini-contrib/gzip"]
 	path = src/github.com/martini-contrib/gzip
 	url = https://github.com/martini-contrib/gzip.git
+[submodule "src/github.com/docopt/docopt.go"]
+	path = src/github.com/docopt/docopt.go
+	url = https://github.com/docopt/docopt.go.git

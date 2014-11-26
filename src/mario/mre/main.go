@@ -6,7 +6,7 @@
 package main
 
 import (
-	"github.com/docopt/docopt-go"
+	"github.com/docopt/docopt.go"
 	"mario/core"
 	"os"
 	"path"
