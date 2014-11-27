@@ -32,8 +32,8 @@ $(EXECUTABLES):
 
 web:
 	@echo [$@]
-	cd web; gulp; cd $(GOPATH)
-	cd web-marsoc; gulp; cd $(GOPATH)
+	cd web/mario; gulp; cd $(GOPATH)
+	cd web/marsoc; gulp; cd $(GOPATH)
 
 $(TESTABLES): test-%:
 	go test mario/$*
@@ -47,16 +47,23 @@ ifdef SAKE_VERSION
 VERSION = $(SAKE_VERSION)
 endif
 
-sake-mario: mrc mre mrf mrg mrp mrs sake-mario-strip sake-strip
+sake-mario: mrc mre mrf mrg mrp mrs sake-mario-strip
 
-sake-marsoc: marsoc mrc mrp sake-marsoc-strip sake-strip
+sake-marsoc: marsoc mrc mrp sake-mario-web sake-marsoc-web
 
 sake-mario-strip:
 	# Strip dev files.
-	rm -f web/gulpfile.js
-	rm -f web/package.json
-	rm -f web/client/*.coffee
-	rm -f web/templates/*.jade
+	rm -f web/mario/gulpfile.js
+	rm -f web/mario/package.json
+	rm -f web/mario/client/*.coffee
+	rm -f web/mario/templates/*.jade
+
+	# Strip marsoc.
+	rm -rf web/marsoc
+
+	# Remove build intermediates and source code. 
+	rm -rf pkg
+	rm -rf src
 
 sake-marsoc-strip:
 	# Strip dev files.
@@ -64,8 +71,3 @@ sake-marsoc-strip:
 	rm -f web-marsoc/package.json
 	rm -f web-marsoc/client/*.coffee
 	rm -f web-marsoc/templates/*.jade
-
-sake-strip:
-	# Remove build intermediates and source code. 
-	rm -rf pkg
-	rm -rf src

@@ -56,9 +56,9 @@ func runWebServer(uiport string, dir *Directory) {
 	m := martini.New()
 	r := martini.NewRouter()
 	m.Use(martini.Recovery())
-	m.Use(martini.Static(core.RelPath("../web/res"),
+	m.Use(martini.Static(core.RelPath("../web/mario/res"),
 		martini.StaticOptions{"", true, "index.html", nil}))
-	m.Use(martini.Static(core.RelPath("../web/client"),
+	m.Use(martini.Static(core.RelPath("../web/mario/client"),
 		martini.StaticOptions{"", true, "index.html", nil}))
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
@@ -95,7 +95,7 @@ func runWebServer(uiport string, dir *Directory) {
 
 	app.Get("/**", func(rw http.ResponseWriter, req *http.Request) {
 		if req.URL.Path == "/" {
-			tmpl, _ := template.New("mrv.html").Delims("[[", "]]").ParseFiles(core.RelPath("../web/templates/mrv.html"))
+			tmpl, _ := template.New("mrv.html").Delims("[[", "]]").ParseFiles(core.RelPath("../web/mario/templates/mrv.html"))
 			var doc bytes.Buffer
 			tmpl.Execute(&doc, &IndexPage{})
 			fmt.Fprintf(rw, doc.String())
