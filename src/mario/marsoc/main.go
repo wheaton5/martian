@@ -137,12 +137,8 @@ Options:
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
-	// Required job mode and SGE environment variables.
-	core.EnvRequire([][]string{
-		{"SGE_ROOT", "path/to/sge/root"},
-		{"SGE_CLUSTER_NAME", "SGE cluster name"},
-		{"SGE_CELL", "usually 'default'"},
-	}, true)
+	// Verify SGE scheduler configuration
+	core.VerifyScheduler("sge")
 
 	// Do not log the value of these environment variables.
 	envPrivate := core.EnvRequire([][]string{
