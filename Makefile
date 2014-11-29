@@ -47,27 +47,24 @@ ifdef SAKE_VERSION
 VERSION = $(SAKE_VERSION)
 endif
 
-sake-mario: mrc mre mrf mrg mrp mrs sake-mario-strip
+sake-mario: mrc mre mrf mrg mrp mrs sake-strip sake-mario-strip
 
-sake-marsoc: marsoc mrc mrp sake-mario-web sake-marsoc-web
+sake-marsoc: marsoc mrc mrp sake-strip
 
-sake-mario-strip:
-	# Strip dev files.
-	rm -f web/mario/gulpfile.js
-	rm -f web/mario/package.json
-	rm -f web/mario/client/*.coffee
-	rm -f web/mario/templates/*.jade
+sake-strip:
+	# Strip web dev files.
+	rm -f web/**/gulpfile.js
+	rm -f web/**/package.json
+	rm -f web/**/*.coffee
+	rm -f web/**/*.jade
 
-	# Strip marsoc.
-	rm -rf web/marsoc
-
-	# Remove build intermediates and source code. 
+	# Remove build intermediates and dev-only files. 
 	rm -rf pkg
 	rm -rf src
+	rm -rf scripts
+	rm -f Makefile
+	rm -f README.md
 
-sake-marsoc-strip:
-	# Strip dev files.
-	rm -f web-marsoc/gulpfile.js
-	rm -f web-marsoc/package.json
-	rm -f web-marsoc/client/*.coffee
-	rm -f web-marsoc/templates/*.jade
+sake-mario-strip:
+	# Strip marsoc.
+	rm -rf web/marsoc
