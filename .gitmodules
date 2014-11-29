@@ -25,6 +25,3 @@
 [submodule "src/github.com/martini-contrib/gzip"]
 	path = src/github.com/martini-contrib/gzip
 	url = https://github.com/martini-contrib/gzip.git
-[submodule "src/github.com/docopt/docopt.go"]
-	path = src/github.com/docopt/docopt.go
-	url = https://github.com/docopt/docopt.go.git
