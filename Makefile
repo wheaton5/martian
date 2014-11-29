@@ -53,10 +53,10 @@ sake-marsoc: marsoc mrc mrp sake-strip
 
 sake-strip:
 	# Strip web dev files.
-	rm -f web/**/gulpfile.js
-	rm -f web/**/package.json
-	rm -f web/**/*.coffee
-	rm -f web/**/*.jade
+	rm -f web/*/gulpfile.js
+	rm -f web/*/package.json
+	rm -f web/*/client/*.coffee
+	rm -f web/*/templates/*.jade
 
 	# Remove build intermediates and dev-only files. 
 	rm -rf pkg
