@@ -130,10 +130,10 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 	m := martini.New()
 	r := martini.NewRouter()
 	m.Use(martini.Recovery())
-	m.Use(martini.Static(core.RelPath("../web-marsoc/res"), martini.StaticOptions{"", true, "index.html", nil}))
-	m.Use(martini.Static(core.RelPath("../web-marsoc/client"), martini.StaticOptions{"", true, "index.html", nil}))
-	m.Use(martini.Static(core.RelPath("../web/res"), martini.StaticOptions{"", true, "index.html", nil}))
-	m.Use(martini.Static(core.RelPath("../web/client"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/marsoc/res"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/marsoc/client"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/mario/res"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/mario/client"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
 	app := &martini.ClassicMartini{m, r}
@@ -144,7 +144,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 	//=========================================================================
 	// Render: main UI.
 	app.Get("/", func() string {
-		return render("web-marsoc/templates", "marsoc.html",
+		return render("web/marsoc/templates", "marsoc.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
@@ -155,7 +155,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 
 	// Render: admin mode main UI.
 	app.Get("/admin", func() string {
-		return render("web-marsoc/templates", "marsoc.html",
+		return render("web/marsoc/templates", "marsoc.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -262,7 +262,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 	//=========================================================================
 	// Render: main metasample UI.
 	app.Get("/metasamples", func() string {
-		return render("web-marsoc/templates", "metasamples.html",
+		return render("web/marsoc/templates", "metasamples.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -312,7 +312,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 	//=========================================================================
 	// Render: pipestance graph UI.
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("web/templates", "graph.html", &GraphPage{
+		return render("web/mario/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
 			Container:    p["container"],
 			Pname:        p["pname"],
@@ -324,7 +324,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 
 	// Render: admin mode pipestance graph UI.
 	app.Get("/admin/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("web/templates", "graph.html", &GraphPage{
+		return render("web/mario/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
 			Container:    p["container"],
 			Pname:        p["pname"],

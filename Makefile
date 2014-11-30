@@ -4,78 +4,67 @@
 # Build a Go package with git version embedding.
 #
 
-EXECUTABLES = marsoc marstat mrc mre mrf mrg mrp mrs mrv
-TESTABLES = marsoc marstat core mrc mre mrf mrg mrp mrs mrv
-TESTRULES := $(addprefix test-,$(TESTABLES))
+GOBINS=marsoc marstat mrc mre mrf mrg mrp mrs mrv
+GOTESTS=$(addprefix test-, $(GOBINS) core)
+VERSION=$(shell git describe --tags --always --dirty)
 
-VERSION = $(shell git describe --tags --always --dirty)
+export GOPATH=$(shell pwd)
 
-.PHONY: all $(EXECUTABLES) test grammar web hoist $(TESTRULES)
+.PHONY: $(GOBINS) grammar web $(GOTESTS)
 
-marsoc-deploy: marsoc hoist
+# Default rule to make it easier to git pull deploy for now.
+# Remove this when we switch to package deployment.
+marsoc-deploy: marsoc 
 
-all: grammar $(EXECUTABLES) web hoist test
-
-test: $(TESTRULES)
-$(TESTRULES): test-%:
-	go test mario/$*
+#
+# Targets for development builds.
+# 
+all: grammar $(GOBINS) web test
 
 grammar:
-	@echo [$@]
-	go tool yacc -p "mm" -o mario/core/grammar.go mario/core/grammar.y && rm y.output
+	go tool yacc -p "mm" -o src/mario/core/grammar.go src/mario/core/grammar.y && rm y.output
 
-hoist:
-	@echo [$@]
-	rm -f $(GOPATH)/adapters
-	rm -f $(GOPATH)/web
-	rm -f $(GOPATH)/web-marsoc
-	ln -s src/mario/adapters $(GOPATH)/adapters
-	ln -s src/mario/web $(GOPATH)/web
-	ln -s src/mario/web-marsoc $(GOPATH)/web-marsoc
-
-web:
-	@echo [$@]
-	cd mario/web; gulp; cd $(GOPATH)/src
-	cd mario/web-marsoc; gulp; cd $(GOPATH)/src
-	
-$(EXECUTABLES):
-	@echo [bin - $@]
+$(GOBINS):
 	go install -ldflags "-X mario/core.__VERSION__ $(VERSION)" mario/$@
 
+web:
+	cd web/mario; gulp; cd $(GOPATH)
+	cd web/marsoc; gulp; cd $(GOPATH)
+
+$(GOTESTS): test-%:
+	go test -v mario/$*
+
+test: $(GOTESTS)
+
+clean:
+	rm -rf $(GOPATH)/bin
+	rm -rf $(GOPATH)/pkg
+
+#
+# Targets for Sake builds.
+# 
 ifdef SAKE_VERSION
-VERSION = $(SAKE_VERSION)
+VERSION=$(SAKE_VERSION)
 endif
 
-sake-mario: mrc mre mrf mrg mrp mrs sake-hoist sake-clean
+sake-mario: mrc mre mrf mrg mrp mrs sake-strip sake-mario-strip
 
-sake-marsoc: marsoc mrc mrp sake-hoist sake-marsoc-hoist sake-clean
+sake-marsoc: marsoc mrc mrp sake-strip
 
-sake-hoist:
-	# Hoist .version
-	cp -f .version $(GOPATH)/.version
+sake-strip:
+	# Strip web dev files.
+	rm -f web/*/gulpfile.js
+	rm -f web/*/package.json
+	rm -f web/*/client/*.coffee
+	rm -f web/*/templates/*.jade
 
-	# Hoist adapters
-	rm -rf $(GOPATH)/adapters
-	cp -rf mario/adapters $(GOPATH)
+	# Remove build intermediates and dev-only files. 
+	rm -rf pkg
+	rm -rf src
+	rm -rf scripts
+	rm -f Makefile
+	rm -f README.md
 
-	# Hoist web; remove dev files
-	rm -rf $(GOPATH)/web
-	cp -rf mario/web $(GOPATH)
-	rm -f $(GOPATH)/web/gulpfile.js
-	rm -f $(GOPATH)/web/package.json
-	rm -f $(GOPATH)/web/client/*.coffee
-	rm -f $(GOPATH)/web/templates/*.jade
-
-sake-marsoc-hoist:
-	# Hoist web; remove dev files
-	rm -rf $(GOPATH)/web-marsoc
-	cp -rf mario/web-marsoc $(GOPATH)
-	rm -f $(GOPATH)/web-marsoc/gulpfile.js
-	rm -f $(GOPATH)/web-marsoc/package.json
-	rm -f $(GOPATH)/web-marsoc/client/*.coffee
-	rm -f $(GOPATH)/web-marsoc/templates/*.jade
-
-sake-clean:
-	# Remove source code and build intermediates
-	rm -rf $(GOPATH)/pkg
-	rm -rf $(GOPATH)/src
+sake-mario-strip:
+	# Strip marsoc.
+	rm -rf web/marsoc

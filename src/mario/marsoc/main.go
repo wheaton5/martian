@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docopt/docopt-go"
+	"github.com/docopt/docopt.go"
 	"github.com/dustin/go-humanize"
 )
 
