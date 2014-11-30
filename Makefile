@@ -25,11 +25,11 @@ grammar:
 	go tool yacc -p "mm" -o src/mario/core/grammar.go src/mario/core/grammar.y && rm y.output
 
 $(GOBINS):
-	go install -ldflags "-X mario/core.__VERSION__ $(VERSION)" mario/$@
+	go install -ldflags "-X mario/core.__VERSION__ '$(VERSION)'" mario/$@
 
 web:
-	cd web/mario; gulp; cd $(GOPATH)
-	cd web/marsoc; gulp; cd $(GOPATH)
+	cd web/mario; npm install; gulp; cd $(GOPATH)
+	cd web/marsoc; npm install; gulp; cd $(GOPATH)
 
 $(GOTESTS): test-%:
 	go test -v mario/$*
