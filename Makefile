@@ -49,7 +49,11 @@ endif
 
 sake-mario: mrc mre mrf mrg mrp mrs sake-strip sake-mario-strip
 
+sake-test-mario: test
+
 sake-marsoc: marsoc mrc mrp sake-strip
+
+sake-test-marsoc: test
 
 sake-strip:
 	# Strip web dev files.
