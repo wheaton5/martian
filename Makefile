@@ -4,14 +4,13 @@
 # Build a Go package with git version embedding.
 #
 
-EXECUTABLES = marsoc marstat mrc mre mrf mrg mrp mrs mrv
-TESTABLES := $(addprefix test-,$(EXECUTABLES) core)
-
-VERSION = $(shell git describe --tags --always --dirty)
+GOBINS=marsoc marstat mrc mre mrf mrg mrp mrs mrv
+GOTESTS=$(addprefix test-, $(GOBINS) core)
+VERSION=$(shell git describe --tags --always --dirty)
 
 export GOPATH=$(shell pwd)
 
-.PHONY: all $(EXECUTABLES) grammar web $(TESTABLES) test
+.PHONY: $(GOBINS) grammar web $(GOTESTS)
 
 # Default rule to make it easier to git pull deploy for now.
 # Remove this when we switch to package deployment.
@@ -20,31 +19,32 @@ marsoc-deploy: marsoc
 #
 # Targets for development builds.
 # 
-all: grammar $(EXECUTABLES) web test
+all: grammar $(GOBINS) web test
 
 grammar:
-	@echo [$@]
 	go tool yacc -p "mm" -o src/mario/core/grammar.go src/mario/core/grammar.y && rm y.output
 
-$(EXECUTABLES):
-	@echo [bin - $@]
+$(GOBINS):
 	go install -ldflags "-X mario/core.__VERSION__ $(VERSION)" mario/$@
 
 web:
-	@echo [$@]
 	cd web/mario; gulp; cd $(GOPATH)
 	cd web/marsoc; gulp; cd $(GOPATH)
 
-$(TESTABLES): test-%:
-	go test mario/$*
+$(GOTESTS): test-%:
+	go test -v mario/$*
 
-test: $(TESTABLES)
+test: $(GOTESTS)
+
+clean:
+	rm -rf $(GOPATH)/bin
+	rm -rf $(GOPATH)/pkg
 
 #
 # Targets for Sake builds.
 # 
 ifdef SAKE_VERSION
-VERSION = $(SAKE_VERSION)
+VERSION=$(SAKE_VERSION)
 endif
 
 sake-mario: mrc mre mrf mrg mrp mrs sake-strip sake-mario-strip
