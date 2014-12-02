@@ -111,7 +111,8 @@ func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interf
 		return ""
 	}
 	incpath := fmt.Sprintf("%s.mro", strings.ToLower(pipeline))
-	return rt.BuildCallSource([]string{incpath}, pipeline, args)
+	src, _ := rt.BuildCallSource([]string{incpath}, pipeline, args)
+	return src
 }
 
 func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
