@@ -137,8 +137,8 @@ Options:
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
-	// Verify SGE scheduler configuration
-	core.VerifyScheduler("sge")
+	// Verify SGE job manager configuration
+	core.VerifyJobManager("sge")
 
 	// Do not log the value of these environment variables.
 	envPrivate := core.EnvRequire([][]string{
@@ -236,8 +236,8 @@ Options:
 		"pname":      "",
 		"psid":       "",
 		"jobmode":    jobMode,
-		"maxcores":   strconv.Itoa(rt.Scheduler.GetMaxCores()),
-		"maxmemgb":   strconv.Itoa(rt.Scheduler.GetMaxMemGB()),
+		"maxcores":   strconv.Itoa(rt.JobManager.GetMaxCores()),
+		"maxmemgb":   strconv.Itoa(rt.JobManager.GetMaxMemGB()),
 		"invokepath": "",
 		"invokesrc":  "",
 		"MROPATH":    mroPath,
