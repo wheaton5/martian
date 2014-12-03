@@ -164,18 +164,23 @@ Options:
 	debug := opts["--debug"].(bool)
 
 	//=========================================================================
-	// Setup Mailer.
-	//=========================================================================
-	mailer := NewMailer(instanceName, emailHost, emailSender, emailRecipient,
-		instanceName != "MARSOC")
-
-	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
 	//=========================================================================
 	jobMode := "sge"
 	profile := true
+	checkSrcPath := true
 	rt := core.NewRuntime(jobMode, mroPath, marioVersion, mroVersion, profile, debug)
+	if _, err := rt.CompileAll(checkSrcPath); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 	core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
+
+        //=========================================================================
+        // Setup Mailer.
+        //=========================================================================
+        mailer := NewMailer(instanceName, emailHost, emailSender, emailRecipient,
+                instanceName != "MARSOC")
 
 	//=========================================================================
 	// Setup SequencerPool, add sequencers, and load seq run cache.
