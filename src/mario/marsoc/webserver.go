@@ -345,27 +345,20 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		for k, v := range info {
 			psinfo[k] = v
 		}
-		if pipestance, ok := pman.GetPipestance(container, pname, psid); ok {
-			psstate := pipestance.GetState()
-			psinfo["state"] = psstate
-			psinfo["pname"] = pname
-			psinfo["psid"] = psid
-			psinfo["invokesrc"] = pipestance.GetInvokeSrc()
-			if psstate == "failed" {
-				fqname, summary, log, errpaths := pipestance.GetFatalError()
-				errpath := ""
-				if len(errpaths) > 0 {
-					errpath = errpaths[0]
-				}
-				state["error"] = map[string]string{
-					"fqname":  fqname,
-					"path":    errpath,
-					"summary": summary,
-					"log":     log,
+		psstate, _ := pman.GetPipestanceState(container, pname, psid)
+		psinfo["state"] = psstate
+		psinfo["pname"] = pname
+		psinfo["psid"] = psid
+		psinfo["invokesrc"], _ = pman.GetPipestanceInvokeSrc(container, pname, psid)
+		ser, ok := pman.GetPipestanceSerialization(container, pname, psid)
+		if ok && psstate == "failed" {
+			if nodes, ok := ser.([]interface{}); ok && len(nodes) > 0 {
+				// The first node in pipestance's serialization is always the pipestance itself
+				if node, ok := nodes[0].(map[string]interface{}); ok {
+					state["error"] = node["error"]
 				}
 			}
 		}
-		ser, _ := pman.GetPipestanceSerialization(container, pname, psid)
 		state["nodes"] = ser
 		state["info"] = psinfo
 		js := makeJSON(state)
