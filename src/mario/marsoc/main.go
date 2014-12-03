@@ -137,12 +137,8 @@ Options:
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
-	// Required job mode and SGE environment variables.
-	core.EnvRequire([][]string{
-		{"SGE_ROOT", "path/to/sge/root"},
-		{"SGE_CLUSTER_NAME", "SGE cluster name"},
-		{"SGE_CELL", "usually 'default'"},
-	}, true)
+	// Verify SGE job manager configuration
+	core.VerifyJobManager("sge")
 
 	// Do not log the value of these environment variables.
 	envPrivate := core.EnvRequire([][]string{
@@ -240,8 +236,8 @@ Options:
 		"pname":      "",
 		"psid":       "",
 		"jobmode":    jobMode,
-		"maxcores":   strconv.Itoa(rt.Scheduler.GetMaxCores()),
-		"maxmemgb":   strconv.Itoa(rt.Scheduler.GetMaxMemGB()),
+		"maxcores":   strconv.Itoa(rt.JobManager.GetMaxCores()),
+		"maxmemgb":   strconv.Itoa(rt.JobManager.GetMaxMemGB()),
 		"invokepath": "",
 		"invokesrc":  "",
 		"MROPATH":    mroPath,
