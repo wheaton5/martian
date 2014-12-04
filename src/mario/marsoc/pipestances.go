@@ -73,9 +73,11 @@ func NewPipestanceManager(rt *core.Runtime, marioVersion string,
 }
 
 func (self *PipestanceManager) CopyAndClearNotifyQueue() []*PipestanceNotification {
+	self.runListMutex.Lock()
 	notifyQueue := make([]*PipestanceNotification, len(self.notifyQueue))
 	copy(notifyQueue, self.notifyQueue)
 	self.notifyQueue = []*PipestanceNotification{}
+	self.runListMutex.Unlock()
 	return notifyQueue
 }
 
