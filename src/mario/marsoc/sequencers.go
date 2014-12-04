@@ -21,7 +21,8 @@ import (
 	"time"
 )
 
-const RUN_IS_INACTIVE_AFTER_HOURS = 1
+const RUN_TOUCH_TIMEOUT = 1         // 1 hour
+const RUN_INACTIVE_TIMEOUT = 2 * 24 // 2 days
 
 type Run struct {
 	Path         string      `json:"path"`
@@ -132,12 +133,16 @@ func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, erro
 		completeTime := getFileModTime(path.Join(run.Path, "RTAComplete.txt"))
 		touchTime := getFileModTime(path.Join(run.Path, "InterOp", "ExtractionMetricsOut.bin"))
 
+		if startTime.IsZero() {
+			startTime, _ = time.Parse("2006-01-02", run.Fdate)
+		}
+
 		run.State = "failed"
 		if !completeTime.IsZero() {
 			run.State = "complete"
-		} else if touchTime.IsZero() {
+		} else if touchTime.IsZero() && time.Since(startTime) < time.Hour*RUN_INACTIVE_TIMEOUT {
 			run.State = "running"
-		} else if !touchTime.IsZero() && time.Since(touchTime) < time.Hour*RUN_IS_INACTIVE_AFTER_HOURS {
+		} else if !touchTime.IsZero() && time.Since(touchTime) < time.Hour*RUN_TOUCH_TIMEOUT {
 			run.State = "running"
 		}
 		if !startTime.IsZero() {
