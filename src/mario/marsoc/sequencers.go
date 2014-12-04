@@ -176,15 +176,15 @@ func getFileModTime(p string) time.Time {
 }
 
 type SequencerPool struct {
-	path         string
-	cachePath    string
-	seqcers      []*Sequencer
-	runList      []*Run
-	runTable     map[string]*Run
-	folderCache  map[string]*Run
-	mailer       *Mailer
-	runQueue     []*SequencerNotification
-	runListMutex *sync.Mutex
+	path          string
+	cachePath     string
+	seqcers       []*Sequencer
+	runList       []*Run
+	runTable      map[string]*Run
+	folderCache   map[string]*Run
+	mailer        *Mailer
+	runQueue      []*SequencerNotification
+	runQueueMutex *sync.Mutex
 }
 
 func NewSequencerPool(p string, cachePath string, mailer *Mailer) *SequencerPool {
@@ -197,16 +197,16 @@ func NewSequencerPool(p string, cachePath string, mailer *Mailer) *SequencerPool
 	self.folderCache = map[string]*Run{}
 	self.mailer = mailer
 	self.runQueue = []*SequencerNotification{}
-	self.runListMutex = &sync.Mutex{}
+	self.runQueueMutex = &sync.Mutex{}
 	return self
 }
 
 func (self *SequencerPool) CopyAndClearRunQueue() []*SequencerNotification {
-	self.runListMutex.Lock()
+	self.runQueueMutex.Lock()
 	runQueue := make([]*SequencerNotification, len(self.runQueue))
 	copy(runQueue, self.runQueue)
 	self.runQueue = []*SequencerNotification{}
-	self.runListMutex.Unlock()
+	self.runQueueMutex.Unlock()
 	return runQueue
 }
 
@@ -301,14 +301,26 @@ func (self *SequencerPool) inventorySequencers() {
 	self.indexCache()
 
 	// Automatically start preprocessing pipeline
+	newCompleteds := []string{}
 	for _, run := range self.runList {
 		if run.State == "complete" {
 			if _, ok := oldCompleted[run.Fcid]; !ok {
-				self.runListMutex.Lock()
+				self.runQueueMutex.Lock()
+				newCompleteds = append(newCompleteds, run.Fcid)
 				self.runQueue = append(self.runQueue, &SequencerNotification{run})
-				self.runListMutex.Unlock()
+				self.runQueueMutex.Unlock()
 			}
 		}
+	}
+
+	// If there are new runs completed, send email.
+	if len(newCompleteds) > 0 {
+		self.mailer.Sendmail(
+			[]string{},
+			fmt.Sprintf("Run %s complete!", newCompleteds[0]),
+			fmt.Sprintf("Hey Preppie,\n\nI noticed sequencing run %s is done.\n\nI started this BCL PROCESSOR party at http://%s/.",
+				newCompleteds[0], self.mailer.InstanceName),
+		)
 	}
 
 	// Update the on-disk cache.
