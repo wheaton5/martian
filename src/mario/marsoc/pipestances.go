@@ -113,6 +113,10 @@ func (self *PipestanceManager) writeCache() {
 	}
 }
 
+func (self *PipestanceManager) getPipestancePath(container string, pipeline string, psid string) string {
+	return path.Join(self.path, container, pipeline, psid, "HEAD")
+}
+
 func (self *PipestanceManager) inventoryPipestances() {
 	// Look for pipestances that are not marked as completed, reattach to them
 	// and put them in the runlist.
@@ -152,14 +156,14 @@ func (self *PipestanceManager) inventoryPipestances() {
 					}
 
 					// If pipestance has _finalstate, consider it complete.
-					if _, err := os.Stat(path.Join(self.path, container, pipeline, psid, "HEAD", "_finalstate")); err == nil {
+					if _, err := os.Stat(path.Join(self.getPipestancePath(container, pipeline, psid), "_finalstate")); err == nil {
 						self.runListMutex.Lock()
 						self.completed[fqname] = true
 						self.runListMutex.Unlock()
 						return
 					}
 
-					pipestance, err := self.rt.ReattachToPipestance(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
+					pipestance, err := self.rt.ReattachToPipestance(psid, self.getPipestancePath(container, pipeline, psid))
 					if err != nil {
 						// If we could not reattach, it's because _invocation was
 						// missing, or will no longer parse due to changes in MRO
@@ -320,7 +324,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		return err
 	}
 	fqname := pipestance.GetFQName()
-	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
+	headPath := self.getPipestancePath(container, pipeline, psid)
 	os.Remove(headPath)
 	os.Symlink(self.mroVersion, headPath)
 
@@ -337,7 +341,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline string, psid string) error {
 	delete(self.completed, makeFQName(pipeline, psid))
 	self.writeCache()
-	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
+	headPath := self.getPipestancePath(container, pipeline, psid)
 	return os.Remove(headPath)
 }
 
@@ -371,7 +375,7 @@ func (self *PipestanceManager) GetPipestanceState(container string, pipeline str
 }
 
 func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string) (interface{}, bool) {
-	psPath := path.Join(self.path, container, pipeline, psid, "HEAD")
+	psPath := self.getPipestancePath(container, pipeline, psid)
 	if ser, ok := self.rt.GetSerialization(psPath); ok {
 		return ser, true
 	}
@@ -396,7 +400,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	}
 
 	// Reattach to the pipestance.
-	pipestance, err := self.rt.ReattachToPipestance(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
+	pipestance, err := self.rt.ReattachToPipestance(psid, self.getPipestancePath(container, pipeline, psid))
 	if err != nil {
 		return nil, false
 	}
@@ -404,4 +408,15 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	// Refresh its metadata state and return.
 	pipestance.RefreshMetadata()
 	return pipestance, true
+}
+
+func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline string, psid string) (string, error) {
+	psPath := self.getPipestancePath(container, pipeline, psid)
+	fname := "_invocation"
+
+	data, err := ioutil.ReadFile(path.Join(psPath, fname))
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
