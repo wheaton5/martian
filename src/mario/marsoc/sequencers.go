@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -38,6 +39,10 @@ type Run struct {
 	Preprocess   interface{} `json:"preprocess"`
 	Analysis     interface{} `json:"analysis"`
 	RunInfoXml   *XMLRunInfo `json:"runinfoxml"`
+}
+
+type SequencerNotification struct {
+	run *Run
 }
 
 type Sequencer struct {
@@ -171,13 +176,15 @@ func getFileModTime(p string) time.Time {
 }
 
 type SequencerPool struct {
-	path        string
-	cachePath   string
-	seqcers     []*Sequencer
-	runList     []*Run
-	runTable    map[string]*Run
-	folderCache map[string]*Run
-	mailer      *Mailer
+	path         string
+	cachePath    string
+	seqcers      []*Sequencer
+	runList      []*Run
+	runTable     map[string]*Run
+	folderCache  map[string]*Run
+	mailer       *Mailer
+	runQueue     []*SequencerNotification
+	runListMutex *sync.Mutex
 }
 
 func NewSequencerPool(p string, cachePath string, mailer *Mailer) *SequencerPool {
@@ -189,7 +196,18 @@ func NewSequencerPool(p string, cachePath string, mailer *Mailer) *SequencerPool
 	self.runTable = map[string]*Run{}
 	self.folderCache = map[string]*Run{}
 	self.mailer = mailer
+	self.runQueue = []*SequencerNotification{}
+	self.runListMutex = &sync.Mutex{}
 	return self
+}
+
+func (self *SequencerPool) CopyAndClearRunQueue() []*SequencerNotification {
+	self.runListMutex.Lock()
+	runQueue := make([]*SequencerNotification, len(self.runQueue))
+	copy(runQueue, self.runQueue)
+	self.runQueue = []*SequencerNotification{}
+	self.runListMutex.Unlock()
+	return runQueue
 }
 
 // Try to pre-populate cache from on-disk JSON.
@@ -237,7 +255,7 @@ func (self *SequencerPool) inventorySequencers() {
 	oldRunCount := len(self.runList)
 
 	// Count number of runs that are complete,
-	// so we can email when a new run is complete.
+	// so we can start processing for newly completed runs.
 	oldCompleted := map[string]bool{}
 	for _, run := range self.runList {
 		if run.State == "complete" {
@@ -282,24 +300,15 @@ func (self *SequencerPool) inventorySequencers() {
 
 	self.indexCache()
 
-	// Count again number of runs that are complete,
-	// so we can email when a new run is complete.
-	newCompleteds := []string{}
+	// Automatically start preprocessing pipeline
 	for _, run := range self.runList {
 		if run.State == "complete" {
 			if _, ok := oldCompleted[run.Fcid]; !ok {
-				newCompleteds = append(newCompleteds, run.Fcid)
+				self.runListMutex.Lock()
+				self.runQueue = append(self.runQueue, &SequencerNotification{run})
+				self.runListMutex.Unlock()
 			}
 		}
-	}
-
-	// If there are new runs completed, send email.
-	if len(newCompleteds) > 0 {
-		self.mailer.Sendmail(
-			[]string{},
-			fmt.Sprintf("Run %s complete!", newCompleteds[0]),
-			fmt.Sprintf("Hey Preppie,\n\nI noticed sequencing run %s is done.\n\nLet's get this BCL PROCESSOR party started at http://%s/.", newCompleteds[0], self.mailer.InstanceName),
-		)
 	}
 
 	// Update the on-disk cache.
