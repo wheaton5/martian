@@ -22,7 +22,7 @@ import (
 )
 
 const RUN_TOUCH_TIMEOUT = 1         // 1 hour
-const RUN_INACTIVE_TIMEOUT = 4 * 24 // 4 days
+const RUN_INACTIVE_TIMEOUT = 2 * 24 // 2 days
 
 type Run struct {
 	Path         string      `json:"path"`
