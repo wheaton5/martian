@@ -347,12 +347,14 @@ func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline 
 	return os.Remove(headPath)
 }
 
-func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, nodeFQname string) {
+func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, nodeFQname string) error {
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
-		return
+		return &PipestanceNotExistsError{psid}
 	}
-	pipestance.ResetNode(nodeFQname)
+	if err := pipestance.ResetNode(nodeFQname); err != nil {
+		return err
+	}
 	pipestance.Unimmortalize()
 	delete(self.failed, pipestance.GetFQName())
 	self.writeCache()
@@ -360,6 +362,7 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	self.runList = append(self.runList, pipestance)
 	self.runTable[pipestance.GetFQName()] = pipestance
 	self.runListMutex.Unlock()
+	return nil
 }
 
 func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (string, bool) {
