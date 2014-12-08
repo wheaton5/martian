@@ -397,7 +397,9 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 
 	// API: Restart failed stage.
 	app.Post("/api/restart/:container/:pname/:psid/:fqname", func(p martini.Params) string {
-		pman.UnfailPipestance(p["container"], p["pname"], p["psid"], p["fqname"])
+		if err := pman.UnfailPipestance(p["container"], p["pname"], p["psid"], p["fqname"]); err != nil {
+			return err.Error()
+		}
 		return ""
 	})
 

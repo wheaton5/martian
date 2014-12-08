@@ -341,25 +341,30 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 }
 
 func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline string, psid string) error {
+	self.runListMutex.Lock()
 	delete(self.completed, makeFQName(pipeline, psid))
 	self.writeCache()
+	self.runListMutex.Unlock()
 	headPath := self.getPipestancePath(container, pipeline, psid)
 	return os.Remove(headPath)
 }
 
-func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, nodeFQname string) {
+func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, nodeFQname string) error {
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
-		return
+		return &core.PipestanceNotExistsError{psid}
 	}
-	pipestance.ResetNode(nodeFQname)
+	if err := pipestance.ResetNode(nodeFQname); err != nil {
+		return err
+	}
 	pipestance.Unimmortalize()
+	self.runListMutex.Lock()
 	delete(self.failed, pipestance.GetFQName())
 	self.writeCache()
-	self.runListMutex.Lock()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[pipestance.GetFQName()] = pipestance
 	self.runListMutex.Unlock()
+	return nil
 }
 
 func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (string, bool) {
