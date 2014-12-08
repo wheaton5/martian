@@ -73,9 +73,11 @@ func NewPipestanceManager(rt *core.Runtime, marioVersion string,
 }
 
 func (self *PipestanceManager) CopyAndClearNotifyQueue() []*PipestanceNotification {
+	self.runListMutex.Lock()
 	notifyQueue := make([]*PipestanceNotification, len(self.notifyQueue))
 	copy(notifyQueue, self.notifyQueue)
 	self.notifyQueue = []*PipestanceNotification{}
+	self.runListMutex.Unlock()
 	return notifyQueue
 }
 
@@ -111,6 +113,10 @@ func (self *PipestanceManager) writeCache() {
 	if err := ioutil.WriteFile(self.cachePath, bytes, 0644); err != nil {
 		core.LogError(err, "pipeman", "Could not write cache file %s.", self.cachePath)
 	}
+}
+
+func (self *PipestanceManager) getPipestancePath(container string, pipeline string, psid string) string {
+	return path.Join(self.path, container, pipeline, psid, "HEAD")
 }
 
 func (self *PipestanceManager) inventoryPipestances() {
@@ -152,14 +158,14 @@ func (self *PipestanceManager) inventoryPipestances() {
 					}
 
 					// If pipestance has _finalstate, consider it complete.
-					if _, err := os.Stat(path.Join(self.path, container, pipeline, psid, "HEAD", "_finalstate")); err == nil {
+					if _, err := os.Stat(path.Join(self.getPipestancePath(container, pipeline, psid), "_finalstate")); err == nil {
 						self.runListMutex.Lock()
 						self.completed[fqname] = true
 						self.runListMutex.Unlock()
 						return
 					}
 
-					pipestance, err := self.rt.ReattachToPipestance(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
+					pipestance, err := self.rt.ReattachToPipestance(psid, self.getPipestancePath(container, pipeline, psid))
 					if err != nil {
 						// If we could not reattach, it's because _invocation was
 						// missing, or will no longer parse due to changes in MRO
@@ -320,7 +326,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		return err
 	}
 	fqname := pipestance.GetFQName()
-	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
+	headPath := self.getPipestancePath(container, pipeline, psid)
 	os.Remove(headPath)
 	os.Symlink(self.mroVersion, headPath)
 
@@ -335,25 +341,30 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 }
 
 func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline string, psid string) error {
+	self.runListMutex.Lock()
 	delete(self.completed, makeFQName(pipeline, psid))
 	self.writeCache()
-	headPath := path.Join(self.path, container, pipeline, psid, "HEAD")
+	self.runListMutex.Unlock()
+	headPath := self.getPipestancePath(container, pipeline, psid)
 	return os.Remove(headPath)
 }
 
-func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, nodeFQname string) {
+func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string, nodeFQname string) error {
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
-		return
+		return &core.PipestanceNotExistsError{psid}
 	}
-	pipestance.ResetNode(nodeFQname)
+	if err := pipestance.ResetNode(nodeFQname); err != nil {
+		return err
+	}
 	pipestance.Unimmortalize()
+	self.runListMutex.Lock()
 	delete(self.failed, pipestance.GetFQName())
 	self.writeCache()
-	self.runListMutex.Lock()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[pipestance.GetFQName()] = pipestance
 	self.runListMutex.Unlock()
+	return nil
 }
 
 func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (string, bool) {
@@ -371,7 +382,7 @@ func (self *PipestanceManager) GetPipestanceState(container string, pipeline str
 }
 
 func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string) (interface{}, bool) {
-	psPath := path.Join(self.path, container, pipeline, psid, "HEAD")
+	psPath := self.getPipestancePath(container, pipeline, psid)
 	if ser, ok := self.rt.GetSerialization(psPath); ok {
 		return ser, true
 	}
@@ -396,7 +407,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	}
 
 	// Reattach to the pipestance.
-	pipestance, err := self.rt.ReattachToPipestance(psid, path.Join(self.path, container, pipeline, psid, "HEAD"))
+	pipestance, err := self.rt.ReattachToPipestance(psid, self.getPipestancePath(container, pipeline, psid))
 	if err != nil {
 		return nil, false
 	}
@@ -404,4 +415,15 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	// Refresh its metadata state and return.
 	pipestance.RefreshMetadata()
 	return pipestance, true
+}
+
+func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline string, psid string) (string, error) {
+	psPath := self.getPipestancePath(container, pipeline, psid)
+	fname := "_invocation"
+
+	data, err := ioutil.ReadFile(path.Join(psPath, fname))
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }

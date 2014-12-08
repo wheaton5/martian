@@ -340,31 +340,15 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		pname := p["pname"]
 		psid := p["psid"]
 		state := map[string]interface{}{}
-		state["error"] = nil
 		psinfo := map[string]string{}
 		for k, v := range info {
 			psinfo[k] = v
 		}
-		if pipestance, ok := pman.GetPipestance(container, pname, psid); ok {
-			psstate := pipestance.GetState()
-			psinfo["state"] = psstate
-			psinfo["pname"] = pname
-			psinfo["psid"] = psid
-			psinfo["invokesrc"] = pipestance.GetInvokeSrc()
-			if psstate == "failed" {
-				fqname, summary, log, errpaths := pipestance.GetFatalError()
-				errpath := ""
-				if len(errpaths) > 0 {
-					errpath = errpaths[0]
-				}
-				state["error"] = map[string]string{
-					"fqname":  fqname,
-					"path":    errpath,
-					"summary": summary,
-					"log":     log,
-				}
-			}
-		}
+		psstate, _ := pman.GetPipestanceState(container, pname, psid)
+		psinfo["state"] = psstate
+		psinfo["pname"] = pname
+		psinfo["psid"] = psid
+		psinfo["invokesrc"], _ = pman.GetPipestanceInvokeSrc(container, pname, psid)
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid)
 		state["nodes"] = ser
 		state["info"] = psinfo
@@ -413,7 +397,9 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 
 	// API: Restart failed stage.
 	app.Post("/api/restart/:container/:pname/:psid/:fqname", func(p martini.Params) string {
-		pman.UnfailPipestance(p["container"], p["pname"], p["psid"], p["fqname"])
+		if err := pman.UnfailPipestance(p["container"], p["pname"], p["psid"], p["fqname"]); err != nil {
+			return err.Error()
+		}
 		return ""
 	})
 

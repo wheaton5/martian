@@ -17,10 +17,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-const RUN_IS_INACTIVE_AFTER_HOURS = 1
+const RUN_TOUCH_TIMEOUT = 1         // 1 hour
+const RUN_INACTIVE_TIMEOUT = 2 * 24 // 2 days
 
 type Run struct {
 	Path         string      `json:"path"`
@@ -38,6 +40,10 @@ type Run struct {
 	Preprocess   interface{} `json:"preprocess"`
 	Analysis     interface{} `json:"analysis"`
 	RunInfoXml   *XMLRunInfo `json:"runinfoxml"`
+}
+
+type SequencerNotification struct {
+	run *Run
 }
 
 type Sequencer struct {
@@ -127,12 +133,16 @@ func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, erro
 		completeTime := getFileModTime(path.Join(run.Path, "RTAComplete.txt"))
 		touchTime := getFileModTime(path.Join(run.Path, "InterOp", "ExtractionMetricsOut.bin"))
 
+		if startTime.IsZero() {
+			startTime, _ = time.Parse("2006-01-02", run.Fdate)
+		}
+
 		run.State = "failed"
 		if !completeTime.IsZero() {
 			run.State = "complete"
-		} else if touchTime.IsZero() {
+		} else if touchTime.IsZero() && time.Since(startTime) < time.Hour*RUN_INACTIVE_TIMEOUT {
 			run.State = "running"
-		} else if !touchTime.IsZero() && time.Since(touchTime) < time.Hour*RUN_IS_INACTIVE_AFTER_HOURS {
+		} else if !touchTime.IsZero() && time.Since(touchTime) < time.Hour*RUN_TOUCH_TIMEOUT {
 			run.State = "running"
 		}
 		if !startTime.IsZero() {
@@ -171,13 +181,15 @@ func getFileModTime(p string) time.Time {
 }
 
 type SequencerPool struct {
-	path        string
-	cachePath   string
-	seqcers     []*Sequencer
-	runList     []*Run
-	runTable    map[string]*Run
-	folderCache map[string]*Run
-	mailer      *Mailer
+	path          string
+	cachePath     string
+	seqcers       []*Sequencer
+	runList       []*Run
+	runTable      map[string]*Run
+	folderCache   map[string]*Run
+	mailer        *Mailer
+	runQueue      []*SequencerNotification
+	runQueueMutex *sync.Mutex
 }
 
 func NewSequencerPool(p string, cachePath string, mailer *Mailer) *SequencerPool {
@@ -189,7 +201,18 @@ func NewSequencerPool(p string, cachePath string, mailer *Mailer) *SequencerPool
 	self.runTable = map[string]*Run{}
 	self.folderCache = map[string]*Run{}
 	self.mailer = mailer
+	self.runQueue = []*SequencerNotification{}
+	self.runQueueMutex = &sync.Mutex{}
 	return self
+}
+
+func (self *SequencerPool) CopyAndClearRunQueue() []*SequencerNotification {
+	self.runQueueMutex.Lock()
+	runQueue := make([]*SequencerNotification, len(self.runQueue))
+	copy(runQueue, self.runQueue)
+	self.runQueue = []*SequencerNotification{}
+	self.runQueueMutex.Unlock()
+	return runQueue
 }
 
 // Try to pre-populate cache from on-disk JSON.
@@ -237,7 +260,7 @@ func (self *SequencerPool) inventorySequencers() {
 	oldRunCount := len(self.runList)
 
 	// Count number of runs that are complete,
-	// so we can email when a new run is complete.
+	// so we can start processing for newly completed runs.
 	oldCompleted := map[string]bool{}
 	for _, run := range self.runList {
 		if run.State == "complete" {
@@ -282,13 +305,15 @@ func (self *SequencerPool) inventorySequencers() {
 
 	self.indexCache()
 
-	// Count again number of runs that are complete,
-	// so we can email when a new run is complete.
+	// Automatically start preprocessing pipeline
 	newCompleteds := []string{}
 	for _, run := range self.runList {
 		if run.State == "complete" {
 			if _, ok := oldCompleted[run.Fcid]; !ok {
+				self.runQueueMutex.Lock()
 				newCompleteds = append(newCompleteds, run.Fcid)
+				self.runQueue = append(self.runQueue, &SequencerNotification{run})
+				self.runQueueMutex.Unlock()
 			}
 		}
 	}
@@ -298,7 +323,8 @@ func (self *SequencerPool) inventorySequencers() {
 		self.mailer.Sendmail(
 			[]string{},
 			fmt.Sprintf("Run %s complete!", newCompleteds[0]),
-			fmt.Sprintf("Hey Preppie,\n\nI noticed sequencing run %s is done.\n\nLet's get this BCL PROCESSOR party started at http://%s/.", newCompleteds[0], self.mailer.InstanceName),
+			fmt.Sprintf("Hey Preppie,\n\nI noticed sequencing run %s is done.\n\nI started this BCL PROCESSOR party at http://%s/.",
+				newCompleteds[0], self.mailer.InstanceName),
 		)
 	}
 

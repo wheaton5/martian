@@ -96,6 +96,22 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 	}()
 }
 
+func processRunLoop(pool *SequencerPool, pman *PipestanceManager, argshim *ArgShim, rt *core.Runtime) {
+	go func() {
+		for {
+			runQueue := pool.CopyAndClearRunQueue()
+
+			for _, runNotification := range runQueue {
+				run := runNotification.run
+				pman.Invoke(run.Fcid, "BCL_PROCESSOR_PD", run.Fcid, argshim.buildCallSourceForRun(rt, run))
+			}
+
+			// Wait a bit.
+			time.Sleep(time.Minute * time.Duration(30))
+		}
+	}()
+}
+
 func main() {
 	core.LogInfo("*", "MARSOC")
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
@@ -164,18 +180,23 @@ Options:
 	debug := opts["--debug"].(bool)
 
 	//=========================================================================
-	// Setup Mailer.
-	//=========================================================================
-	mailer := NewMailer(instanceName, emailHost, emailSender, emailRecipient,
-		instanceName != "MARSOC")
-
-	//=========================================================================
 	// Setup Mario Runtime with pipelines path.
 	//=========================================================================
 	jobMode := "sge"
 	profile := true
+	checkSrcPath := true
 	rt := core.NewRuntime(jobMode, mroPath, marioVersion, mroVersion, profile, debug)
+	if _, err := rt.CompileAll(checkSrcPath); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 	core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
+
+	//=========================================================================
+	// Setup Mailer.
+	//=========================================================================
+	mailer := NewMailer(instanceName, emailHost, emailSender, emailRecipient,
+		instanceName != "MARSOC")
 
 	//=========================================================================
 	// Setup SequencerPool, add sequencers, and load seq run cache.
@@ -212,6 +233,7 @@ Options:
 	pman.goRunListLoop()
 	lena.goDownloadLoop()
 	emailNotifierLoop(pman, lena, mailer)
+	processRunLoop(pool, pman, argshim, rt)
 
 	//=========================================================================
 	// Collect pipestance static info.
