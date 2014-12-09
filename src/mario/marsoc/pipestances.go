@@ -480,8 +480,8 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 		return nil, false
 	}
 
-	// Refresh its state and return.
-	pipestance.RefreshState()
+	// Load its metadata and return.
+	pipestance.LoadMetadata()
 	return pipestance, true
 }
 
