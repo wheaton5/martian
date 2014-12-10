@@ -397,7 +397,7 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 
 	// API: Restart failed stage.
 	app.Post("/api/restart/:container/:pname/:psid/:fqname", func(p martini.Params) string {
-		if err := pman.UnfailPipestance(p["container"], p["pname"], p["psid"], p["fqname"]); err != nil {
+		if err := pman.UnfailPipestanceNode(p["container"], p["pname"], p["psid"], p["fqname"]); err != nil {
 			return err.Error()
 		}
 		return ""
@@ -412,6 +412,21 @@ func runWebServer(uiport string, instanceName string, marioVersion string,
 		errors := []string{}
 		for _, sample := range samples {
 			if err := pman.ArchivePipestanceHead(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+				errors = append(errors, err.Error())
+			}
+		}
+		return strings.Join(errors, "\n")
+	})
+
+	// API: Restart failed pipestances associated to a flow cell.
+	app.Post("/api/restart-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		// Get all the samples for this fcid.
+		samples := lena.getSamplesForFlowcell(body.Fcid)
+
+		// Unfail the pipestances.
+		errors := []string{}
+		for _, sample := range samples {
+			if err := pman.UnfailPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
 				errors = append(errors, err.Error())
 			}
 		}
