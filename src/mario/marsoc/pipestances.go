@@ -45,6 +45,7 @@ type PipestanceManager struct {
 	runList        []*core.Pipestance
 	runListMutex   *sync.Mutex
 	runTable       map[string]*core.Pipestance
+	pendingTable   map[string]bool
 	containerTable map[string]string
 	notifyQueue    []*PipestanceNotification
 	mailer         *Mailer
@@ -66,6 +67,7 @@ func NewPipestanceManager(rt *core.Runtime, marioVersion string,
 	self.runList = []*core.Pipestance{}
 	self.runListMutex = &sync.Mutex{}
 	self.runTable = map[string]*core.Pipestance{}
+	self.pendingTable = map[string]bool{}
 	self.containerTable = map[string]string{}
 	self.notifyQueue = []*PipestanceNotification{}
 	self.mailer = mailer
@@ -319,22 +321,41 @@ func (self *PipestanceManager) processRunList() {
 	self.runListMutex.Unlock()
 }
 
+func (self *PipestanceManager) addPendingPipestance(fqname string) {
+	self.runListMutex.Lock()
+	self.pendingTable[fqname] = true
+	delete(self.failed, fqname)
+	self.runListMutex.Unlock()
+}
+
+func (self *PipestanceManager) removePendingPipestance(fqname string) {
+	self.runListMutex.Lock()
+	delete(self.pendingTable, fqname)
+	self.runListMutex.Unlock()
+}
+
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
+	fqname := makeFQName(pipeline, psid)
+
+	core.LogInfo("pipeman", "Instantiating and pushing to pendingList: %s.", fqname)
+	self.addPendingPipestance(fqname)
+
 	psPath := path.Join(self.path, container, pipeline, psid, self.mroVersion)
 	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
 	if err != nil {
+		self.removePendingPipestance(fqname)
 		return err
 	}
-	fqname := pipestance.GetFQName()
 	headPath := self.getPipestancePath(container, pipeline, psid)
 	os.Remove(headPath)
 	os.Symlink(self.mroVersion, headPath)
 
-	core.LogInfo("pipeman", "Instantiating and pushing to runList: %s.", fqname)
+	core.LogInfo("pipeman", "Finished instantiating and pushing to runList: %s.", fqname)
 	self.runListMutex.Lock()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
 	self.containerTable[fqname] = container
+	delete(self.pendingTable, fqname)
 	self.runListMutex.Unlock()
 
 	return nil
@@ -352,6 +373,7 @@ func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline 
 func (self *PipestanceManager) unfailPipestance(container string, pipeline string, psid string, nodeFQname string, unfailAll bool) error {
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
+		self.removePendingPipestance(fqname)
 		return &core.PipestanceNotExistsError{psid}
 	}
 	var err error
@@ -364,11 +386,13 @@ func (self *PipestanceManager) unfailPipestance(container string, pipeline strin
 		return err
 	}
 	pipestance.Unimmortalize()
+
+	core.LogInfo("pipeman", "Finished unfailing and pushing to runList: %s.", fqname)
 	self.runListMutex.Lock()
-	delete(self.failed, pipestance.GetFQName())
 	self.writeCache()
 	self.runList = append(self.runList, pipestance)
 	self.runTable[pipestance.GetFQName()] = pipestance
+	delete(self.pendingTable, fqname)
 	self.runListMutex.Unlock()
 	return nil
 }
@@ -391,6 +415,9 @@ func (self *PipestanceManager) GetPipestanceState(container string, pipeline str
 	}
 	if run, ok := self.runTable[fqname]; ok {
 		return run.GetState(), true
+	}
+	if _, ok := self.pendingTable[fqname]; ok {
+		return "queued", true
 	}
 	return "", false
 }
