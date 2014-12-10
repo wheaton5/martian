@@ -107,7 +107,7 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
         )
 
     $scope.unfailSamples = () ->
-	$scope.showbutton = false
+        $scope.showbutton = false
         $http.post('/api/restart-fcid-samples', { fcid: $scope.selrun.fcid }).success((data) ->
             $scope.refreshRuns()
             if data then window.alert(data.toString())

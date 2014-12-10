@@ -158,24 +158,32 @@
         }
       });
     };
-    return $scope.unfailSamples = function() {};
-  }, $scope.showbutton = false, $http.post('/api/restart-fcid-samples', {
-    fcid: $scope.selrun.fcid
-  }).success(function(data) {
-    $scope.refreshRuns();
-    if (data) {
-      return window.alert(data.toString());
+    $scope.unfailSamples = function() {
+      $scope.showbutton = false;
+      return $http.post('/api/restart-fcid-samples', {
+        fcid: $scope.selrun.fcid
+      }).success(function(data) {
+        $scope.refreshRuns();
+        if (data) {
+          return window.alert(data.toString());
+        }
+      });
+    };
+    $scope.allDone = function() {
+      return _.every($scope.samples, function(s) {
+        return s.psstate === 'complete';
+      });
+    };
+    $scope.allFail = function() {
+      return _.every($scope.samples, function(s) {
+        return s.psstate === 'failed';
+      });
+    };
+    if (admin) {
+      return $interval((function() {
+        return $scope.refreshRuns();
+      }), 5000);
     }
-  }), $scope.allDone = function() {
-    return _.every($scope.samples, function(s) {
-      return s.psstate === 'complete';
-    });
-  }, $scope.allFail = function() {
-    return _.every($scope.samples, function(s) {
-      return s.psstate === 'failed';
-    });
-  }, admin ? $interval((function() {
-    return $scope.refreshRuns();
-  }), 5000) : void 0);
+  });
 
 }).call(this);
