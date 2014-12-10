@@ -3,14 +3,11 @@ mario
 
 How to Clone Me
 ---------------
-This repo includes vendored third-party code, so it must be git cloned in a specific way:
+This repo includes vendored third-party code as submodules, so it must be git cloned recursively:
 
 ```
-> cd $GOPATH
-> git clone git@github.com:10XDev/mario.git src --recursive
+> git clone git@github.com:10XDev/mario.git --recursive
 ```
-Make sure to clone into a folder named `src` directly under your `$GOPATH`, not into a folder named `mario`.
-
 
 Mario Executables
 -----------------
