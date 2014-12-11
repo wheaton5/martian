@@ -321,16 +321,21 @@ func (self *PipestanceManager) processRunList() {
 	self.runListMutex.Unlock()
 }
 
-func (self *PipestanceManager) addPendingPipestance(fqname string) {
+func (self *PipestanceManager) addPendingPipestance(fqname string, unfail bool) {
 	self.runListMutex.Lock()
 	self.pendingTable[fqname] = true
-	delete(self.failed, fqname)
+	if unfail {
+		delete(self.failed, fqname)
+	}
 	self.runListMutex.Unlock()
 }
 
-func (self *PipestanceManager) removePendingPipestance(fqname string) {
+func (self *PipestanceManager) removePendingPipestance(fqname string, unfail bool) {
 	self.runListMutex.Lock()
 	delete(self.pendingTable, fqname)
+	if unfail {
+		self.failed[fqname] = true
+	}
 	self.runListMutex.Unlock()
 }
 
@@ -338,12 +343,12 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	fqname := makeFQName(pipeline, psid)
 
 	core.LogInfo("pipeman", "Instantiating and pushing to pendingList: %s.", fqname)
-	self.addPendingPipestance(fqname)
+	self.addPendingPipestance(fqname, false)
 
 	psPath := path.Join(self.path, container, pipeline, psid, self.mroVersion)
 	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
 	if err != nil {
-		self.removePendingPipestance(fqname)
+		self.removePendingPipestance(fqname, false)
 		return err
 	}
 	headPath := self.getPipestancePath(container, pipeline, psid)
@@ -374,11 +379,11 @@ func (self *PipestanceManager) unfailPipestance(container string, pipeline strin
 	fqname := makeFQName(pipeline, psid)
 
 	core.LogInfo("pipeman", "Unfailing and pushing to pendingList: %s.", fqname)
-	self.addPendingPipestance(fqname)
+	self.addPendingPipestance(fqname, true)
 
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
-		self.removePendingPipestance(fqname)
+		self.removePendingPipestance(fqname, true)
 		return &core.PipestanceNotExistsError{psid}
 	}
 	var err error
@@ -388,7 +393,7 @@ func (self *PipestanceManager) unfailPipestance(container string, pipeline strin
 		err = pipestance.ResetNode(nodeFQname)
 	}
 	if err != nil {
-		self.removePendingPipestance(fqname)
+		self.removePendingPipestance(fqname, true)
 		return err
 	}
 	pipestance.Unimmortalize()
