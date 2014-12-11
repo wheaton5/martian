@@ -102,7 +102,7 @@ func (self *ArgShim) buildArgsForSample(sbag interface{}, fastqPaths map[string]
 }
 
 func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interface{}) string {
-	pipeline, ok := shimout["pipeline"].(string)
+	pipeline, ok := shimout["call"].(string)
 	if !ok {
 		return ""
 	}

@@ -321,15 +321,6 @@ func (self *PipestanceManager) processRunList() {
 	self.runListMutex.Unlock()
 }
 
-func (self *PipestanceManager) addPendingPipestance(fqname string, unfail bool) {
-	self.runListMutex.Lock()
-	self.pendingTable[fqname] = true
-	if unfail {
-		delete(self.failed, fqname)
-	}
-	self.runListMutex.Unlock()
-}
-
 func (self *PipestanceManager) removePendingPipestance(fqname string, unfail bool) {
 	self.runListMutex.Lock()
 	delete(self.pendingTable, fqname)
@@ -342,8 +333,15 @@ func (self *PipestanceManager) removePendingPipestance(fqname string, unfail boo
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
 	fqname := makeFQName(pipeline, psid)
 
-	core.LogInfo("pipeman", "Instantiating and pushing to pendingList: %s.", fqname)
-	self.addPendingPipestance(fqname, false)
+	self.runListMutex.Lock()
+	// Check if pipestance has already been invoked
+	if _, ok := self.getPipestanceState(container, pipeline, psid); ok {
+		self.runListMutex.Unlock()
+		return &core.PipestanceExistsError{psid}
+	}
+	self.pendingTable[fqname] = true
+	self.runListMutex.Unlock()
+	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
 	psPath := path.Join(self.path, container, pipeline, psid, self.mroVersion)
 	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
@@ -357,10 +355,10 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 
 	core.LogInfo("pipeman", "Finished instantiating and pushing to runList: %s.", fqname)
 	self.runListMutex.Lock()
+	delete(self.pendingTable, fqname)
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
 	self.containerTable[fqname] = container
-	delete(self.pendingTable, fqname)
 	self.runListMutex.Unlock()
 
 	return nil
@@ -378,8 +376,16 @@ func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline 
 func (self *PipestanceManager) unfailPipestance(container string, pipeline string, psid string, nodeFQname string, unfailAll bool) error {
 	fqname := makeFQName(pipeline, psid)
 
-	core.LogInfo("pipeman", "Unfailing and pushing to pendingList: %s.", fqname)
-	self.addPendingPipestance(fqname, true)
+	self.runListMutex.Lock()
+	// Check if pipestance is failed
+	if state, _ := self.getPipestanceState(container, pipeline, psid); state != "failed" {
+		self.runListMutex.Unlock()
+		return &core.PipestanceNotFailedError{psid}
+	}
+	delete(self.failed, fqname)
+	self.pendingTable[fqname] = true
+	self.runListMutex.Unlock()
+	core.LogInfo("pipeman", "Unfailing and pushed to pendingList: %s.", fqname)
 
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
@@ -401,9 +407,9 @@ func (self *PipestanceManager) unfailPipestance(container string, pipeline strin
 	core.LogInfo("pipeman", "Finished unfailing and pushing to runList: %s.", fqname)
 	self.runListMutex.Lock()
 	self.writeCache()
+	delete(self.pendingTable, fqname)
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
-	delete(self.pendingTable, fqname)
 	self.runListMutex.Unlock()
 	return nil
 }
@@ -416,27 +422,28 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	return self.unfailPipestance(container, pipeline, psid, "", true)
 }
 
-func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (string, bool) {
+func (self *PipestanceManager) getPipestanceState(container string, pipeline string, psid string) (string, bool) {
 	fqname := makeFQName(pipeline, psid)
-	self.runListMutex.Lock()
 	if _, ok := self.completed[fqname]; ok {
-		self.runListMutex.Unlock()
 		return "complete", true
 	}
 	if _, ok := self.failed[fqname]; ok {
-		self.runListMutex.Unlock()
 		return "failed", true
 	}
 	if run, ok := self.runTable[fqname]; ok {
-		self.runListMutex.Unlock()
 		return run.GetState(), true
 	}
 	if _, ok := self.pendingTable[fqname]; ok {
-		self.runListMutex.Unlock()
 		return "waiting", true
 	}
-	self.runListMutex.Unlock()
 	return "", false
+}
+
+func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (string, bool) {
+	self.runListMutex.Lock()
+	state, ok := self.getPipestanceState(container, pipeline, psid)
+	self.runListMutex.Unlock()
+	return state, ok
 }
 
 func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string) (interface{}, bool) {
