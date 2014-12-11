@@ -187,12 +187,11 @@ type SequencerPool struct {
 	runList       []*Run
 	runTable      map[string]*Run
 	folderCache   map[string]*Run
-	mailer        *Mailer
 	runQueue      []*SequencerNotification
 	runQueueMutex *sync.Mutex
 }
 
-func NewSequencerPool(p string, cachePath string, mailer *Mailer) *SequencerPool {
+func NewSequencerPool(p string, cachePath string) *SequencerPool {
 	self := &SequencerPool{}
 	self.path = p
 	self.cachePath = path.Join(cachePath, "sequencers")
@@ -200,7 +199,6 @@ func NewSequencerPool(p string, cachePath string, mailer *Mailer) *SequencerPool
 	self.runList = []*Run{}
 	self.runTable = map[string]*Run{}
 	self.folderCache = map[string]*Run{}
-	self.mailer = mailer
 	self.runQueue = []*SequencerNotification{}
 	self.runQueueMutex = &sync.Mutex{}
 	return self
@@ -306,26 +304,14 @@ func (self *SequencerPool) inventorySequencers() {
 	self.indexCache()
 
 	// Automatically start preprocessing pipeline
-	newCompleteds := []string{}
 	for _, run := range self.runList {
 		if run.State == "complete" {
 			if _, ok := oldCompleted[run.Fcid]; !ok {
 				self.runQueueMutex.Lock()
-				newCompleteds = append(newCompleteds, run.Fcid)
 				self.runQueue = append(self.runQueue, &SequencerNotification{run})
 				self.runQueueMutex.Unlock()
 			}
 		}
-	}
-
-	// If there are new runs completed, send email.
-	if len(newCompleteds) > 0 {
-		self.mailer.Sendmail(
-			[]string{},
-			fmt.Sprintf("Run %s complete!", newCompleteds[0]),
-			fmt.Sprintf("Hey Preppie,\n\nI noticed sequencing run %s is done.\n\nI started this BCL PROCESSOR party at http://%s/.",
-				newCompleteds[0], self.mailer.InstanceName),
-		)
 	}
 
 	// Update the on-disk cache.
