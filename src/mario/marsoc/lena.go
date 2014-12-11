@@ -16,6 +16,7 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -125,6 +126,7 @@ type Lena struct {
 	spidTable   map[int]*Sample
 	sbagTable   map[int]interface{}
 	metasamples []*Sample
+	lenaDbMutex *sync.RWMutex
 	mailer      *Mailer
 }
 
@@ -137,6 +139,7 @@ func NewLena(downloadUrl string, authToken string, cachePath string, mailer *Mai
 	self.spidTable = map[int]*Sample{}
 	self.sbagTable = map[int]interface{}{}
 	self.metasamples = []*Sample{}
+	self.lenaDbMutex = &sync.RWMutex{}
 	self.mailer = mailer
 	return self
 }
@@ -166,9 +169,9 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	}
 
 	// Create a new, empty cache.
-	self.fcidTable = map[string]map[int]*Sample{}
-	self.spidTable = map[int]*Sample{}
-	self.metasamples = []*Sample{}
+	fcidTable := map[string]map[int]*Sample{}
+	spidTable := map[int]*Sample{}
+	metasamples := []*Sample{}
 	for _, sample := range samples {
 		// Collect list of fcids referenced in the sample_defs
 		uniqueFcids := map[string]bool{}
@@ -181,13 +184,13 @@ func (self *Lena) ingestDatabase(data []byte) error {
 			// Store them into lists indexed by flowcell id.
 			fcid := sample_def.Sequencing_run.Name
 			uniqueFcids[fcid] = true
-			smap, ok := self.fcidTable[fcid]
+			smap, ok := fcidTable[fcid]
 			if ok {
 				smap[sample.Id] = sample
 			} else {
-				self.fcidTable[fcid] = map[int]*Sample{sample.Id: sample}
+				fcidTable[fcid] = map[int]*Sample{sample.Id: sample}
 			}
-			self.spidTable[sample.Id] = sample
+			spidTable[sample.Id] = sample
 		}
 
 		// Sort the uniquified fcids, and build the pscontainer
@@ -200,7 +203,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 		if len(fcids) > 1 {
 			// It's a metasample, add to list, set container to sample id.
 			sample.Pscontainer = strconv.Itoa(sample.Id)
-			self.metasamples = append(self.metasamples, sample)
+			metasamples = append(metasamples, sample)
 		} else if len(fcids) == 1 {
 			// Single-flowcell sample.
 			sample.Pscontainer = fcids[0]
@@ -222,7 +225,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 	}
 
 	// Create new, empty sample bag.
-	self.sbagTable = map[int]interface{}{}
+	sbagTable := map[int]interface{}{}
 	for _, iface := range bagIfaces {
 		spbag, ok := iface.(map[string]interface{})
 		if !ok {
@@ -233,10 +236,17 @@ func (self *Lena) ingestDatabase(data []byte) error {
 		if !ok {
 			return errors.New(fmt.Sprintf("JSON object contains value for id that is not a number %v.", idIface))
 		}
-		self.sbagTable[int(fspid)] = iface
+		sbagTable[int(fspid)] = iface
 	}
 
-	core.LogInfo("lenaapi", "%d samples, %d bags loaded from %s.", len(samples), len(self.sbagTable), self.dbPath)
+	self.lenaDbMutex.Lock()
+	self.fcidTable = fcidTable
+	self.spidTable = spidTable
+	self.metasamples = metasamples
+	self.sbagTable = sbagTable
+	self.lenaDbMutex.Unlock()
+
+	core.LogInfo("lenaapi", "%d samples, %d bags loaded from %s.", len(samples), len(sbagTable), self.dbPath)
 	return nil
 }
 
@@ -294,8 +304,10 @@ func (self *Lena) lenaAPI() ([]byte, error) {
 
 func (self *Lena) getSamplesForFlowcell(fcid string) []*Sample {
 	// Get sample map for this fcid.
+	self.lenaDbMutex.RLock()
 	sampleMap, ok := self.fcidTable[fcid]
 	if !ok {
+		self.lenaDbMutex.RUnlock()
 		return []*Sample{}
 	}
 
@@ -314,16 +326,23 @@ func (self *Lena) getSamplesForFlowcell(fcid string) []*Sample {
 			sampleList = append(sampleList, sample)
 		}
 	}
+	self.lenaDbMutex.RUnlock()
 	return sampleList
 }
 
 func (self *Lena) getMetasamples() []*Sample {
-	return self.metasamples
+	self.lenaDbMutex.RLock()
+	metasamples := make([]*Sample, len(self.metasamples))
+	copy(metasamples, self.metasamples)
+	self.lenaDbMutex.RUnlock()
+	return metasamples
 }
 
 func (self *Lena) getSampleWithId(sampleId string) *Sample {
 	if spid, err := strconv.Atoi(sampleId); err == nil {
+		self.lenaDbMutex.RLock()
 		sample, _ := self.spidTable[spid]
+		self.lenaDbMutex.RUnlock()
 		return sample
 	}
 	return nil
@@ -331,7 +350,10 @@ func (self *Lena) getSampleWithId(sampleId string) *Sample {
 
 func (self *Lena) getSampleBagWithId(sampleId string) interface{} {
 	if spid, err := strconv.Atoi(sampleId); err == nil {
-		return self.sbagTable[spid]
+		self.lenaDbMutex.RLock()
+		sbag := self.sbagTable[spid]
+		self.lenaDbMutex.RUnlock()
+		return sbag
 	}
 	return nil
 }
