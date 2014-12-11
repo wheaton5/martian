@@ -106,8 +106,18 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
             if data then window.alert(data.toString())
         )
 
+    $scope.unfailSamples = () ->
+        $scope.showbutton = false
+        $http.post('/api/restart-fcid-samples', { fcid: $scope.selrun.fcid }).success((data) ->
+            $scope.refreshRuns()
+            if data then window.alert(data.toString())
+        )
+
     $scope.allDone = () ->
         _.every($scope.samples, (s) -> s.psstate == 'complete')
+
+    $scope.allFail = () ->
+        _.every($scope.samples, (s) -> s.psstate == 'failed')
         
     # Only admin pages get auto-refresh.
     if admin then $interval((() -> $scope.refreshRuns()), 5000)
