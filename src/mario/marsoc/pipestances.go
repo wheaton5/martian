@@ -152,12 +152,12 @@ func (self *PipestanceManager) inventoryPipestances() {
 					// an analysis pipestance is in for notification emails.
 					self.runListMutex.Lock()
 					self.containerTable[fqname] = container
-					self.runListMutex.Unlock()
-
-					// If we already know the state of this pipestance, move on.
 					if self.completed[fqname] || self.failed[fqname] {
+						// If we already know the state of this pipestance, move on.
+						self.runListMutex.Unlock()
 						return
 					}
+					self.runListMutex.Unlock()
 
 					// If pipestance has _finalstate, consider it complete.
 					if _, err := os.Stat(path.Join(self.getPipestancePath(container, pipeline, psid), "_finalstate")); err == nil {
@@ -371,6 +371,11 @@ func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline 
 }
 
 func (self *PipestanceManager) unfailPipestance(container string, pipeline string, psid string, nodeFQname string, unfailAll bool) error {
+	fqname := makeFQName(pipeline, psid)
+
+	core.LogInfo("pipeman", "Unfailing and pushing to pendingList: %s.", fqname)
+	self.addPendingPipestance(fqname)
+
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
 		self.removePendingPipestance(fqname)
@@ -383,6 +388,7 @@ func (self *PipestanceManager) unfailPipestance(container string, pipeline strin
 		err = pipestance.ResetNode(nodeFQname)
 	}
 	if err != nil {
+		self.removePendingPipestance(fqname)
 		return err
 	}
 	pipestance.Unimmortalize()
@@ -391,7 +397,7 @@ func (self *PipestanceManager) unfailPipestance(container string, pipeline strin
 	self.runListMutex.Lock()
 	self.writeCache()
 	self.runList = append(self.runList, pipestance)
-	self.runTable[pipestance.GetFQName()] = pipestance
+	self.runTable[fqname] = pipestance
 	delete(self.pendingTable, fqname)
 	self.runListMutex.Unlock()
 	return nil
@@ -407,18 +413,24 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 
 func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (string, bool) {
 	fqname := makeFQName(pipeline, psid)
+	self.runListMutex.Lock()
 	if _, ok := self.completed[fqname]; ok {
+		self.runListMutex.Unlock()
 		return "complete", true
 	}
 	if _, ok := self.failed[fqname]; ok {
+		self.runListMutex.Unlock()
 		return "failed", true
 	}
 	if run, ok := self.runTable[fqname]; ok {
+		self.runListMutex.Unlock()
 		return run.GetState(), true
 	}
 	if _, ok := self.pendingTable[fqname]; ok {
-		return "queued", true
+		self.runListMutex.Unlock()
+		return "waiting", true
 	}
+	self.runListMutex.Unlock()
 	return "", false
 }
 
@@ -443,9 +455,12 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	}
 
 	// Check the runTable.
+	self.runListMutex.Lock()
 	if pipestance, ok := self.runTable[fqname]; ok {
+		self.runListMutex.Unlock()
 		return pipestance, true
 	}
+	self.runListMutex.Unlock()
 
 	// Reattach to the pipestance.
 	pipestance, err := self.rt.ReattachToPipestance(psid, self.getPipestancePath(container, pipeline, psid))
