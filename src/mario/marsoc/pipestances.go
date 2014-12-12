@@ -226,7 +226,7 @@ func (self *PipestanceManager) processRunList() {
 
 	for _, pipestance := range runListCopy {
 		go func(pipestance *core.Pipestance, wg *sync.WaitGroup) {
-			pipestance.RefreshMetadata()
+			pipestance.RefreshState()
 
 			state := pipestance.GetState()
 			fqname := pipestance.GetFQName()
@@ -480,8 +480,8 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 		return nil, false
 	}
 
-	// Refresh its metadata state and return.
-	pipestance.RefreshMetadata()
+	// Load its metadata and return.
+	pipestance.LoadMetadata()
 	return pipestance, true
 }
 
