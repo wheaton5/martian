@@ -118,6 +118,12 @@ type Sample struct {
 	Callsrc                  string       `json:"callsrc"`
 }
 
+type BySampleId []*Sample
+
+func (a BySampleId) Len() int           { return len(a) }
+func (a BySampleId) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a BySampleId) Less(i, j int) bool { return a[i].Id < a[j].Id }
+
 type Lena struct {
 	downloadUrl string
 	authToken   string
@@ -238,6 +244,8 @@ func (self *Lena) ingestDatabase(data []byte) error {
 		}
 		sbagTable[int(fspid)] = iface
 	}
+
+	sort.Sort(BySampleId(metasamples))
 
 	self.lenaDbMutex.Lock()
 	self.fcidTable = fcidTable
