@@ -19,6 +19,8 @@ app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
 
     $scope.selectSample = (sample) ->
         $scope.selsample = sample
+        for s in $scope.samples
+            s.selected = false
         $scope.selsample.selected = true
         $http.post('/api/get-metasample-callsrc', { id: $scope.selsample?.id.toString() }).success((data) ->
             if $scope.selsample? then  _.assign($scope.selsample, data)
