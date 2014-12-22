@@ -24,6 +24,10 @@ func makeFQName(pipeline string, psid string) string {
 	return fmt.Sprintf("ID.%s.%s", psid, pipeline)
 }
 
+func makePipestancePath(pipestancesPath string, container string, pipeline string, psid string) string {
+	return path.Join(pipestancesPath, container, pipeline, psid, "HEAD")
+}
+
 type PipestanceNotification struct {
 	State     string
 	Container string
@@ -36,9 +40,10 @@ type PipestanceManager struct {
 	rt             *core.Runtime
 	marioVersion   string
 	mroVersion     string
-	path           string
 	cachePath      string
 	stepms         int
+	writePath      string
+	paths          []string
 	pipelines      []string
 	completed      map[string]bool
 	failed         map[string]bool
@@ -47,18 +52,20 @@ type PipestanceManager struct {
 	runTable       map[string]*core.Pipestance
 	pendingTable   map[string]bool
 	containerTable map[string]string
+	pathTable      map[string]string
 	notifyQueue    []*PipestanceNotification
 	mailer         *Mailer
 }
 
 func NewPipestanceManager(rt *core.Runtime, marioVersion string,
-	mroVersion string, pipestancesPath string, cachePath string, stepms int,
+	mroVersion string, pipestancesPaths []string, cachePath string, stepms int,
 	mailer *Mailer) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.marioVersion = marioVersion
 	self.mroVersion = mroVersion
-	self.path = pipestancesPath
+	self.paths = pipestancesPaths
+	self.writePath = pipestancesPaths[len(pipestancesPaths)-1]
 	self.cachePath = path.Join(cachePath, "pipestances")
 	self.stepms = stepms
 	self.pipelines = rt.PipelineNames
@@ -69,6 +76,7 @@ func NewPipestanceManager(rt *core.Runtime, marioVersion string,
 	self.runTable = map[string]*core.Pipestance{}
 	self.pendingTable = map[string]bool{}
 	self.containerTable = map[string]string{}
+	self.pathTable = map[string]string{}
 	self.notifyQueue = []*PipestanceNotification{}
 	self.mailer = mailer
 	return self
@@ -117,8 +125,15 @@ func (self *PipestanceManager) writeCache() {
 	}
 }
 
-func (self *PipestanceManager) getPipestancePath(container string, pipeline string, psid string) string {
-	return path.Join(self.path, container, pipeline, psid, "HEAD")
+func (self *PipestanceManager) getPipestancePath(container string, pipeline string, psid string) (string, error) {
+	self.runListMutex.Lock()
+	defer self.runListMutex.Unlock()
+
+	fqname := makeFQName(pipeline, psid)
+	if pipestancePath, ok := self.pathTable[fqname]; ok {
+		return pipestancePath, nil
+	}
+	return "", &core.PipestanceNotExistsError{fqname}
 }
 
 func (self *PipestanceManager) inventoryPipestances() {
@@ -130,62 +145,65 @@ func (self *PipestanceManager) inventoryPipestances() {
 	// Concurrently step all pipestances in the runlist copy.
 	var wg sync.WaitGroup
 
-	// Iterate over top level containers (flowcells).
-	containerInfos, _ := ioutil.ReadDir(self.path)
-	for _, containerInfo := range containerInfos {
-		container := containerInfo.Name()
+	for _, pipestancesPath := range self.paths {
+		// Iterate over top level containers (flowcells).
+		containerInfos, _ := ioutil.ReadDir(pipestancesPath)
+		for _, containerInfo := range containerInfos {
+			container := containerInfo.Name()
 
-		// Iterate over all known pipelines.
-		for _, pipeline := range self.pipelines {
-			psidInfos, _ := ioutil.ReadDir(path.Join(self.path, container, pipeline))
+			// Iterate over all known pipelines.
+			for _, pipeline := range self.pipelines {
+				psidInfos, _ := ioutil.ReadDir(path.Join(pipestancesPath, container, pipeline))
 
-			// Iterate over psids under this pipeline.
-			for _, psidInfo := range psidInfos {
-				wg.Add(1)
-				pscount += 1
-				go func(psidInfo os.FileInfo, pipeline string, container string) {
-					psid := psidInfo.Name()
-					fqname := makeFQName(pipeline, psid)
-					defer wg.Done()
+				// Iterate over psids under this pipeline.
+				for _, psidInfo := range psidInfos {
+					wg.Add(1)
+					pscount += 1
+					go func(psidInfo os.FileInfo, pipeline string, container string) {
+						psid := psidInfo.Name()
+						fqname := makeFQName(pipeline, psid)
+						defer wg.Done()
 
-					// Cache the fqname to container mapping so we know what container
-					// an analysis pipestance is in for notification emails.
-					self.runListMutex.Lock()
-					self.containerTable[fqname] = container
-					if self.completed[fqname] || self.failed[fqname] {
-						// If we already know the state of this pipestance, move on.
-						self.runListMutex.Unlock()
-						return
-					}
-					self.runListMutex.Unlock()
-
-					// If pipestance has _finalstate, consider it complete.
-					if _, err := os.Stat(path.Join(self.getPipestancePath(container, pipeline, psid), "_finalstate")); err == nil {
+						// Cache the fqname to container mapping so we know what container
+						// an analysis pipestance is in for notification emails.
 						self.runListMutex.Lock()
-						self.completed[fqname] = true
+						self.containerTable[fqname] = container
+						self.pathTable[fqname] = makePipestancePath(pipestancesPath, container, pipeline, psid)
+						if self.completed[fqname] || self.failed[fqname] {
+							// If we already know the state of this pipestance, move on.
+							self.runListMutex.Unlock()
+							return
+						}
 						self.runListMutex.Unlock()
-						return
-					}
 
-					pipestance, err := self.rt.ReattachToPipestance(psid, self.getPipestancePath(container, pipeline, psid))
-					if err != nil {
-						// If we could not reattach, it's because _invocation was
-						// missing, or will no longer parse due to changes in MRO
-						// definitions. Consider the pipestance failed.
+						// If pipestance has _finalstate, consider it complete.
+						if _, err := os.Stat(path.Join(makePipestancePath(pipestancesPath, container, pipeline, psid), "_finalstate")); err == nil {
+							self.runListMutex.Lock()
+							self.completed[fqname] = true
+							self.runListMutex.Unlock()
+							return
+						}
+
+						pipestance, err := self.rt.ReattachToPipestance(psid, makePipestancePath(pipestancesPath, container, pipeline, psid))
+						if err != nil {
+							// If we could not reattach, it's because _invocation was
+							// missing, or will no longer parse due to changes in MRO
+							// definitions. Consider the pipestance failed.
+							self.runListMutex.Lock()
+							self.failed[fqname] = true
+							self.runListMutex.Unlock()
+							return
+						}
+
+						pipestance.LoadMetadata()
+
+						core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
 						self.runListMutex.Lock()
-						self.failed[fqname] = true
+						self.runList = append(self.runList, pipestance)
+						self.runTable[fqname] = pipestance
 						self.runListMutex.Unlock()
-						return
-					}
-
-					pipestance.LoadMetadata()
-
-					core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
-					self.runListMutex.Lock()
-					self.runList = append(self.runList, pipestance)
-					self.runTable[fqname] = pipestance
-					self.runListMutex.Unlock()
-				}(psidInfo, pipeline, container)
+					}(psidInfo, pipeline, container)
+				}
 			}
 		}
 	}
@@ -345,13 +363,13 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	self.runListMutex.Unlock()
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
-	psPath := path.Join(self.path, container, pipeline, psid, self.mroVersion)
+	psPath := path.Join(self.writePath, container, pipeline, psid, self.mroVersion)
 	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
 	if err != nil {
 		self.removePendingPipestance(fqname, false)
 		return err
 	}
-	headPath := self.getPipestancePath(container, pipeline, psid)
+	headPath := makePipestancePath(self.writePath, container, pipeline, psid)
 	os.Remove(headPath)
 	os.Symlink(self.mroVersion, headPath)
 
@@ -363,6 +381,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	self.runList = append(self.runList, pipestance)
 	self.runTable[fqname] = pipestance
 	self.containerTable[fqname] = container
+	self.pathTable[fqname] = headPath
 	self.runListMutex.Unlock()
 
 	return nil
@@ -373,7 +392,10 @@ func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline 
 	delete(self.completed, makeFQName(pipeline, psid))
 	self.writeCache()
 	self.runListMutex.Unlock()
-	headPath := self.getPipestancePath(container, pipeline, psid)
+	headPath, err := self.getPipestancePath(container, pipeline, psid)
+	if err != nil {
+		return err
+	}
 	return os.Remove(headPath)
 }
 
@@ -451,7 +473,10 @@ func (self *PipestanceManager) GetPipestanceState(container string, pipeline str
 }
 
 func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string) (interface{}, bool) {
-	psPath := self.getPipestancePath(container, pipeline, psid)
+	psPath, err := self.getPipestancePath(container, pipeline, psid)
+	if err != nil {
+		return nil, false
+	}
 	if ser, ok := self.rt.GetSerialization(psPath); ok {
 		return ser, true
 	}
@@ -478,8 +503,14 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	}
 	self.runListMutex.Unlock()
 
+	// Get pipestance path.
+	psPath, err := self.getPipestancePath(container, pipeline, psid)
+	if err != nil {
+		return nil, false
+	}
+
 	// Reattach to the pipestance.
-	pipestance, err := self.rt.ReattachToPipestance(psid, self.getPipestancePath(container, pipeline, psid))
+	pipestance, err := self.rt.ReattachToPipestance(psid, psPath)
 	if err != nil {
 		return nil, false
 	}
@@ -490,9 +521,12 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 }
 
 func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline string, psid string) (string, error) {
-	psPath := self.getPipestancePath(container, pipeline, psid)
-	fname := "_invocation"
+	psPath, err := self.getPipestancePath(container, pipeline, psid)
+	if err != nil {
+		return "", err
+	}
 
+	fname := "_invocation"
 	data, err := ioutil.ReadFile(path.Join(psPath, fname))
 	if err != nil {
 		return "", err

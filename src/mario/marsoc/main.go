@@ -180,7 +180,7 @@ Options:
 	argshimPath := env["MARSOC_ARGSHIM_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQUENCERS_PATH"]
-	pipestancesPath := env["MARSOC_PIPESTANCES_PATH"]
+	pipestancesPaths := strings.Split(env["MARSOC_PIPESTANCES_PATH"], ":")
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
 	lenaAuthToken := envPrivate["LENA_AUTH_TOKEN"]
 	lenaDownloadUrl := env["LENA_DOWNLOAD_URL"]
@@ -223,7 +223,7 @@ Options:
 	//=========================================================================
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
-	pman := NewPipestanceManager(rt, marioVersion, mroVersion, pipestancesPath,
+	pman := NewPipestanceManager(rt, marioVersion, mroVersion, pipestancesPaths,
 		cachePath, stepSecs, mailer)
 	pman.loadCache()
 	pman.inventoryPipestances()
