@@ -8,10 +8,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"mario/core"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -43,6 +45,8 @@ type PipestanceManager struct {
 	cachePath      string
 	stepms         int
 	writePath      string
+	scratchIndex   int
+	scratchPaths   []string
 	paths          []string
 	pipelines      []string
 	completed      map[string]bool
@@ -51,6 +55,7 @@ type PipestanceManager struct {
 	runListMutex   *sync.Mutex
 	runTable       map[string]*core.Pipestance
 	pendingTable   map[string]bool
+	copyTable      map[string]bool
 	containerTable map[string]string
 	pathTable      map[string]string
 	notifyQueue    []*PipestanceNotification
@@ -58,14 +63,16 @@ type PipestanceManager struct {
 }
 
 func NewPipestanceManager(rt *core.Runtime, marioVersion string,
-	mroVersion string, pipestancesPaths []string, cachePath string, stepms int,
-	mailer *Mailer) *PipestanceManager {
+	mroVersion string, pipestancesPaths []string, scratchPaths []string, cachePath string,
+	stepms int, mailer *Mailer) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.marioVersion = marioVersion
 	self.mroVersion = mroVersion
 	self.paths = pipestancesPaths
 	self.writePath = pipestancesPaths[len(pipestancesPaths)-1]
+	self.scratchPaths = scratchPaths
+	self.scratchIndex = 0
 	self.cachePath = path.Join(cachePath, "pipestances")
 	self.stepms = stepms
 	self.pipelines = rt.PipelineNames
@@ -75,6 +82,7 @@ func NewPipestanceManager(rt *core.Runtime, marioVersion string,
 	self.runListMutex = &sync.Mutex{}
 	self.runTable = map[string]*core.Pipestance{}
 	self.pendingTable = map[string]bool{}
+	self.copyTable = map[string]bool{}
 	self.containerTable = map[string]string{}
 	self.pathTable = map[string]string{}
 	self.notifyQueue = []*PipestanceNotification{}
@@ -171,6 +179,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 						self.pathTable[fqname] = makePipestancePath(pipestancesPath, container, pipeline, psid)
 						if self.completed[fqname] || self.failed[fqname] {
 							// If we already know the state of this pipestance, move on.
+							self.copyPipestance(fqname)
 							self.runListMutex.Unlock()
 							return
 						}
@@ -180,6 +189,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 						if _, err := os.Stat(path.Join(makePipestancePath(pipestancesPath, container, pipeline, psid), "_finalstate")); err == nil {
 							self.runListMutex.Lock()
 							self.completed[fqname] = true
+							self.copyPipestance(fqname)
 							self.runListMutex.Unlock()
 							return
 						}
@@ -191,6 +201,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 							// definitions. Consider the pipestance failed.
 							self.runListMutex.Lock()
 							self.failed[fqname] = true
+							self.copyPipestance(fqname)
 							self.runListMutex.Unlock()
 							return
 						}
@@ -233,6 +244,49 @@ func parseFQName(fqname string) (string, string) {
 	return parts[2], parts[1]
 }
 
+func (self *PipestanceManager) copyPipestance(fqname string) {
+	go func(fqname string) {
+		self.runListMutex.Lock()
+		pipestancePath := path.Dir(self.pathTable[fqname])
+		// Check to make sure this isn't already being copied
+		if _, ok := self.copyTable[fqname]; ok {
+			self.runListMutex.Unlock()
+			return
+		}
+		self.copyTable[fqname] = true
+		self.runListMutex.Unlock()
+
+		if fileinfo, _ := os.Lstat(pipestancePath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
+			newPipestancePath := pipestancePath + ".tmp"
+			os.RemoveAll(newPipestancePath)
+			os.MkdirAll(newPipestancePath, 0755)
+			filepath.Walk(pipestancePath, func(oldPath string, fileinfo os.FileInfo, _ error) error {
+				relPath, _ := filepath.Rel(pipestancePath, oldPath)
+				newPath := path.Join(newPipestancePath, relPath)
+
+				if fileinfo.Mode().IsDir() {
+					os.Mkdir(newPath, 0755)
+				}
+
+				if fileinfo.Mode().IsRegular() {
+					in, _ := os.Open(oldPath)
+					defer in.Close()
+
+					out, _ := os.Create(newPath)
+					defer out.Close()
+
+					io.Copy(out, in)
+				}
+				return nil
+			})
+			os.Rename(newPipestancePath, pipestancePath)
+		}
+		self.runListMutex.Lock()
+		delete(self.copyTable, fqname)
+		self.runListMutex.Unlock()
+	}(fqname)
+}
+
 func (self *PipestanceManager) processRunList() {
 	// Copy the current runlist, then clear it.
 	self.runListMutex.Lock()
@@ -257,6 +311,7 @@ func (self *PipestanceManager) processRunList() {
 				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
 				self.completed[fqname] = true
+				self.copyPipestance(fqname)
 				self.runListMutex.Unlock()
 
 				// Immortalization.
@@ -295,6 +350,7 @@ func (self *PipestanceManager) processRunList() {
 				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
 				self.failed[fqname] = true
+				self.copyPipestance(fqname)
 				self.runListMutex.Unlock()
 
 				// Immortalization.
@@ -350,6 +406,18 @@ func (self *PipestanceManager) removePendingPipestance(fqname string, unfail boo
 	self.runListMutex.Unlock()
 }
 
+func (self *PipestanceManager) getScratchPath() string {
+	self.runListMutex.Lock()
+	defer self.runListMutex.Unlock()
+
+	scratchPath := self.scratchPaths[self.scratchIndex]
+	self.scratchIndex += 1
+	if self.scratchIndex <= len(self.scratchPaths) {
+		self.scratchIndex = 0
+	}
+	return scratchPath
+}
+
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
 	fqname := makeFQName(pipeline, psid)
 
@@ -359,11 +427,24 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		self.runListMutex.Unlock()
 		return &core.PipestanceExistsError{psid}
 	}
+	// Check if pipestance is being copied right now.
+	if _, ok := self.copyTable[fqname]; ok {
+		self.runListMutex.Unlock()
+		return &core.PipestanceCopyingError{psid}
+	}
 	self.pendingTable[fqname] = true
 	self.runListMutex.Unlock()
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
-	psPath := path.Join(self.writePath, container, pipeline, psid, self.mroVersion)
+	psDir := path.Join(self.writePath, container, pipeline, psid)
+	scratchDir := path.Join(self.getScratchPath(), container, pipeline, psid)
+	if _, err := os.Stat(psDir); err != nil {
+		os.RemoveAll(scratchDir)
+		os.MkdirAll(scratchDir, 0755)
+		os.Symlink(scratchDir, psDir)
+	}
+	psPath := path.Join(psDir, self.mroVersion)
+
 	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
 	if err != nil {
 		self.removePendingPipestance(fqname, false)
@@ -371,7 +452,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	}
 	headPath := makePipestancePath(self.writePath, container, pipeline, psid)
 	os.Remove(headPath)
-	os.Symlink(self.mroVersion, headPath)
+	os.Symlink(psPath, headPath)
 
 	pipestance.LoadMetadata()
 
@@ -407,6 +488,11 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	if state, _ := self.getPipestanceState(container, pipeline, psid); state != "failed" {
 		self.runListMutex.Unlock()
 		return &core.PipestanceNotFailedError{psid}
+	}
+	// Check if pipestance is being copied right now.
+	if _, ok := self.copyTable[fqname]; ok {
+		self.runListMutex.Unlock()
+		return &core.PipestanceCopyingError{psid}
 	}
 	delete(self.failed, fqname)
 	self.pendingTable[fqname] = true
