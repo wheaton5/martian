@@ -399,7 +399,7 @@ func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline 
 	return os.Remove(headPath)
 }
 
-func (self *PipestanceManager) unfailPipestance(container string, pipeline string, psid string, nodeFQname string, unfailAll bool) error {
+func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string) error {
 	fqname := makeFQName(pipeline, psid)
 
 	self.runListMutex.Lock()
@@ -418,13 +418,7 @@ func (self *PipestanceManager) unfailPipestance(container string, pipeline strin
 		self.removePendingPipestance(fqname, true)
 		return &core.PipestanceNotExistsError{psid}
 	}
-	var err error
-	if unfailAll {
-		err = pipestance.Reset()
-	} else {
-		err = pipestance.ResetNode(nodeFQname)
-	}
-	if err != nil {
+	if err := pipestance.Reset(); err != nil {
 		self.removePendingPipestance(fqname, true)
 		return err
 	}
@@ -438,14 +432,6 @@ func (self *PipestanceManager) unfailPipestance(container string, pipeline strin
 	self.runTable[fqname] = pipestance
 	self.runListMutex.Unlock()
 	return nil
-}
-
-func (self *PipestanceManager) UnfailPipestanceNode(container string, pipeline string, psid string, nodeFQname string) error {
-	return self.unfailPipestance(container, pipeline, psid, nodeFQname, false)
-}
-
-func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string) error {
-	return self.unfailPipestance(container, pipeline, psid, "", true)
 }
 
 func (self *PipestanceManager) getPipestanceState(container string, pipeline string, psid string) (string, bool) {
