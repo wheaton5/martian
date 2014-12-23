@@ -144,6 +144,25 @@ func (self *PipestanceManager) getPipestancePath(container string, pipeline stri
 	return "", &core.PipestanceNotExistsError{fqname}
 }
 
+func (self *PipestanceManager) clearUnusedScratchPaths(usedScratchPaths map[string]bool) {
+	for _, scratchPath := range self.scratchPaths {
+		containerInfos, _ := ioutil.ReadDir(scratchPath)
+		for _, containerInfo := range containerInfos {
+			container := containerInfo.Name()
+			for _, pipeline := range self.pipelines {
+				psidInfos, _ := ioutil.ReadDir(path.Join(scratchPath, container, pipeline))
+				for _, psidInfo := range psidInfos {
+					psid := psidInfo.Name()
+					psPath := path.Join(scratchPath, container, pipeline, psid)
+					if _, ok := usedScratchPaths[psPath]; !ok {
+						os.RemoveAll(psPath)
+					} 
+				}
+			}
+		}
+	}
+}
+
 func (self *PipestanceManager) inventoryPipestances() {
 	// Look for pipestances that are not marked as completed, reattach to them
 	// and put them in the runlist.
@@ -152,6 +171,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 
 	// Concurrently step all pipestances in the runlist copy.
 	var wg sync.WaitGroup
+	usedScratchPaths := map[string]bool{}
 
 	for _, pipestancesPath := range self.paths {
 		// Iterate over top level containers (flowcells).
@@ -170,7 +190,26 @@ func (self *PipestanceManager) inventoryPipestances() {
 					go func(psidInfo os.FileInfo, pipeline string, container string) {
 						psid := psidInfo.Name()
 						fqname := makeFQName(pipeline, psid)
+						psPath := path.Join(pipestancesPath, container, pipeline, psid)
 						defer wg.Done()
+
+						// If psid has .tmp suffix and no psid without .tmp suffix exists,
+						// this pipestance was about to be renamed prior to Marsoc shutdown
+						if strings.HasSuffix(psid, ".tmp") {
+							permanentPsid := strings.TrimSuffix(psid, ".tmp")
+							every := true
+							for _, psidInfo := range psidInfos {
+								if psidInfo.Name() == permanentPsid {
+									every = false
+									break
+								}
+							}
+							if every {
+								newPsPath := path.Join(pipestancesPath, container, pipeline, permanentPsid)
+								os.Rename(psPath, newPsPath)
+							}
+							return
+						}
 
 						// Cache the fqname to container mapping so we know what container
 						// an analysis pipestance is in for notification emails.
@@ -206,6 +245,12 @@ func (self *PipestanceManager) inventoryPipestances() {
 							return
 						}
 
+						// Cache used scratch containers
+						hardPsPath, _ := filepath.EvalSymlinks(psPath)
+						self.runListMutex.Lock()
+						usedScratchPaths[hardPsPath] = true
+						self.runListMutex.Unlock()
+
 						pipestance.LoadMetadata()
 
 						core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
@@ -222,6 +267,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 	self.runListMutex.Lock()
 	self.writeCache()
 	self.runListMutex.Unlock()
+	self.clearUnusedScratchPaths(usedScratchPaths)
 	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
 }
 
@@ -258,10 +304,9 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 
 		if fileinfo, _ := os.Lstat(pipestancePath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
 			newPipestancePath := pipestancePath + ".tmp"
-			os.RemoveAll(newPipestancePath)
-			os.MkdirAll(newPipestancePath, 0755)
-			filepath.Walk(pipestancePath, func(oldPath string, fileinfo os.FileInfo, _ error) error {
-				relPath, _ := filepath.Rel(pipestancePath, oldPath)
+			hardPipestancePath, _ := filepath.EvalSymlinks(pipestancePath)
+			filepath.Walk(hardPipestancePath, func(oldPath string, fileinfo os.FileInfo, _ error) error {
+				relPath, _ := filepath.Rel(hardPipestancePath, oldPath)
 				newPath := path.Join(newPipestancePath, relPath)
 
 				if fileinfo.Mode().IsDir() {
@@ -277,9 +322,16 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 
 					io.Copy(out, in)
 				}
+
+				if fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
+					oldPath, _ = os.Readlink(oldPath)
+					os.Symlink(oldPath, newPath)
+				}
 				return nil
 			})
+			os.Remove(pipestancePath)
 			os.Rename(newPipestancePath, pipestancePath)
+			os.RemoveAll(hardPipestancePath)
 		}
 		self.runListMutex.Lock()
 		delete(self.copyTable, fqname)
@@ -308,11 +360,6 @@ func (self *PipestanceManager) processRunList() {
 				// If pipestance is done, remove from runTable, mark it in the
 				// cache as completed, and flush the cache.
 				core.LogInfo("pipeman", "Complete and removing from runList: %s.", fqname)
-				self.runListMutex.Lock()
-				delete(self.runTable, fqname)
-				self.completed[fqname] = true
-				self.copyPipestance(fqname)
-				self.runListMutex.Unlock()
 
 				// Immortalization.
 				pipestance.Immortalize()
@@ -321,6 +368,12 @@ func (self *PipestanceManager) processRunList() {
 				core.LogInfo("pipeman", "Starting VDR kill for %s.", fqname)
 				killReport := pipestance.VDRKill()
 				core.LogInfo("pipeman", "VDR killed %d files, %s from %s.", killReport.Count, humanize.Bytes(killReport.Size), fqname)
+
+				self.runListMutex.Lock()
+				delete(self.runTable, fqname)
+				self.completed[fqname] = true
+				self.copyPipestance(fqname)
+				self.runListMutex.Unlock()
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
@@ -347,14 +400,15 @@ func (self *PipestanceManager) processRunList() {
 				// If pipestance is failed, remove from runTable, mark it in the
 				// cache as failed, and flush the cache.
 				core.LogInfo("pipeman", "Failed and removing from runList: %s.", fqname)
+
+				// Immortalization.
+				pipestance.Immortalize()
+
 				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
 				self.failed[fqname] = true
 				self.copyPipestance(fqname)
 				self.runListMutex.Unlock()
-
-				// Immortalization.
-				pipestance.Immortalize()
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
@@ -411,10 +465,7 @@ func (self *PipestanceManager) getScratchPath() string {
 	defer self.runListMutex.Unlock()
 
 	scratchPath := self.scratchPaths[self.scratchIndex]
-	self.scratchIndex += 1
-	if self.scratchIndex <= len(self.scratchPaths) {
-		self.scratchIndex = 0
-	}
+	self.scratchIndex = (self.scratchIndex + 1) % len(self.scratchPaths)
 	return scratchPath
 }
 
@@ -441,6 +492,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	if _, err := os.Stat(psDir); err != nil {
 		os.RemoveAll(scratchDir)
 		os.MkdirAll(scratchDir, 0755)
+		os.MkdirAll(path.Dir(psDir), 0755)
 		os.Symlink(scratchDir, psDir)
 	}
 	psPath := path.Join(psDir, self.mroVersion)

@@ -182,7 +182,7 @@ Options:
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQUENCERS_PATH"]
 	pipestancesPaths := strings.Split(env["MARSOC_PIPESTANCES_PATH"], ":")
-	scratchPaths := strings.Split(env["MARSOC_SCRATCH_PATHS"], ":")
+	scratchPaths := strings.Split(env["MARSOC_SCRATCH_PATH"], ":")
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
 	lenaAuthToken := envPrivate["LENA_AUTH_TOKEN"]
 	lenaDownloadUrl := env["LENA_DOWNLOAD_URL"]
