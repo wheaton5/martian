@@ -30,6 +30,8 @@ func makePipestancePath(pipestancesPath string, container string, pipeline strin
 	return path.Join(pipestancesPath, container, pipeline, psid, "HEAD")
 }
 
+type PipestanceFunc func(string, string, string, os.FileInfo, sync.WaitGroup)
+
 type PipestanceNotification struct {
 	State     string
 	Container string
@@ -144,130 +146,113 @@ func (self *PipestanceManager) getPipestancePath(container string, pipeline stri
 	return "", &core.PipestanceNotExistsError{fqname}
 }
 
-func (self *PipestanceManager) clearUnusedScratchPaths(usedScratchPaths map[string]bool) {
-	for _, scratchPath := range self.scratchPaths {
-		containerInfos, _ := ioutil.ReadDir(scratchPath)
+func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []string, pipestanceFunc PipestanceFunc) int {
+	var wg sync.WaitGroup
+	pscount := 0
+
+	for _, pipestancesPath := range pipestancesPaths {
+		containerInfos, _ := ioutil.ReadDir(pipestancesPath)
 		for _, containerInfo := range containerInfos {
 			container := containerInfo.Name()
 			for _, pipeline := range self.pipelines {
-				psidInfos, _ := ioutil.ReadDir(path.Join(scratchPath, container, pipeline))
+				psidInfos, _ := ioutil.ReadDir(path.Join(pipestancesPath, container, pipeline))
 				for _, psidInfo := range psidInfos {
-					psid := psidInfo.Name()
-					psPath := path.Join(scratchPath, container, pipeline, psid)
-					if _, ok := usedScratchPaths[psPath]; !ok {
-						os.RemoveAll(psPath)
-					} 
+					wg.Add(1)
+					pscount += 1
+					go pipestanceFunc(pipestancesPath, container, pipeline, psidInfo, wg)
 				}
 			}
 		}
 	}
+	wg.Wait()
+	return pscount
 }
 
 func (self *PipestanceManager) inventoryPipestances() {
 	// Look for pipestances that are not marked as completed, reattach to them
 	// and put them in the runlist.
 	core.LogInfo("pipeman", "Begin pipestance inventory.")
-	pscount := 0
 
 	// Concurrently step all pipestances in the runlist copy.
-	var wg sync.WaitGroup
-	usedScratchPaths := map[string]bool{}
+	scratchPsPaths := map[string]bool{}
 
-	for _, pipestancesPath := range self.paths {
-		// Iterate over top level containers (flowcells).
-		containerInfos, _ := ioutil.ReadDir(pipestancesPath)
-		for _, containerInfo := range containerInfos {
-			container := containerInfo.Name()
+	pscount := self.traversePipestancesPaths(self.paths,
+		func(pipestancesPath string, container string, pipeline string, psidInfo os.FileInfo, wg sync.WaitGroup) {
+			psid := psidInfo.Name()
+			psPath := path.Join(pipestancesPath, container, pipeline, psid)
+			defer wg.Done()
 
-			// Iterate over all known pipelines.
-			for _, pipeline := range self.pipelines {
-				psidInfos, _ := ioutil.ReadDir(path.Join(pipestancesPath, container, pipeline))
-
-				// Iterate over psids under this pipeline.
-				for _, psidInfo := range psidInfos {
-					wg.Add(1)
-					pscount += 1
-					go func(psidInfo os.FileInfo, pipeline string, container string) {
-						psid := psidInfo.Name()
-						fqname := makeFQName(pipeline, psid)
-						psPath := path.Join(pipestancesPath, container, pipeline, psid)
-						defer wg.Done()
-
-						// If psid has .tmp suffix and no psid without .tmp suffix exists,
-						// this pipestance was about to be renamed prior to Marsoc shutdown
-						if strings.HasSuffix(psid, ".tmp") {
-							permanentPsid := strings.TrimSuffix(psid, ".tmp")
-							every := true
-							for _, psidInfo := range psidInfos {
-								if psidInfo.Name() == permanentPsid {
-									every = false
-									break
-								}
-							}
-							if every {
-								newPsPath := path.Join(pipestancesPath, container, pipeline, permanentPsid)
-								os.Rename(psPath, newPsPath)
-							}
-							return
-						}
-
-						// Cache the fqname to container mapping so we know what container
-						// an analysis pipestance is in for notification emails.
-						self.runListMutex.Lock()
-						self.containerTable[fqname] = container
-						self.pathTable[fqname] = makePipestancePath(pipestancesPath, container, pipeline, psid)
-						if self.completed[fqname] || self.failed[fqname] {
-							// If we already know the state of this pipestance, move on.
-							self.copyPipestance(fqname)
-							self.runListMutex.Unlock()
-							return
-						}
-						self.runListMutex.Unlock()
-
-						// If pipestance has _finalstate, consider it complete.
-						if _, err := os.Stat(path.Join(makePipestancePath(pipestancesPath, container, pipeline, psid), "_finalstate")); err == nil {
-							self.runListMutex.Lock()
-							self.completed[fqname] = true
-							self.copyPipestance(fqname)
-							self.runListMutex.Unlock()
-							return
-						}
-
-						pipestance, err := self.rt.ReattachToPipestance(psid, makePipestancePath(pipestancesPath, container, pipeline, psid))
-						if err != nil {
-							// If we could not reattach, it's because _invocation was
-							// missing, or will no longer parse due to changes in MRO
-							// definitions. Consider the pipestance failed.
-							self.runListMutex.Lock()
-							self.failed[fqname] = true
-							self.copyPipestance(fqname)
-							self.runListMutex.Unlock()
-							return
-						}
-
-						// Cache used scratch containers
-						hardPsPath, _ := filepath.EvalSymlinks(psPath)
-						self.runListMutex.Lock()
-						usedScratchPaths[hardPsPath] = true
-						self.runListMutex.Unlock()
-
-						pipestance.LoadMetadata()
-
-						core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
-						self.runListMutex.Lock()
-						self.runList = append(self.runList, pipestance)
-						self.runTable[fqname] = pipestance
-						self.runListMutex.Unlock()
-					}(psidInfo, pipeline, container)
+			// If psid has .tmp suffix and no psid without .tmp suffix exists,
+			// this pipestance was about to be renamed prior to Marsoc shutdown
+			if strings.HasSuffix(psid, ".tmp") {
+				permanentPsid := strings.TrimSuffix(psid, ".tmp")
+				newPsPath := path.Join(pipestancesPath, container, pipeline, permanentPsid)
+				if _, err := os.Stat(newPsPath); err == nil {
+					return
 				}
+				os.Rename(psPath, newPsPath)
+
+				psid = permanentPsid
+				psPath = newPsPath
 			}
-		}
-	}
-	wg.Wait()
+			fqname := makeFQName(pipeline, psid)
+
+			// Cache the fqname to container mapping so we know what container
+			// an analysis pipestance is in for notification emails.
+			self.runListMutex.Lock()
+			hardPsPath, _ := filepath.EvalSymlinks(psPath)
+			scratchPsPaths[hardPsPath] = true
+			self.containerTable[fqname] = container
+			self.pathTable[fqname] = makePipestancePath(pipestancesPath, container, pipeline, psid)
+			if self.completed[fqname] || self.failed[fqname] {
+				// If we already know the state of this pipestance, move on.
+				self.copyPipestance(fqname)
+				self.runListMutex.Unlock()
+				return
+			}
+			self.runListMutex.Unlock()
+
+			// If pipestance has _finalstate, consider it complete.
+			if _, err := os.Stat(path.Join(makePipestancePath(pipestancesPath, container, pipeline, psid), "_finalstate")); err == nil {
+				self.runListMutex.Lock()
+				self.completed[fqname] = true
+				self.copyPipestance(fqname)
+				self.runListMutex.Unlock()
+				return
+			}
+
+			pipestance, err := self.rt.ReattachToPipestance(psid, makePipestancePath(pipestancesPath, container, pipeline, psid))
+			if err != nil {
+				// If we could not reattach, it's because _invocation was
+				// missing, or will no longer parse due to changes in MRO
+				// definitions. Consider the pipestance failed.
+				self.runListMutex.Lock()
+				self.failed[fqname] = true
+				self.copyPipestance(fqname)
+				self.runListMutex.Unlock()
+				return
+			}
+
+			pipestance.LoadMetadata()
+
+			core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
+			self.runListMutex.Lock()
+			self.runList = append(self.runList, pipestance)
+			self.runTable[fqname] = pipestance
+			self.runListMutex.Unlock()
+		})
 	self.runListMutex.Lock()
 	self.writeCache()
 	self.runListMutex.Unlock()
-	self.clearUnusedScratchPaths(usedScratchPaths)
+	self.traversePipestancesPaths(self.scratchPaths,
+		func(pipestancesPath string, container string, pipeline string, psidInfo os.FileInfo, wg sync.WaitGroup) {
+			defer wg.Done()
+			psid := psidInfo.Name()
+			scratchPsPath := path.Join(pipestancesPath, container, pipeline, psid)
+			if _, ok := scratchPsPaths[scratchPsPath]; !ok {
+				os.RemoveAll(scratchPsPath)
+			}
+		})
 	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
 }
 
@@ -293,21 +278,21 @@ func parseFQName(fqname string) (string, string) {
 func (self *PipestanceManager) copyPipestance(fqname string) {
 	go func(fqname string) {
 		self.runListMutex.Lock()
-		pipestancePath := path.Dir(self.pathTable[fqname])
 		// Check to make sure this isn't already being copied
 		if _, ok := self.copyTable[fqname]; ok {
 			self.runListMutex.Unlock()
 			return
 		}
 		self.copyTable[fqname] = true
+		psPath := path.Dir(self.pathTable[fqname])
 		self.runListMutex.Unlock()
 
-		if fileinfo, _ := os.Lstat(pipestancePath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
-			newPipestancePath := pipestancePath + ".tmp"
-			hardPipestancePath, _ := filepath.EvalSymlinks(pipestancePath)
-			filepath.Walk(hardPipestancePath, func(oldPath string, fileinfo os.FileInfo, _ error) error {
-				relPath, _ := filepath.Rel(hardPipestancePath, oldPath)
-				newPath := path.Join(newPipestancePath, relPath)
+		if fileinfo, _ := os.Lstat(psPath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
+			newPsPath := psPath + ".tmp"
+			hardPsPath, _ := filepath.EvalSymlinks(psPath)
+			filepath.Walk(hardPsPath, func(oldPath string, fileinfo os.FileInfo, _ error) error {
+				relPath, _ := filepath.Rel(hardPsPath, oldPath)
+				newPath := path.Join(newPsPath, relPath)
 
 				if fileinfo.Mode().IsDir() {
 					os.Mkdir(newPath, 0755)
@@ -329,9 +314,9 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 				}
 				return nil
 			})
-			os.Remove(pipestancePath)
-			os.Rename(newPipestancePath, pipestancePath)
-			os.RemoveAll(hardPipestancePath)
+			os.Remove(psPath)
+			os.Rename(newPsPath, psPath)
+			os.RemoveAll(hardPsPath)
 		}
 		self.runListMutex.Lock()
 		delete(self.copyTable, fqname)
