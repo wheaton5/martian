@@ -353,6 +353,8 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	os.Remove(headPath)
 	os.Symlink(self.mroVersion, headPath)
 
+	pipestance.LoadMetadata()
+
 	core.LogInfo("pipeman", "Finished instantiating and pushing to runList: %s.", fqname)
 	self.runListMutex.Lock()
 	delete(self.pendingTable, fqname)
