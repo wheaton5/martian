@@ -276,7 +276,7 @@ func parseFQName(fqname string) (string, string) {
 }
 
 func (self *PipestanceManager) copyPipestance(fqname string) {
-	go func(fqname string) {
+	go func() {
 		self.runListMutex.Lock()
 		// Check to make sure this isn't already being copied
 		if _, ok := self.copyTable[fqname]; ok {
@@ -290,6 +290,7 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 		if fileinfo, _ := os.Lstat(psPath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
 			newPsPath := psPath + ".tmp"
 			hardPsPath, _ := filepath.EvalSymlinks(psPath)
+			os.RemoveAll(newPsPath)
 			filepath.Walk(hardPsPath, func(oldPath string, fileinfo os.FileInfo, _ error) error {
 				relPath, _ := filepath.Rel(hardPsPath, oldPath)
 				newPath := path.Join(newPsPath, relPath)
@@ -321,7 +322,7 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 		self.runListMutex.Lock()
 		delete(self.copyTable, fqname)
 		self.runListMutex.Unlock()
-	}(fqname)
+	}()
 }
 
 func (self *PipestanceManager) processRunList() {
