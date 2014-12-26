@@ -196,7 +196,7 @@ Options:
 	//=========================================================================
 	jobMode := "sge"
 	profile := true
-	locals := true
+	locals := false
 	checkSrcPath := true
 	rt := core.NewRuntime(jobMode, mroPath, marioVersion, mroVersion, profile, locals, debug)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
