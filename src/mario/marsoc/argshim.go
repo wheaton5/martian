@@ -18,7 +18,7 @@ import (
 type ArgShim struct {
 	cmdPath            string
 	debug              bool
-	samplePipelinesMap map[string]string
+	samplePipelinesMap map[int]string
 	writer             *bufio.Writer
 	reader             *bufio.Reader
 	mutex              *sync.Mutex
@@ -29,6 +29,7 @@ func NewArgShim(argshimPath string, debug bool) *ArgShim {
 	self.cmdPath = argshimPath
 	self.debug = debug
 	self.mutex = &sync.Mutex{}
+	self.samplePipelinesMap = map[int]string{}
 
 	cmd := exec.Command(self.cmdPath)
 	stdin, _ := cmd.StdinPipe()
@@ -36,8 +37,6 @@ func NewArgShim(argshimPath string, debug bool) *ArgShim {
 	stdout, _ := cmd.StdoutPipe()
 	self.reader = bufio.NewReaderSize(stdout, 1000000)
 	cmd.Start()
-
-	self.samplePipelinesMap = self.getSamplePipelinesMap()
 
 	return self
 }
@@ -67,22 +66,16 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 	return v
 }
 
-func (self *ArgShim) getSamplePipelinesMap() map[string]string {
-	// Just capture the sample to pipeline map and do lookups locally.
-	// No sense in invoking Node.js each time.
-	v := self.invoke("getSamplePipelinesMap", []interface{}{})
-	if tv, ok := v.(map[string]interface{}); ok {
-		ntv := map[string]string{}
-		for k, v := range tv {
-			ntv[k] = v.(string)
-		}
-		return ntv
-	}
-	return map[string]string{}
-}
-
 func (self *ArgShim) getPipelineForSample(sample *Sample) string {
-	return self.samplePipelinesMap[sample.Workflow.Name]
+	if pipeline, ok := self.samplePipelinesMap[sample.Id]; ok {
+		return pipeline
+	}
+	v := self.invoke("getPipelineForSample", []interface{}{sample})
+	if tv, ok := v.(string); ok {
+		self.samplePipelinesMap[sample.Id] = tv
+		return tv
+	}
+	return ""
 }
 
 func (self *ArgShim) buildArgsForRun(run *Run) map[string]interface{} {
