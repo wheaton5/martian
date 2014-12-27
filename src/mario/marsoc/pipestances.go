@@ -178,6 +178,8 @@ func (self *PipestanceManager) inventoryPipestances() {
 						return
 					}
 
+					pipestance.LoadMetadata()
+
 					core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto runList.", fqname)
 					self.runListMutex.Lock()
 					self.runList = append(self.runList, pipestance)
