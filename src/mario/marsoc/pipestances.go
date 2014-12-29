@@ -30,7 +30,7 @@ func makePipestancePath(pipestancesPath string, container string, pipeline strin
 	return path.Join(pipestancesPath, container, pipeline, psid, "HEAD")
 }
 
-type PipestanceFunc func(string, string, string, os.FileInfo, sync.WaitGroup)
+type PipestanceFunc func(string, string, string, os.FileInfo, *sync.WaitGroup)
 
 type PipestanceNotification struct {
 	State     string
@@ -159,7 +159,7 @@ func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []strin
 				for _, psidInfo := range psidInfos {
 					wg.Add(1)
 					pscount += 1
-					go pipestanceFunc(pipestancesPath, container, pipeline, psidInfo, wg)
+					go pipestanceFunc(pipestancesPath, container, pipeline, psidInfo, &wg)
 				}
 			}
 		}
@@ -177,7 +177,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 	scratchPsPaths := map[string]bool{}
 
 	pscount := self.traversePipestancesPaths(self.paths,
-		func(pipestancesPath string, container string, pipeline string, psidInfo os.FileInfo, wg sync.WaitGroup) {
+		func(pipestancesPath string, container string, pipeline string, psidInfo os.FileInfo, wg *sync.WaitGroup) {
 			psid := psidInfo.Name()
 			psPath := path.Join(pipestancesPath, container, pipeline, psid)
 			defer wg.Done()
@@ -245,7 +245,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 	self.writeCache()
 	self.runListMutex.Unlock()
 	self.traversePipestancesPaths(self.scratchPaths,
-		func(pipestancesPath string, container string, pipeline string, psidInfo os.FileInfo, wg sync.WaitGroup) {
+		func(pipestancesPath string, container string, pipeline string, psidInfo os.FileInfo, wg *sync.WaitGroup) {
 			defer wg.Done()
 			psid := psidInfo.Name()
 			scratchPsPath := path.Join(pipestancesPath, container, pipeline, psid)
