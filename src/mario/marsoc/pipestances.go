@@ -276,18 +276,14 @@ func parseFQName(fqname string) (string, string) {
 }
 
 func (self *PipestanceManager) copyPipestance(fqname string) {
-	go func() {
-		self.runListMutex.Lock()
+	psPath := path.Dir(self.pathTable[fqname])
+	if fileinfo, _ := os.Lstat(psPath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
 		// Check to make sure this isn't already being copied
 		if _, ok := self.copyTable[fqname]; ok {
-			self.runListMutex.Unlock()
 			return
 		}
 		self.copyTable[fqname] = true
-		psPath := path.Dir(self.pathTable[fqname])
-		self.runListMutex.Unlock()
-
-		if fileinfo, _ := os.Lstat(psPath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
+		go func() {
 			newPsPath := psPath + ".tmp"
 			hardPsPath, _ := filepath.EvalSymlinks(psPath)
 			os.RemoveAll(newPsPath)
@@ -318,11 +314,12 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 			os.Remove(psPath)
 			os.Rename(newPsPath, psPath)
 			os.RemoveAll(hardPsPath)
-		}
-		self.runListMutex.Lock()
-		delete(self.copyTable, fqname)
-		self.runListMutex.Unlock()
-	}()
+
+			self.runListMutex.Lock()
+			delete(self.copyTable, fqname)
+			self.runListMutex.Unlock()
+		}()
+	}
 }
 
 func (self *PipestanceManager) processRunList() {
@@ -464,11 +461,6 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		self.runListMutex.Unlock()
 		return &core.PipestanceExistsError{psid}
 	}
-	// Check if pipestance is being copied right now.
-	if _, ok := self.copyTable[fqname]; ok {
-		self.runListMutex.Unlock()
-		return &core.PipestanceCopyingError{psid}
-	}
 	self.pendingTable[fqname] = true
 	self.runListMutex.Unlock()
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
@@ -522,15 +514,16 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	fqname := makeFQName(pipeline, psid)
 
 	self.runListMutex.Lock()
-	// Check if pipestance is failed
-	if state, _ := self.getPipestanceState(container, pipeline, psid); state != "failed" {
-		self.runListMutex.Unlock()
-		return &core.PipestanceNotFailedError{psid}
-	}
+	state, _ := self.getPipestanceState(container, pipeline, psid)
 	// Check if pipestance is being copied right now.
-	if _, ok := self.copyTable[fqname]; ok {
+	if state == "copying" {
 		self.runListMutex.Unlock()
 		return &core.PipestanceCopyingError{psid}
+	}
+	// Check if pipestance is failed
+	if state != "failed" {
+		self.runListMutex.Unlock()
+		return &core.PipestanceNotFailedError{psid}
 	}
 	delete(self.failed, fqname)
 	self.pendingTable[fqname] = true
@@ -560,6 +553,9 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 
 func (self *PipestanceManager) getPipestanceState(container string, pipeline string, psid string) (string, bool) {
 	fqname := makeFQName(pipeline, psid)
+	if _, ok := self.copyTable[fqname]; ok {
+		return "copying", true
+	}
 	if _, ok := self.completed[fqname]; ok {
 		return "complete", true
 	}
