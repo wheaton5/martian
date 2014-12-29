@@ -204,9 +204,13 @@ func (self *PipestanceManager) inventoryPipestances() {
 			scratchPsPaths[hardPsPath] = true
 			self.containerTable[fqname] = container
 			self.pathTable[fqname] = makePipestancePath(pipestancesPath, container, pipeline, psid)
-			if self.completed[fqname] || self.failed[fqname] {
-				// If we already know the state of this pipestance, move on.
+			// If we already know the state of this pipestance, move on.
+			if self.completed[fqname] {
 				self.copyPipestance(fqname)
+				self.runListMutex.Unlock()
+				return
+			}
+			if self.failed[fqname] {
 				self.runListMutex.Unlock()
 				return
 			}
@@ -228,7 +232,6 @@ func (self *PipestanceManager) inventoryPipestances() {
 				// definitions. Consider the pipestance failed.
 				self.runListMutex.Lock()
 				self.failed[fqname] = true
-				self.copyPipestance(fqname)
 				self.runListMutex.Unlock()
 				return
 			}
@@ -390,7 +393,6 @@ func (self *PipestanceManager) processRunList() {
 				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
 				self.failed[fqname] = true
-				self.copyPipestance(fqname)
 				self.runListMutex.Unlock()
 
 				// Email notification.
