@@ -183,6 +183,7 @@ func getFileModTime(p string) time.Time {
 type SequencerPool struct {
 	path          string
 	cachePath     string
+	autoInvoke    bool
 	seqcers       []*Sequencer
 	runList       []*Run
 	runTable      map[string]*Run
@@ -191,10 +192,11 @@ type SequencerPool struct {
 	runQueueMutex *sync.Mutex
 }
 
-func NewSequencerPool(p string, cachePath string) *SequencerPool {
+func NewSequencerPool(p string, cachePath string, autoInvoke bool) *SequencerPool {
 	self := &SequencerPool{}
 	self.path = p
 	self.cachePath = path.Join(cachePath, "sequencers")
+	self.autoInvoke = autoInvoke
 	self.seqcers = []*Sequencer{}
 	self.runList = []*Run{}
 	self.runTable = map[string]*Run{}
@@ -304,12 +306,14 @@ func (self *SequencerPool) inventorySequencers() {
 	self.indexCache()
 
 	// Automatically start preprocessing pipeline
-	for _, run := range self.runList {
-		if run.State == "complete" {
-			if _, ok := oldCompleted[run.Fcid]; !ok {
-				self.runQueueMutex.Lock()
-				self.runQueue = append(self.runQueue, &SequencerNotification{run})
-				self.runQueueMutex.Unlock()
+	if self.autoInvoke {
+		for _, run := range self.runList {
+			if run.State == "complete" {
+				if _, ok := oldCompleted[run.Fcid]; !ok {
+					self.runQueueMutex.Lock()
+					self.runQueue = append(self.runQueue, &SequencerNotification{run})
+					self.runQueueMutex.Unlock()
+				}
 			}
 		}
 	}

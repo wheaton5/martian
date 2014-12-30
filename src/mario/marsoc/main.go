@@ -162,6 +162,7 @@ Options:
 		{"MARSOC_EMAIL_HOST", "smtp.server.local"},
 		{"MARSOC_EMAIL_SENDER", "email@address.com"},
 		{"MARSOC_EMAIL_RECIPIENT", "email@address.com"},
+		{"MARSOC_AUTO_INVOKE", "true/false"},
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
@@ -187,6 +188,10 @@ Options:
 	emailHost := env["MARSOC_EMAIL_HOST"]
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
+	autoInvoke := true
+	if value, err := strconv.ParseBool(env["MARSOC_AUTO_INVOKE"]); err == nil {
+		autoInvoke = value
+	}
 	stepSecs := 5
 	mroVersion := core.GetGitTag(mroPath)
 	debug := opts["--debug"].(bool)
@@ -214,7 +219,7 @@ Options:
 	//=========================================================================
 	// Setup SequencerPool, add sequencers, and load seq run cache.
 	//=========================================================================
-	pool := NewSequencerPool(seqrunsPath, cachePath)
+	pool := NewSequencerPool(seqrunsPath, cachePath, autoInvoke)
 	for _, seqcerName := range seqcerNames {
 		pool.add(seqcerName)
 	}
