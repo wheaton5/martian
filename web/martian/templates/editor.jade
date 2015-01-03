@@ -1,0 +1,56 @@
+//- 
+    Copyright (c) 2014 10X Genomics, Inc. All rights reserved.
+    
+    Main UI for martianlang editor.
+
+doctype html
+html(ng-app="app")
+    head
+        title MRO Editor
+        link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/editor.css")
+        script(src="/js/angular.min.js")
+        script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="/js/lodash.min.js")
+        script(src="/js/ace/ace.js" type="text/javascript" charset="utf-8") 
+        script(src="/js/d3.v3.min.js")
+        script(src="/js/dagre-d3.min.js")
+    body(ng-controller="MartianEdCtrl")
+        header.navbar.navbar-inverse.navbar-fixed-top
+            .navbar-header 
+                .navbar-brand
+                    |10
+                    span.logo-color X
+                    | &nbsp;MRO Editor
+        main-ace-editor(editor-info="mainEditor" save="save()")
+        #toolbar
+            button.btn.btn-default#new(ng-click="new()")
+                span.glyphicon.glyphicon-plus
+                | &nbsp;New
+            button.btn.btn-default#build(ng-click="build()")
+                span.glyphicon.glyphicon-refresh
+                | &nbsp;Build
+            button.btn.btn-default#save(ng-click="save()" ng-disabled="!mainEditor.dirty")
+                span.glyphicon.glyphicon-floppy-disk
+                | &nbsp;Save
+            button.btn.btn-default.dropdown#file-selector
+                a.dropdown-toggle {{mainEditor.fname}}
+                ul.dropdown-menu
+                    li(ng-repeat="fname in availableFnames")
+                        a(href="#" ng-click="selectFile(fname)") {{fname}}
+    tabset#info-tabs
+        tab(heading="Compiler Messages")
+            pre#compiler-messages {{compilerMessages}}
+
+        tab(heading="{{includeEditor.fname}}") 
+            include-ace-editor(editor-info="includeEditor")
+
+        tab(heading="{{pipelineDec.Id}}" ng-repeat="pipelineDec in pipelineDecList" 
+            select="selectTab(pipelineDec)" active="pipelineDec.active")
+            svg(width="1000px" height="1000px")
+                g(pipe-graph
+                  pipeline-dec="pipelineDec"
+                  id="{{pipelineDec.Id}}" 
+                  transform="translate(20,20)")
+
+    script(src="/editor.js")
