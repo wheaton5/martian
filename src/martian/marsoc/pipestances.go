@@ -16,10 +16,13 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/dustin/go-humanize"
 )
+
+var minBytesAvailable uint64 = 1024 * 1024 * 1024 * 1024 * 1.5 // 1.5 terabytes
 
 func makeFQName(pipeline string, psid string) string {
 	// This construction must remain identical to Pipestance::GetFQName.
@@ -445,13 +448,24 @@ func (self *PipestanceManager) removePendingPipestance(fqname string, unfail boo
 	self.runListMutex.Unlock()
 }
 
-func (self *PipestanceManager) getScratchPath() string {
-	self.runListMutex.Lock()
-	defer self.runListMutex.Unlock()
+func (self *PipestanceManager) getScratchPath() (string, error) {
+	i := 0
+	for i < len(self.scratchPaths) {
+		self.runListMutex.Lock()
+		scratchPath := self.scratchPaths[self.scratchIndex]
+		self.scratchIndex = (self.scratchIndex + 1) % len(self.scratchPaths)
+		self.runListMutex.Unlock()
 
-	scratchPath := self.scratchPaths[self.scratchIndex]
-	self.scratchIndex = (self.scratchIndex + 1) % len(self.scratchPaths)
-	return scratchPath
+		var stat syscall.Statfs_t
+		if err := syscall.Statfs(scratchPath, &stat); err == nil {
+			bytesAvailable := stat.Bavail * uint64(stat.Bsize)
+			if bytesAvailable >= minBytesAvailable {
+				return scratchPath, nil
+			}
+		}
+		i += 1
+	}
+	return "", &core.MartianError{fmt.Sprintf("Pipestance scratch paths %s are full.", strings.Join(self.scratchPaths, ", "))}
 }
 
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
@@ -465,10 +479,16 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	}
 	self.pendingTable[fqname] = true
 	self.runListMutex.Unlock()
+
+	scratchPath, err := self.getScratchPath()
+	if err != nil {
+		return err
+	}
+
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
 	psDir := path.Join(self.writePath, container, pipeline, psid)
-	scratchDir := path.Join(self.getScratchPath(), container, pipeline, psid)
+	scratchDir := path.Join(scratchPath, container, pipeline, psid)
 	if _, err := os.Stat(psDir); err != nil {
 		os.RemoveAll(scratchDir)
 		os.MkdirAll(scratchDir, 0755)
