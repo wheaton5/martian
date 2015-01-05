@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2014 10X Genomics, Inc. All rights reserved.
 #
-# Angular controllers for mario runner main UI.
+# Angular controllers for martian runner main UI.
 #
 
 actualSeconds = (run) ->
@@ -47,7 +47,7 @@ app.filter('momentFormat',  () -> (time, fmt) -> moment(time).format(fmt)
     "#{dpred.hours() + 24 * dpred.days()}h #{dpred.minutes()}m (#{eta})"
 )
 
-app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
+app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.admin = admin
     $scope.urlprefix = if admin then '/admin' else ''
 
