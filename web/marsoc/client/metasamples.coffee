@@ -17,6 +17,11 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
         $scope.samples = data
     )
 
+    $scope.refreshSamples = () ->
+        $http.get('/api/get-metasamples').success((data) ->
+            $scope.samples = data
+        )
+
     $scope.selectSample = (sample) ->
         $scope.selsample = sample
         for s in $scope.samples
@@ -28,7 +33,25 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
 
     $scope.invokeAnalysis = () ->
         $scope.showbutton = false
-        $http.post('/api/invoke-metasample-analysis', { id: "" + $scope.selsample?.id.toString() }).success((data) ->
+        $http.post('/api/invoke-metasample-analysis', { id: $scope.selsample?.id.toString() }).success((data) ->
+            $scope.refreshSamples()
             if data then window.alert(data.toString())
         )
+
+    $scope.archiveSample = () ->
+        $scope.showbutton = false
+        $http.post('/api/archive-metasample', { id: $scope.selsample?.id.toString() }).success((data) ->
+            $scope.refreshSamples()
+            if data then window.alert(data.toString())
+        )
+
+    $scope.unfailSample = () ->
+        $scope.showbutton = false
+        $http.post('/api/restart-metasample-analysis', { id: $scope.selsample?.id.toString() }).success((data) ->
+            $scope.refreshSamples()
+            if data then window.alert(data.toString())
+        )
+
+    # Only admin pages get auto-refresh.
+    if admin then $interval((() -> $scope.refreshSamples()), 5000)
 )
