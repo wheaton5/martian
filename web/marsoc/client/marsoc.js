@@ -76,7 +76,7 @@
     };
   });
 
-  app.controller('MarioRunCtrl', function($scope, $http, $interval) {
+  app.controller('MartianRunCtrl', function($scope, $http, $interval) {
     $scope.admin = admin;
     $scope.urlprefix = admin ? '/admin' : '';
     $scope.selrun = null;

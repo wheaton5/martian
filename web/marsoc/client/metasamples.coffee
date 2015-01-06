@@ -1,12 +1,12 @@
 #
 # Copyright (c) 2014 10X Genomics, Inc. All rights reserved.
 #
-# Angular controllers for mario runner main UI.
+# Angular controllers for martian runner main UI.
 #
 
 app = angular.module('app', ['ui.bootstrap'])
 
-app.controller('MarioRunCtrl', ($scope, $http, $interval) ->
+app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.admin = admin
     $scope.urlprefix = if admin then '/admin' else ''
 

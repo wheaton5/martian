@@ -3,7 +3,7 @@
 
   app = angular.module('app', ['ui.bootstrap']);
 
-  app.controller('MarioRunCtrl', function($scope, $http, $interval) {
+  app.controller('MartianRunCtrl', function($scope, $http, $interval) {
     $scope.admin = admin;
     $scope.urlprefix = admin ? '/admin' : '';
     $scope.selsample = null;

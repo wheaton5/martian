@@ -22,17 +22,17 @@ marsoc-deploy: marsoc
 all: grammar $(GOBINS) web test
 
 grammar:
-	go tool yacc -p "mm" -o src/mario/core/grammar.go src/mario/core/grammar.y && rm y.output
+	go tool yacc -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
 
 $(GOBINS):
-	go install -ldflags "-X mario/core.__VERSION__ '$(VERSION)'" mario/$@
+	go install -ldflags "-X martian/core.__VERSION__ '$(VERSION)'" martian/$@
 
 web:
-	cd web/mario; npm install; gulp; cd $(GOPATH)
+	cd web/martian; npm install; gulp; cd $(GOPATH)
 	cd web/marsoc; npm install; gulp; cd $(GOPATH)
 
 $(GOTESTS): test-%:
-	go test -v mario/$*
+	go test -v martian/$*
 
 test: $(GOTESTS)
 
@@ -47,9 +47,9 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-mario: mrc mre mrf mrg mrp mrs sake-strip sake-mario-strip
+sake-martian: mrc mre mrf mrg mrp mrs sake-strip sake-martian-strip
 
-sake-test-mario: test
+sake-test-martian: test
 
 sake-marsoc: marsoc mrc mrp sake-strip
 
@@ -69,6 +69,6 @@ sake-strip:
 	rm -f Makefile
 	rm -f README.md
 
-sake-mario-strip:
+sake-martian-strip:
 	# Strip marsoc.
 	rm -rf web/marsoc
