@@ -464,10 +464,8 @@ func (self *PipestanceManager) removePendingPipestance(fqname string, unfail boo
 func (self *PipestanceManager) getScratchPath() (string, error) {
 	i := 0
 	for i < len(self.scratchPaths) {
-		self.runListMutex.Lock()
 		scratchPath := self.scratchPaths[self.scratchIndex]
 		self.scratchIndex = (self.scratchIndex + 1) % len(self.scratchPaths)
-		self.runListMutex.Unlock()
 
 		var stat syscall.Statfs_t
 		if err := syscall.Statfs(scratchPath, &stat); err == nil {
@@ -490,14 +488,13 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		self.runListMutex.Unlock()
 		return &core.PipestanceExistsError{psid}
 	}
-	self.pendingTable[fqname] = true
-	self.runListMutex.Unlock()
-
 	scratchPath, err := self.getScratchPath()
 	if err != nil {
+		self.runListMutex.Unlock()
 		return err
 	}
-
+	self.pendingTable[fqname] = true
+	self.runListMutex.Unlock()
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
 	psDir := path.Join(self.writePath, container, pipeline, psid)
