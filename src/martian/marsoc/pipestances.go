@@ -293,12 +293,16 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 			newPsPath := psPath + ".tmp"
 			hardPsPath, _ := filepath.EvalSymlinks(psPath)
 			os.RemoveAll(newPsPath)
-			filepath.Walk(hardPsPath, func(oldPath string, fileinfo os.FileInfo, _ error) error {
+			if err := filepath.Walk(hardPsPath, func(oldPath string, fileinfo os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+
 				relPath, _ := filepath.Rel(hardPsPath, oldPath)
 				newPath := path.Join(newPsPath, relPath)
 
 				if fileinfo.Mode().IsDir() {
-					os.Mkdir(newPath, 0755)
+					err = os.Mkdir(newPath, 0755)
 				}
 
 				if fileinfo.Mode().IsRegular() {
@@ -308,18 +312,27 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 					out, _ := os.Create(newPath)
 					defer out.Close()
 
-					io.Copy(out, in)
+					_, err = io.Copy(out, in)
 				}
 
 				if fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
 					oldPath, _ = os.Readlink(oldPath)
-					os.Symlink(oldPath, newPath)
+					err = os.Symlink(oldPath, newPath)
 				}
-				return nil
-			})
-			os.Remove(psPath)
-			os.Rename(newPsPath, psPath)
-			os.RemoveAll(hardPsPath)
+				return err
+			}); err == nil {
+				os.Remove(psPath)
+				os.Rename(newPsPath, psPath)
+				os.RemoveAll(hardPsPath)
+			} else {
+				pname, psid := parseFQName(fqname)
+				container := self.containerTable[fqname]
+				self.mailer.Sendmail(
+					[]string{},
+					fmt.Sprintf("%s of %s copy failed!", pname, psid),
+					fmt.Sprintf("Hey Preppie,\n\n%s of %s/%s at %s failed to copy:\n\n%s", pname, container, psid, psPath, err.Error()),
+				)
+			}
 
 			self.runListMutex.Lock()
 			delete(self.copyTable, fqname)
