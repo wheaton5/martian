@@ -250,15 +250,15 @@ func (self *PipestanceManager) inventoryPipestances() {
 	self.runListMutex.Lock()
 	self.writeCache()
 	self.runListMutex.Unlock()
-	self.traversePipestancesPaths(self.scratchPaths,
-		func(pipestancesPath string, container string, pipeline string, psidInfo os.FileInfo, wg *sync.WaitGroup) {
-			defer wg.Done()
-			psid := psidInfo.Name()
-			scratchPsPath := path.Join(pipestancesPath, container, pipeline, psid)
+	for _, scratchPath := range self.scratchPaths {
+		scratchPsInfos, _ := ioutil.ReadDir(scratchPath)
+		for _, scratchPsInfo := range scratchPsInfos {
+			scratchPsPath := path.Join(scratchPath, scratchPsInfo.Name())
 			if _, ok := scratchPsPaths[scratchPsPath]; !ok {
 				os.RemoveAll(scratchPsPath)
 			}
-		})
+		}
+	}
 	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
 }
 
@@ -498,7 +498,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
 	psDir := path.Join(self.writePath, container, pipeline, psid)
-	scratchDir := path.Join(scratchPath, container, pipeline, psid)
+	scratchDir := path.Join(scratchPath, fmt.Sprintf("%s.%s.%s", container, pipeline, psid))
 	if _, err := os.Stat(psDir); err != nil {
 		os.RemoveAll(scratchDir)
 		os.MkdirAll(scratchDir, 0755)
