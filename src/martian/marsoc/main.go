@@ -159,6 +159,7 @@ Options:
 		{"MARSOC_ARGSHIM_PATH", "path/to/argshim"},
 		{"MARSOC_MROPATH", "path/to/mros"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
+		{"MARSOC_SCRATCH_PATH", "path/to/scratch/pipestances"},
 		{"MARSOC_EMAIL_HOST", "smtp.server.local"},
 		{"MARSOC_EMAIL_SENDER", "email@address.com"},
 		{"MARSOC_EMAIL_RECIPIENT", "email@address.com"},
@@ -181,7 +182,8 @@ Options:
 	argshimPath := env["MARSOC_ARGSHIM_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQUENCERS_PATH"]
-	pipestancesPath := env["MARSOC_PIPESTANCES_PATH"]
+	pipestancesPaths := strings.Split(env["MARSOC_PIPESTANCES_PATH"], ":")
+	scratchPaths := strings.Split(env["MARSOC_SCRATCH_PATH"], ":")
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
 	lenaAuthToken := envPrivate["LENA_AUTH_TOKEN"]
 	lenaDownloadUrl := env["LENA_DOWNLOAD_URL"]
@@ -228,8 +230,8 @@ Options:
 	//=========================================================================
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
-	pman := NewPipestanceManager(rt, martianVersion, mroVersion, pipestancesPath,
-		cachePath, stepSecs, mailer)
+	pman := NewPipestanceManager(rt, martianVersion, mroVersion, pipestancesPaths,
+		scratchPaths, cachePath, stepSecs, mailer)
 	pman.loadCache()
 	pman.inventoryPipestances()
 

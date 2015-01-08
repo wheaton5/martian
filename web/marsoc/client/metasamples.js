@@ -11,6 +11,11 @@
     $http.get('/api/get-metasamples').success(function(data) {
       return $scope.samples = data;
     });
+    $scope.refreshSamples = function() {
+      return $http.get('/api/get-metasamples').success(function(data) {
+        return $scope.samples = data;
+      });
+    };
     $scope.selectSample = function(sample) {
       var s, _i, _len, _ref, _ref1;
       $scope.selsample = sample;
@@ -28,17 +33,47 @@
         }
       });
     };
-    return $scope.invokeAnalysis = function() {
+    $scope.invokeAnalysis = function() {
       var _ref;
       $scope.showbutton = false;
       return $http.post('/api/invoke-metasample-analysis', {
-        id: "" + ((_ref = $scope.selsample) != null ? _ref.id.toString() : void 0)
+        id: (_ref = $scope.selsample) != null ? _ref.id.toString() : void 0
       }).success(function(data) {
+        $scope.refreshSamples();
         if (data) {
           return window.alert(data.toString());
         }
       });
     };
+    $scope.archiveSample = function() {
+      var _ref;
+      $scope.showbutton = false;
+      return $http.post('/api/archive-metasample', {
+        id: (_ref = $scope.selsample) != null ? _ref.id.toString() : void 0
+      }).success(function(data) {
+        $scope.refreshSamples();
+        if (data) {
+          return window.alert(data.toString());
+        }
+      });
+    };
+    $scope.unfailSample = function() {
+      var _ref;
+      $scope.showbutton = false;
+      return $http.post('/api/restart-metasample-analysis', {
+        id: (_ref = $scope.selsample) != null ? _ref.id.toString() : void 0
+      }).success(function(data) {
+        $scope.refreshSamples();
+        if (data) {
+          return window.alert(data.toString());
+        }
+      });
+    };
+    if (admin) {
+      return $interval((function() {
+        return $scope.refreshSamples();
+      }), 5000);
+    }
   });
 
 }).call(this);
