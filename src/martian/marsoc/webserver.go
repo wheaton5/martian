@@ -307,6 +307,32 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		return ""
 	})
 
+	// API: Restart failed metasample analysis.
+	app.Post("/api/restart-metasample-analysis", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
+		sample := lena.getSampleWithId(body.Id)
+		if sample == nil {
+			return fmt.Sprintf("Sample '%s' not found.", body.Id)
+		}
+
+		if err := pman.UnfailPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
+	// API: Archive metasample pipestance.
+	app.Post("/api/archive-metasample", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
+		sample := lena.getSampleWithId(body.Id)
+		if sample == nil {
+			return fmt.Sprintf("Sample '%s' not found.", body.Id)
+		}
+
+		if err := pman.ArchivePipestanceHead(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
 	//=========================================================================
 	// Pipestance graph UI.
 	//=========================================================================
@@ -396,8 +422,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 	})
 
 	// API: Restart failed stage.
-	app.Post("/api/restart/:container/:pname/:psid/:fqname", func(p martini.Params) string {
-		if err := pman.UnfailPipestanceNode(p["container"], p["pname"], p["psid"], p["fqname"]); err != nil {
+	app.Post("/api/restart/:container/:pname/:psid", func(p martini.Params) string {
+		if err := pman.UnfailPipestance(p["container"], p["pname"], p["psid"]); err != nil {
 			return err.Error()
 		}
 		return ""
