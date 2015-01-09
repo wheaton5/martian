@@ -3,4 +3,4 @@
 # marsoc stop script
 #
 pkill -U $USER -f "^marsoc"
-gzip ~/logs/*.log
+gzip $MARTIAN_VAR/logs/*.log
