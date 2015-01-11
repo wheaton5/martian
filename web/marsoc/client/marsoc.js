@@ -20,7 +20,7 @@
     if (run.seqcerName.indexOf("hiseq") === 0) {
       d = 379 * (total - 12) + 21513;
     } else {
-      d = 249 * total + 6060;
+      d = 268 * total + 7080;
     }
     return moment.duration(d, 'seconds');
   };
