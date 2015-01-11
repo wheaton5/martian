@@ -129,7 +129,7 @@ func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, erro
 	}
 
 	go func(run *Run) {
-		startTime := getFileModTime(path.Join(run.Path, "RunInfo.xml"))
+		startTime := getFileModTime(path.Join(run.Path, "Config", "RTAStart.bat"))
 		completeTime := getFileModTime(path.Join(run.Path, "RTAComplete.txt"))
 		touchTime := getFileModTime(path.Join(run.Path, "InterOp", "ExtractionMetricsOut.bin"))
 

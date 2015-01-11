@@ -17,7 +17,7 @@ predictedSeconds = (run) ->
         sum + read.NumCycles
     , 0)
     if run.seqcerName.indexOf("hiseq") == 0
-        d = 314 * total + 30960
+        d = 379 * (total-12) + 21513
     else
         d = 249 * total + 6060
     return moment.duration(d, 'seconds')
