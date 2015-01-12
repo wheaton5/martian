@@ -47,11 +47,6 @@ type TargetSet struct {
 	T_freq float32 `json:"t_freq"`
 }
 
-type Workflow struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
 type BarcodeSet struct {
 	Id   int    `json:"id"`
 	Name string `json:"name"`
@@ -103,7 +98,6 @@ type Sample struct {
 	Genome                   *Genome      `json:"genome"`
 	Target_set               *TargetSet   `json:"target_set"`
 	Primers                  []*Oligo     `json:"primers"`
-	Workflow                 *Workflow    `json:"workflow"`
 	Degenerate_primer_length int          `json:"degenerate_primer_length"`
 	Barcode_set              *BarcodeSet  `json:"barcode_set"`
 	Template_input_mass      float32      `json:"template_input_mass"`

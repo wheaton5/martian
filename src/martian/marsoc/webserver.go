@@ -470,7 +470,6 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		}
 		return makeJSON(map[string]interface{}{
 			"ready_to_invoke": sample.Ready_to_invoke,
-			"workflow":        sample.Workflow.Name,
 			"sample_bag":      lena.getSampleBagWithId(sid),
 			"fastq_paths":     updateSampleState(sample, rt, lena, argshim, pman),
 		})
