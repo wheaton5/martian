@@ -203,9 +203,9 @@ Options:
 	//=========================================================================
 	jobMode := "sge"
 	profile := true
-	locals := false
+	localVars := false
 	checkSrcPath := true
-	rt := core.NewRuntime(jobMode, mroPath, martianVersion, mroVersion, profile, locals, debug)
+	rt := core.NewRuntime(jobMode, mroPath, martianVersion, mroVersion, profile, localVars, debug)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
