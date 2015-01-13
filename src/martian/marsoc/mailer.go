@@ -40,7 +40,6 @@ type SmtpTemplateData struct {
 	To      string
 	Subject string
 	Body    string
-	Cc      string
 }
 
 const emailTemplate = `From: {{.From}}
@@ -48,8 +47,6 @@ To: {{.To}}
 Subject: {{.Subject}}
 
 {{.Body}}
-
-cc: {{.Cc}}
 
 Stay fresh,
 Martian
@@ -72,10 +69,9 @@ func (self *Mailer) Sendmail(to []string, subject string, body string) error {
 	// Build template context.
 	context := &SmtpTemplateData{
 		fmt.Sprintf("Martian Lopez <%s>", self.senderEmail),
-		self.notifyEmail,
+		strings.Join(recipients, ", "),
 		subject,
 		body,
-		strings.Join(recipients, ", "),
 	}
 
 	// Render the template.
