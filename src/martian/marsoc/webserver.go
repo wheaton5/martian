@@ -102,18 +102,16 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 	for _, sample_def := range sample.Sample_defs {
 		sd_fcid := sample_def.Sequencing_run.Name
 		sd_state, ok := pman.GetPipestanceState(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid)
-		if !ok || sd_state != "complete" {
-			sample.Ready_to_invoke = false
-		}
 		if ok {
 			sample_def.Sequencing_run.Psstate = sd_state
 		}
-		if preprocPipestance, _ := pman.GetPipestance(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid); preprocPipestance != nil {
-			if outs, ok := preprocPipestance.GetOuts(0).(map[string]interface{}); ok {
-				if fastq_path, ok := outs["fastq_path"].(string); ok {
-					fastqPaths[sd_fcid] = fastq_path
-				}
+		if sd_state == "complete" {
+			outs := pman.GetPipestanceOuts(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid, 0)
+			if fastq_path, ok := outs["fastq_path"].(string); ok {
+				fastqPaths[sd_fcid] = fastq_path
 			}
+		} else {
+			sample.Ready_to_invoke = false
 		}
 	}
 	sample.Callsrc = argshim.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths)

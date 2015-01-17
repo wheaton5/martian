@@ -674,3 +674,16 @@ func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline
 	}
 	return string(data), nil
 }
+
+func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline string, psid string, forkIndex int) map[string]interface{} {
+	if psPath, err := self.getPipestancePath(container, pipeline, psid); err == nil {
+		fpath := path.Join(psPath, pipeline, fmt.Sprintf("fork%d", forkIndex), "_outs")
+		if data, err := ioutil.ReadFile(fpath); err == nil {
+			var v map[string]interface{}
+			if err := json.Unmarshal(data, &v); err == nil {
+				return v
+			}
+		}
+	}
+	return map[string]interface{}{}
+}
