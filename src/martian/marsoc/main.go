@@ -202,11 +202,11 @@ Options:
 	// Setup Martian Runtime with pipelines path.
 	//=========================================================================
 	jobMode := "sge"
+	vdrMode := "rolling"
 	profile := true
 	localVars := false
-	enableVdr := true
 	checkSrcPath := true
-	rt := core.NewRuntime(jobMode, mroPath, martianVersion, mroVersion, profile, localVars, enableVdr, debug)
+	rt := core.NewRuntime(jobMode, vdrMode, mroPath, martianVersion, mroVersion, profile, localVars, debug)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
