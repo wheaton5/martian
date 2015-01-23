@@ -83,12 +83,21 @@
     $scope.sampi = 0;
     $scope.samples = null;
     $scope.showbutton = true;
+    $scope.autoinvoke = {
+      button: true,
+      state: false
+    };
     $http.get('/api/get-runs').success(function(data) {
       $scope.runs = data;
       return $scope.runTable = _.indexBy($scope.runs, 'fcid');
     });
+    if ($scope.admin) {
+      $http.get('/api/get-auto-invoke-status').success(function(data) {
+        return $scope.autoinvoke.state = data.state;
+      });
+    }
     $scope.refreshRuns = function() {
-      return $http.get('/api/get-runs').success(function(runs) {
+      $http.get('/api/get-runs').success(function(runs) {
         var run, _i, _len, _ref;
         for (_i = 0, _len = runs.length; _i < _len; _i++) {
           run = runs[_i];
@@ -102,6 +111,12 @@
           return $scope.showbutton = true;
         });
       });
+      if ($scope.admin) {
+        return $http.get('/api/get-auto-invoke-status').success(function(data) {
+          $scope.autoinvoke.state = data.state;
+          return $scope.autoinvoke.button = true;
+        });
+      }
     };
     $scope.selectRun = function(run) {
       var r, _i, _len, _ref, _ref1, _ref2;
@@ -177,6 +192,17 @@
     $scope.allFail = function() {
       return _.every($scope.samples, function(s) {
         return s.psstate === 'failed';
+      });
+    };
+    $scope.setAutoInvoke = function() {
+      $scope.autoinvoke.button = false;
+      return $http.post('/api/set-auto-invoke-status', {
+        state: $scope.autoinvoke.state
+      }).success(function(data) {
+        $scope.refreshRuns();
+        if (data) {
+          return window.alert(data.toString());
+        }
       });
     };
     if (admin) {

@@ -55,11 +55,17 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.sampi = 0
     $scope.samples = null
     $scope.showbutton = true
+    $scope.autoinvoke = { button: true, state: false }
     
     $http.get('/api/get-runs').success((data) ->
         $scope.runs = data
         $scope.runTable = _.indexBy($scope.runs, 'fcid')
     )
+
+    if $scope.admin
+        $http.get('/api/get-auto-invoke-status').success((data) ->
+            $scope.autoinvoke.state = data.state
+        )
 
     $scope.refreshRuns = () ->
         $http.get('/api/get-runs').success((runs) ->
@@ -71,6 +77,11 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
                 $scope.showbutton = true
             )
         )
+        if $scope.admin
+            $http.get('/api/get-auto-invoke-status').success((data) ->
+                $scope.autoinvoke.state = data.state
+                $scope.autoinvoke.button = true
+            )
 
     $scope.selectRun = (run) ->
         $scope.samples = null
@@ -118,6 +129,13 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
 
     $scope.allFail = () ->
         _.every($scope.samples, (s) -> s.psstate == 'failed')
+
+    $scope.setAutoInvoke = () ->
+        $scope.autoinvoke.button = false
+        $http.post('/api/set-auto-invoke-status', { state: $scope.autoinvoke.state }).success((data) ->
+            $scope.refreshRuns()
+            if data then window.alert(data.toString())
+        )
         
     # Only admin pages get auto-refresh.
     if admin then $interval((() -> $scope.refreshRuns()), 5000)
