@@ -84,6 +84,10 @@ type MetadataForm struct {
 	Name string
 }
 
+type AutoInvokeForm struct {
+	State bool
+}
+
 // For a given sample, update the following fields:
 // Pname    The analysis pipeline to be run on it, according to argshim
 // Psstate  Current state of the sample's pipestance, if any
@@ -102,22 +106,36 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 	for _, sample_def := range sample.Sample_defs {
 		sd_fcid := sample_def.Sequencing_run.Name
 		sd_state, ok := pman.GetPipestanceState(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid)
-		if !ok || sd_state != "complete" {
-			sample.Ready_to_invoke = false
-		}
 		if ok {
 			sample_def.Sequencing_run.Psstate = sd_state
 		}
-		if preprocPipestance, _ := pman.GetPipestance(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid); preprocPipestance != nil {
-			if outs, ok := preprocPipestance.GetOuts(0).(map[string]interface{}); ok {
-				if fastq_path, ok := outs["fastq_path"].(string); ok {
-					fastqPaths[sd_fcid] = fastq_path
-				}
+		if sd_state == "complete" {
+			outs := pman.GetPipestanceOuts(sd_fcid, "BCL_PROCESSOR_PD", sd_fcid, 0)
+			if fastq_path, ok := outs["fastq_path"].(string); ok {
+				fastqPaths[sd_fcid] = fastq_path
 			}
+		} else {
+			sample.Ready_to_invoke = false
 		}
 	}
 	sample.Callsrc = argshim.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths)
 	return fastqPaths
+}
+
+func InvokeAnalysis(fcid string, rt *core.Runtime, lena *Lena, argshim *ArgShim, pman *PipestanceManager) string {
+	// Get all the samples for this fcid.
+	samples := lena.getSamplesForFlowcell(fcid)
+
+	// Invoke the appropriate pipeline on each sample.
+	errors := []string{}
+	for _, sample := range samples {
+		// Invoke the pipestance.
+		updateSampleState(sample, rt, lena, argshim, pman)
+		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
+			errors = append(errors, err.Error())
+		}
+	}
+	return strings.Join(errors, "\n")
 }
 
 func runWebServer(uiport string, instanceName string, martianVersion string,
@@ -407,18 +425,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Invoke analysis.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Get all the samples for this fcid.
-		samples := lena.getSamplesForFlowcell(body.Fcid)
-
-		// Invoke the appropriate pipeline on each sample.
-		errors := []string{}
-		for _, sample := range samples {
-			// Invoke the pipestance.
-			if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
-				errors = append(errors, err.Error())
-			}
-		}
-		return strings.Join(errors, "\n")
+		return InvokeAnalysis(body.Fcid, rt, lena, argshim, pman)
 	})
 
 	// API: Restart failed stage.
@@ -457,6 +464,17 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			}
 		}
 		return strings.Join(errors, "\n")
+	})
+
+	app.Post("/api/set-auto-invoke-status", binding.Bind(AutoInvokeForm{}), func(body AutoInvokeForm, p martini.Params) string {
+		pman.autoInvoke = body.State
+		return ""
+	})
+
+	app.Get("/api/get-auto-invoke-status", func(p martini.Params) string {
+		return makeJSON(map[string]interface{}{
+			"state": pman.autoInvoke,
+		})
 	})
 
 	//=========================================================================

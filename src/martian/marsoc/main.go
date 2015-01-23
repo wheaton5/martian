@@ -54,14 +54,14 @@ func sendNotificationMail(users []string, mailer *Mailer, notices []*PipestanceN
 func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 	go func() {
 		for {
-			// Copy and clear the notifyQueue from PipestanceManager to avoid races.
-			notifyQueue := pman.CopyAndClearNotifyQueue()
+			// Copy and clear the mailQueue from PipestanceManager to avoid races.
+			mailQueue := pman.CopyAndClearMailQueue()
 
 			// Build a table of users to lists of notifications.
 			// Also, collect all the notices that don't have a user associated.
 			emailTable := map[string][]*PipestanceNotification{}
 			userlessNotices := []*PipestanceNotification{}
-			for _, notice := range notifyQueue {
+			for _, notice := range mailQueue {
 				// Get the sample with the psid in the notice.
 				sample := lena.getSampleWithId(notice.Psid)
 
@@ -96,26 +96,34 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 	}()
 }
 
-func processRunLoop(pool *SequencerPool, pman *PipestanceManager, argshim *ArgShim, rt *core.Runtime, mailer *Mailer) {
+func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, argshim *ArgShim, rt *core.Runtime, mailer *Mailer) {
 	go func() {
 		for {
 			runQueue := pool.CopyAndClearRunQueue()
+			analysisQueue := pman.CopyAndClearAnalysisQueue()
 
-			fcids := []string{}
-			for _, runNotification := range runQueue {
-				run := runNotification.run
-				fcids = append(fcids, run.Fcid)
-				pman.Invoke(run.Fcid, "BCL_PROCESSOR_PD", run.Fcid, argshim.buildCallSourceForRun(rt, run))
-			}
+			if pman.autoInvoke {
+				fcids := []string{}
+				for _, notice := range runQueue {
+					run := notice.run
+					fcids = append(fcids, run.Fcid)
+					pman.Invoke(run.Fcid, "BCL_PROCESSOR_PD", run.Fcid, argshim.buildCallSourceForRun(rt, run))
+				}
 
-			// If there are new runs completed, send email.
-			if len(fcids) > 0 {
-				mailer.Sendmail(
-					[]string{},
-					fmt.Sprintf("Sequencing runs complete! (%s)", strings.Join(fcids, ", ")),
-					fmt.Sprintf("Hey Preppie,\n\nI noticed sequencing runs %s are done.\n\nI started this BCL PROCESSOR party at http://%s/.",
-						strings.Join(fcids, ", "), mailer.InstanceName),
-				)
+				// If there are new runs completed, send email.
+				if len(fcids) > 0 {
+					mailer.Sendmail(
+						[]string{},
+						fmt.Sprintf("Sequencing runs complete! (%s)", strings.Join(fcids, ", ")),
+						fmt.Sprintf("Hey Preppie,\n\nI noticed sequencing runs %s are done.\n\nI started this BCL PROCESSOR party at http://%s/.",
+							strings.Join(fcids, ", "), mailer.InstanceName),
+					)
+				}
+
+				for _, notice := range analysisQueue {
+					fcid := notice.Fcid
+					InvokeAnalysis(fcid, rt, lena, argshim, pman)
+				}
 			}
 
 			// Wait a bit.
@@ -195,7 +203,8 @@ Options:
 		autoInvoke = value
 	}
 	stepSecs := 5
-	mroVersion := core.GetGitTag(mroPath)
+	mroVersion, _ := core.GetGitTag(mroPath)
+	mroBranch, _ := core.GetGitBranch(mroPath)
 	debug := opts["--debug"].(bool)
 
 	//=========================================================================
@@ -221,7 +230,7 @@ Options:
 	//=========================================================================
 	// Setup SequencerPool, add sequencers, and load seq run cache.
 	//=========================================================================
-	pool := NewSequencerPool(seqrunsPath, cachePath, autoInvoke)
+	pool := NewSequencerPool(seqrunsPath, cachePath)
 	for _, seqcerName := range seqcerNames {
 		pool.add(seqcerName)
 	}
@@ -231,7 +240,7 @@ Options:
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
 	pman := NewPipestanceManager(rt, martianVersion, mroVersion, pipestancesPaths,
-		scratchPaths, cachePath, stepSecs, mailer)
+		scratchPaths, cachePath, stepSecs, autoInvoke, mailer)
 	pman.loadCache()
 	pman.inventoryPipestances()
 
@@ -253,7 +262,7 @@ Options:
 	pman.goRunListLoop()
 	lena.goDownloadLoop()
 	emailNotifierLoop(pman, lena, mailer)
-	processRunLoop(pool, pman, argshim, rt, mailer)
+	processRunLoop(pool, pman, lena, argshim, rt, mailer)
 
 	//=========================================================================
 	// Collect pipestance static info.
@@ -287,7 +296,7 @@ Options:
 		"MROPROFILE": fmt.Sprintf("%v", profile),
 		"MROPORT":    uiport,
 		"mroversion": mroVersion,
-		"mrobranch":  core.GetGitBranch(mroPath),
+		"mrobranch":  mroBranch,
 	}
 
 	//=========================================================================
