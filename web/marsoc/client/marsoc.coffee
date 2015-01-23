@@ -130,9 +130,15 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.allFail = () ->
         _.every($scope.samples, (s) -> s.psstate == 'failed')
 
+    $scope.getAutoInvokeClass = () ->
+        if $scope.autoinvoke.state
+            return "complete"
+        else
+            return "failed"
+
     $scope.setAutoInvoke = () ->
         $scope.autoinvoke.button = false
-        $http.post('/api/set-auto-invoke-status', { state: $scope.autoinvoke.state }).success((data) ->
+        $http.post('/api/set-auto-invoke-status', { state: !$scope.autoinvoke.state }).success((data) ->
             $scope.refreshRuns()
             if data then window.alert(data.toString())
         )

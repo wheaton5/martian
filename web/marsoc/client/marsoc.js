@@ -194,10 +194,17 @@
         return s.psstate === 'failed';
       });
     };
+    $scope.getAutoInvokeClass = function() {
+      if ($scope.autoinvoke.state) {
+        return "complete";
+      } else {
+        return "failed";
+      }
+    };
     $scope.setAutoInvoke = function() {
       $scope.autoinvoke.button = false;
       return $http.post('/api/set-auto-invoke-status', {
-        state: $scope.autoinvoke.state
+        state: !$scope.autoinvoke.state
       }).success(function(data) {
         $scope.refreshRuns();
         if (data) {
