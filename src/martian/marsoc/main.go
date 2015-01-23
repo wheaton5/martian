@@ -195,7 +195,8 @@ Options:
 		autoInvoke = value
 	}
 	stepSecs := 5
-	mroVersion := core.GetGitTag(mroPath)
+	mroVersion, _ := core.GetGitTag(mroPath)
+	mroBranch, _ := core.GetGitBranch(mroPath)
 	debug := opts["--debug"].(bool)
 
 	//=========================================================================
@@ -287,7 +288,7 @@ Options:
 		"MROPROFILE": fmt.Sprintf("%v", profile),
 		"MROPORT":    uiport,
 		"mroversion": mroVersion,
-		"mrobranch":  core.GetGitBranch(mroPath),
+		"mrobranch":  mroBranch,
 	}
 
 	//=========================================================================
