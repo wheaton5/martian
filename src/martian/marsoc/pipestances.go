@@ -43,11 +43,16 @@ type PipestanceNotification struct {
 	Vdrsize   uint64
 }
 
+type AnalysisNotification struct {
+	Fcid string
+}
+
 type PipestanceManager struct {
 	rt             *core.Runtime
 	martianVersion string
 	mroVersion     string
 	cachePath      string
+	autoInvoke     bool
 	stepms         int
 	writePath      string
 	scratchIndex   int
@@ -63,13 +68,14 @@ type PipestanceManager struct {
 	copyTable      map[string]bool
 	containerTable map[string]string
 	pathTable      map[string]string
-	notifyQueue    []*PipestanceNotification
+	mailQueue      []*PipestanceNotification
+	analysisQueue  []*AnalysisNotification
 	mailer         *Mailer
 }
 
 func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 	mroVersion string, pipestancesPaths []string, scratchPaths []string, cachePath string,
-	stepms int, mailer *Mailer) *PipestanceManager {
+	stepms int, autoInvoke bool, mailer *Mailer) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.martianVersion = martianVersion
@@ -80,6 +86,7 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 	self.scratchIndex = 0
 	self.cachePath = path.Join(cachePath, "pipestances")
 	self.stepms = stepms
+	self.autoInvoke = autoInvoke
 	self.pipelines = rt.PipelineNames
 	self.completed = map[string]bool{}
 	self.failed = map[string]bool{}
@@ -90,18 +97,28 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 	self.copyTable = map[string]bool{}
 	self.containerTable = map[string]string{}
 	self.pathTable = map[string]string{}
-	self.notifyQueue = []*PipestanceNotification{}
+	self.mailQueue = []*PipestanceNotification{}
+	self.analysisQueue = []*AnalysisNotification{}
 	self.mailer = mailer
 	return self
 }
 
-func (self *PipestanceManager) CopyAndClearNotifyQueue() []*PipestanceNotification {
+func (self *PipestanceManager) CopyAndClearMailQueue() []*PipestanceNotification {
 	self.runListMutex.Lock()
-	notifyQueue := make([]*PipestanceNotification, len(self.notifyQueue))
-	copy(notifyQueue, self.notifyQueue)
-	self.notifyQueue = []*PipestanceNotification{}
+	mailQueue := make([]*PipestanceNotification, len(self.mailQueue))
+	copy(mailQueue, self.mailQueue)
+	self.mailQueue = []*PipestanceNotification{}
 	self.runListMutex.Unlock()
-	return notifyQueue
+	return mailQueue
+}
+
+func (self *PipestanceManager) CopyAndClearAnalysisQueue() []*AnalysisNotification {
+	self.runListMutex.Lock()
+	analysisQueue := make([]*AnalysisNotification, len(self.analysisQueue))
+	copy(analysisQueue, self.analysisQueue)
+	self.analysisQueue = []*AnalysisNotification{}
+	self.runListMutex.Unlock()
+	return analysisQueue
 }
 
 func (self *PipestanceManager) loadCache() {
@@ -283,6 +300,7 @@ func parseFQName(fqname string) (string, string) {
 
 func (self *PipestanceManager) copyPipestance(fqname string) {
 	psPath := path.Dir(self.pathTable[fqname])
+	pname, psid := parseFQName(fqname)
 	if fileinfo, _ := os.Lstat(psPath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
 		// Check to make sure this isn't already being copied
 		if _, ok := self.copyTable[fqname]; ok {
@@ -293,7 +311,7 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 			newPsPath := psPath + ".tmp"
 			hardPsPath, _ := filepath.EvalSymlinks(psPath)
 			os.RemoveAll(newPsPath)
-			if err := filepath.Walk(hardPsPath, func(oldPath string, fileinfo os.FileInfo, err error) error {
+			err := filepath.Walk(hardPsPath, func(oldPath string, fileinfo os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
@@ -320,12 +338,12 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 					err = os.Symlink(oldPath, newPath)
 				}
 				return err
-			}); err == nil {
+			})
+			if err == nil {
 				os.Remove(psPath)
 				os.Rename(newPsPath, psPath)
 				os.RemoveAll(hardPsPath)
 			} else {
-				pname, psid := parseFQName(fqname)
 				container := self.containerTable[fqname]
 				self.mailer.Sendmail(
 					[]string{},
@@ -337,6 +355,11 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 			self.runListMutex.Lock()
 			delete(self.copyTable, fqname)
 			self.runListMutex.Unlock()
+			if err == nil && pname == "BCL_PROCESSOR_PD" {
+				self.runListMutex.Lock()
+				self.analysisQueue = append(self.analysisQueue, &AnalysisNotification{Fcid: psid})
+				self.runListMutex.Unlock()
+			}
 		}()
 	}
 }
@@ -392,7 +415,7 @@ func (self *PipestanceManager) processRunList() {
 				} else {
 					// For ANALYZER_PD, queue up notification for batch email of users.
 					self.runListMutex.Lock()
-					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
+					self.mailQueue = append(self.mailQueue, &PipestanceNotification{
 						State:     "complete",
 						Container: self.containerTable[fqname],
 						Pname:     pname,
@@ -426,7 +449,7 @@ func (self *PipestanceManager) processRunList() {
 				} else {
 					// For ANALYZER_PD, queue up notification for batch email of users.
 					self.runListMutex.Lock()
-					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
+					self.mailQueue = append(self.mailQueue, &PipestanceNotification{
 						State:     "failed",
 						Container: self.containerTable[fqname],
 						Pname:     pname,

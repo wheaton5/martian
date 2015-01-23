@@ -30,6 +30,9 @@ html(ng-app="app")
                         a(href="https://github.com/10XDev/martian/releases") [[.MarsocVersion]]
                         | &nbsp;Pipelines&nbsp;
                         a(href="https://10xtech.atlassian.net/wiki/display/COMPBIO/Pipelines+Version+Tracking") [[.PipelinesVersion]]
+                        span(ng-if="admin && autoinvoke.button")
+                            | &nbsp;
+                            button.btn.btn-default(btn-checkbox ng-model="autoinvoke.state" ng-click="setAutoInvoke()" ng-class="getAutoInvokeClass()") Auto-Invoke
         #runs.detail
             table.table.table-striped#run-table
                 thead
