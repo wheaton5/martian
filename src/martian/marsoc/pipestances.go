@@ -267,16 +267,26 @@ func (self *PipestanceManager) inventoryPipestances() {
 	self.runListMutex.Lock()
 	self.writeCache()
 	self.runListMutex.Unlock()
+	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
+
+	core.LogInfo("pipeman", "Begin scratch directory cleanup.")
+	var wg sync.WaitGroup
 	for _, scratchPath := range self.scratchPaths {
 		scratchPsInfos, _ := ioutil.ReadDir(scratchPath)
 		for _, scratchPsInfo := range scratchPsInfos {
 			scratchPsPath := path.Join(scratchPath, scratchPsInfo.Name())
 			if _, ok := scratchPsPaths[scratchPsPath]; !ok {
-				os.RemoveAll(scratchPsPath)
+				core.LogInfo("pipeman", "Removing scratch directory %s", scratchPsPath)
+				wg.Add(1)
+				go func(scratchPsPath string) {
+					defer wg.Done()
+					os.RemoveAll(scratchPsPath)
+				}(scratchPsPath)
 			}
 		}
 	}
-	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
+	wg.Wait()
+	core.LogInfo("pipeman", "Finished scratch directory cleanup.")
 }
 
 // Start an infinite process loop.
