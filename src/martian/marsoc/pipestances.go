@@ -396,8 +396,8 @@ func (self *PipestanceManager) processRunList() {
 				// cache as completed, and flush the cache.
 				core.LogInfo("pipeman", "Complete and removing from runList: %s.", fqname)
 
-				// Cleanup
-				pipestance.Cleanup()
+				// Post processing.
+				pipestance.PostProcess()
 
 				// Immortalization.
 				pipestance.Immortalize()
