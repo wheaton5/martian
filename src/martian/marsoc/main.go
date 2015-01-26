@@ -212,10 +212,12 @@ Options:
 	//=========================================================================
 	jobMode := "sge"
 	vdrMode := "rolling"
+	reqMemPerCore := 8
 	profile := true
-	localVars := false
+	stackVars := false
 	checkSrcPath := true
-	rt := core.NewRuntime(jobMode, vdrMode, mroPath, martianVersion, mroVersion, profile, localVars, debug)
+	rt := core.NewRuntimeWithCores(jobMode, vdrMode, mroPath, martianVersion, mroVersion,
+		-1, -1, reqMemPerCore, profile, stackVars, debug, false)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
