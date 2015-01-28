@@ -130,9 +130,18 @@ func InvokeAnalysis(fcid string, rt *core.Runtime, lena *Lena, argshim *ArgShim,
 	errors := []string{}
 	for _, sample := range samples {
 		// Invoke the pipestance.
-		updateSampleState(sample, rt, lena, argshim, pman)
-		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
-			errors = append(errors, err.Error())
+		fastqPaths := updateSampleState(sample, rt, lena, argshim, pman)
+		every := true
+		for _, fastqPath := range fastqPaths {
+			if _, err := os.Stat(fastqPath); err != nil {
+				errors = append(errors, err.Error())
+				every = false
+			}
+		}
+		if every {
+			if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
+				errors = append(errors, err.Error())
+			}
 		}
 	}
 	return strings.Join(errors, "\n")
@@ -418,6 +427,15 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		fcid := body.Fcid
 		run := pool.find(fcid)
 		if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
+	// API: Archive BCL_PROCESSOR_PD.
+	app.Post("/api/archive-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		fcid := body.Fcid
+		if err := pman.ArchivePipestanceHead(fcid, "BCL_PROCESSOR_PD", fcid); err != nil {
 			return err.Error()
 		}
 		return ""

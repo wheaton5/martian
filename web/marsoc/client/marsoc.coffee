@@ -103,6 +103,13 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
             if data then window.alert(data.toString())
         )
 
+    $scope.archivePreprocess = () ->
+        $scope.showbutton = false
+        $http.post('/api/archive-preprocess', { fcid: $scope.selrun.fcid }).success((data) ->
+            $scope.refreshRuns()
+            if data then window.alert(data.toString())
+        )
+
     $scope.invokeAnalysis = () ->
         $scope.showbutton = false
         $http.post('/api/invoke-analysis', { fcid: $scope.selrun.fcid }).success((data) ->
@@ -127,8 +134,8 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.allDone = () ->
         _.every($scope.samples, (s) -> s.psstate == 'complete')
 
-    $scope.allFail = () ->
-        _.every($scope.samples, (s) -> s.psstate == 'failed')
+    $scope.someFail = () ->
+        _.some($scope.samples, (s) -> s.psstate == 'failed')
 
     $scope.getAutoInvokeClass = () ->
         if $scope.autoinvoke.state

@@ -217,6 +217,11 @@ func (self *PipestanceManager) inventoryPipestances() {
 			}
 			fqname := makeFQName(pipeline, psid)
 
+			// If pipestance has been archived, return.
+			if _, err := os.Stat(makePipestancePath(pipestancesPath, container, pipeline, psid)); err != nil {
+				return
+			}
+
 			// Cache the fqname to container mapping so we know what container
 			// an analysis pipestance is in for notification emails.
 			self.runListMutex.Lock()
@@ -245,7 +250,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 				return
 			}
 
-			pipestance, err := self.rt.ReattachToPipestance(psid, makePipestancePath(pipestancesPath, container, pipeline, psid))
+			pipestance, err := self.ReattachToPipestance(psid, makePipestancePath(pipestancesPath, container, pipeline, psid))
 			if err != nil {
 				// If we could not reattach, it's because _invocation was
 				// missing, or will no longer parse due to changes in MRO
@@ -684,7 +689,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	}
 
 	// Reattach to the pipestance.
-	pipestance, err := self.rt.ReattachToPipestance(psid, psPath)
+	pipestance, err := self.ReattachToPipestance(psid, psPath)
 	if err != nil {
 		return nil, false
 	}
@@ -692,6 +697,10 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	// Load its metadata and return.
 	pipestance.LoadMetadata()
 	return pipestance, true
+}
+
+func (self *PipestanceManager) ReattachToPipestance(psid string, psPath string) (*core.Pipestance, error) {
+	return self.rt.ReattachToPipestance(psid, psPath, "", false)
 }
 
 func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline string, psid string) (string, error) {
