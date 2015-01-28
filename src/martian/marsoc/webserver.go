@@ -130,9 +130,18 @@ func InvokeAnalysis(fcid string, rt *core.Runtime, lena *Lena, argshim *ArgShim,
 	errors := []string{}
 	for _, sample := range samples {
 		// Invoke the pipestance.
-		updateSampleState(sample, rt, lena, argshim, pman)
-		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
-			errors = append(errors, err.Error())
+		fastqPaths := updateSampleState(sample, rt, lena, argshim, pman)
+		every := true
+		for _, fastqPath := range fastqPaths {
+			if _, err := os.Stat(fastqPath); err != nil {
+				errors = append(errors, err.Error())
+				every = false
+			}
+		}
+		if every {
+			if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
+				errors = append(errors, err.Error())
+			}
 		}
 	}
 	return strings.Join(errors, "\n")
