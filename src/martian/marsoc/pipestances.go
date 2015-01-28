@@ -217,6 +217,11 @@ func (self *PipestanceManager) inventoryPipestances() {
 			}
 			fqname := makeFQName(pipeline, psid)
 
+			// If pipestance has been archived, return.
+			if _, err := os.Stat(makePipestancePath(pipestancesPath, container, pipeline, psid)); err != nil {
+				return
+			}
+
 			// Cache the fqname to container mapping so we know what container
 			// an analysis pipestance is in for notification emails.
 			self.runListMutex.Lock()
