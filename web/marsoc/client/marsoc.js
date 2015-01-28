@@ -151,6 +151,17 @@
         }
       });
     };
+    $scope.archivePreprocess = function() {
+      $scope.showbutton = false;
+      return $http.post('/api/archive-preprocess', {
+        fcid: $scope.selrun.fcid
+      }).success(function(data) {
+        $scope.refreshRuns();
+        if (data) {
+          return window.alert(data.toString());
+        }
+      });
+    };
     $scope.invokeAnalysis = function() {
       $scope.showbutton = false;
       return $http.post('/api/invoke-analysis', {
@@ -189,8 +200,8 @@
         return s.psstate === 'complete';
       });
     };
-    $scope.allFail = function() {
-      return _.every($scope.samples, function(s) {
+    $scope.someFail = function() {
+      return _.some($scope.samples, function(s) {
         return s.psstate === 'failed';
       });
     };

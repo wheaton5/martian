@@ -89,6 +89,7 @@ html(ng-app="app")
                 tbody
                     tr
                         td(ng-if="selrun.preprocess")
+                            button.btn.btn-default(ng-if="selrun.preprocess == 'complete' && admin && showbutton" ng-click="archivePreprocess()" style="margin-bottom: 15px") Archive
                             div(style="margin-top: 5px; margin-bottom: 15px")
                                 .minibox(ng-class="selrun.preprocess" style="text-align:center; width: 85px") 
                                     a(href="{{urlprefix}}/pipestance/{{selrun.fcid}}/BCL_PROCESSOR_PD/{{selrun.fcid}}") {{selrun.fcid}}<br>{{selrun.preprocess}}
@@ -108,7 +109,7 @@ html(ng-app="app")
                             div(ng-if="samples")
                                 button.btn.btn-default(ng-if="!samples[sampi].psstate && admin && showbutton" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke All
                                 button.btn.btn-default(ng-if="allDone() && admin && showbutton" ng-click="archiveSamples()" style="margin-bottom: 15px") Archive All
-                                button.btn.btn-default(ng-if="allFail() && admin && showbutton" ng-click="unfailSamples()" style="margin-bottom: 15px") Unfail All
+                                button.btn.btn-default(ng-if="someFail() && admin && showbutton" ng-click="unfailSamples()" style="margin-bottom: 15px") Unfail All
                                 div(style="margin-top: 5px")
                                     .minibox(ng-repeat="sample in samples" ng-class="sample.psstate" ng-mouseover="sampi=$index"
                                         style="text-align:center; margin-right:2px; margin-bottom: 2px; width: 85px; ") 

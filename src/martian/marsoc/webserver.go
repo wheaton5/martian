@@ -423,6 +423,15 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		return ""
 	})
 
+	// API: Archive BCL_PROCESSOR_PD.
+	app.Post("/api/archive-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		fcid := body.Fcid
+		if err := pman.ArchivePipestanceHead(fcid, "BCL_PROCESSOR_PD", fcid); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
 	// API: Invoke analysis.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		return InvokeAnalysis(body.Fcid, rt, lena, argshim, pman)
