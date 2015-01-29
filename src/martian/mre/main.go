@@ -55,14 +55,18 @@ Options:
 	if value := os.Getenv("MROPATH"); len(value) > 0 {
 		mroPath = value
 	}
-	mroVersion := core.GetGitTag(mroPath)
-	core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
 	core.LogInfo("environ", "MROPATH = %s", mroPath)
+
+	// Compute version.
+	mroVersion, err := core.GetGitTag(mroPath)
+	if err == nil {
+		core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
+	}
 
 	//=========================================================================
 	// Configure Martian runtime.
 	//=========================================================================
-	rt := core.NewRuntime("local", mroPath, martianVersion, mroVersion, false, false, false)
+	rt := core.NewRuntime("local", "disable", mroPath, martianVersion, mroVersion, false, false, false)
 
 	//=========================================================================
 	// Start web server.

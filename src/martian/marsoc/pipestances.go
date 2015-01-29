@@ -43,11 +43,16 @@ type PipestanceNotification struct {
 	Vdrsize   uint64
 }
 
+type AnalysisNotification struct {
+	Fcid string
+}
+
 type PipestanceManager struct {
 	rt             *core.Runtime
 	martianVersion string
 	mroVersion     string
 	cachePath      string
+	autoInvoke     bool
 	stepms         int
 	writePath      string
 	scratchIndex   int
@@ -63,13 +68,14 @@ type PipestanceManager struct {
 	copyTable      map[string]bool
 	containerTable map[string]string
 	pathTable      map[string]string
-	notifyQueue    []*PipestanceNotification
+	mailQueue      []*PipestanceNotification
+	analysisQueue  []*AnalysisNotification
 	mailer         *Mailer
 }
 
 func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 	mroVersion string, pipestancesPaths []string, scratchPaths []string, cachePath string,
-	stepms int, mailer *Mailer) *PipestanceManager {
+	stepms int, autoInvoke bool, mailer *Mailer) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.martianVersion = martianVersion
@@ -80,6 +86,7 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 	self.scratchIndex = 0
 	self.cachePath = path.Join(cachePath, "pipestances")
 	self.stepms = stepms
+	self.autoInvoke = autoInvoke
 	self.pipelines = rt.PipelineNames
 	self.completed = map[string]bool{}
 	self.failed = map[string]bool{}
@@ -90,18 +97,28 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 	self.copyTable = map[string]bool{}
 	self.containerTable = map[string]string{}
 	self.pathTable = map[string]string{}
-	self.notifyQueue = []*PipestanceNotification{}
+	self.mailQueue = []*PipestanceNotification{}
+	self.analysisQueue = []*AnalysisNotification{}
 	self.mailer = mailer
 	return self
 }
 
-func (self *PipestanceManager) CopyAndClearNotifyQueue() []*PipestanceNotification {
+func (self *PipestanceManager) CopyAndClearMailQueue() []*PipestanceNotification {
 	self.runListMutex.Lock()
-	notifyQueue := make([]*PipestanceNotification, len(self.notifyQueue))
-	copy(notifyQueue, self.notifyQueue)
-	self.notifyQueue = []*PipestanceNotification{}
+	mailQueue := make([]*PipestanceNotification, len(self.mailQueue))
+	copy(mailQueue, self.mailQueue)
+	self.mailQueue = []*PipestanceNotification{}
 	self.runListMutex.Unlock()
-	return notifyQueue
+	return mailQueue
+}
+
+func (self *PipestanceManager) CopyAndClearAnalysisQueue() []*AnalysisNotification {
+	self.runListMutex.Lock()
+	analysisQueue := make([]*AnalysisNotification, len(self.analysisQueue))
+	copy(analysisQueue, self.analysisQueue)
+	self.analysisQueue = []*AnalysisNotification{}
+	self.runListMutex.Unlock()
+	return analysisQueue
 }
 
 func (self *PipestanceManager) loadCache() {
@@ -200,6 +217,11 @@ func (self *PipestanceManager) inventoryPipestances() {
 			}
 			fqname := makeFQName(pipeline, psid)
 
+			// If pipestance has been archived, return.
+			if _, err := os.Stat(makePipestancePath(pipestancesPath, container, pipeline, psid)); err != nil {
+				return
+			}
+
 			// Cache the fqname to container mapping so we know what container
 			// an analysis pipestance is in for notification emails.
 			self.runListMutex.Lock()
@@ -228,7 +250,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 				return
 			}
 
-			pipestance, err := self.rt.ReattachToPipestance(psid, makePipestancePath(pipestancesPath, container, pipeline, psid))
+			pipestance, err := self.ReattachToPipestance(psid, makePipestancePath(pipestancesPath, container, pipeline, psid))
 			if err != nil {
 				// If we could not reattach, it's because _invocation was
 				// missing, or will no longer parse due to changes in MRO
@@ -250,16 +272,26 @@ func (self *PipestanceManager) inventoryPipestances() {
 	self.runListMutex.Lock()
 	self.writeCache()
 	self.runListMutex.Unlock()
+	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
+
+	core.LogInfo("pipeman", "Begin scratch directory cleanup.")
+	var wg sync.WaitGroup
 	for _, scratchPath := range self.scratchPaths {
 		scratchPsInfos, _ := ioutil.ReadDir(scratchPath)
 		for _, scratchPsInfo := range scratchPsInfos {
 			scratchPsPath := path.Join(scratchPath, scratchPsInfo.Name())
 			if _, ok := scratchPsPaths[scratchPsPath]; !ok {
-				os.RemoveAll(scratchPsPath)
+				core.LogInfo("pipeman", "Removing scratch directory %s", scratchPsPath)
+				wg.Add(1)
+				go func(scratchPsPath string) {
+					defer wg.Done()
+					os.RemoveAll(scratchPsPath)
+				}(scratchPsPath)
 			}
 		}
 	}
-	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
+	wg.Wait()
+	core.LogInfo("pipeman", "Finished scratch directory cleanup.")
 }
 
 // Start an infinite process loop.
@@ -283,6 +315,7 @@ func parseFQName(fqname string) (string, string) {
 
 func (self *PipestanceManager) copyPipestance(fqname string) {
 	psPath := path.Dir(self.pathTable[fqname])
+	pname, psid := parseFQName(fqname)
 	if fileinfo, _ := os.Lstat(psPath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
 		// Check to make sure this isn't already being copied
 		if _, ok := self.copyTable[fqname]; ok {
@@ -293,7 +326,7 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 			newPsPath := psPath + ".tmp"
 			hardPsPath, _ := filepath.EvalSymlinks(psPath)
 			os.RemoveAll(newPsPath)
-			if err := filepath.Walk(hardPsPath, func(oldPath string, fileinfo os.FileInfo, err error) error {
+			err := filepath.Walk(hardPsPath, func(oldPath string, fileinfo os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
@@ -320,12 +353,12 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 					err = os.Symlink(oldPath, newPath)
 				}
 				return err
-			}); err == nil {
+			})
+			if err == nil {
 				os.Remove(psPath)
 				os.Rename(newPsPath, psPath)
 				os.RemoveAll(hardPsPath)
 			} else {
-				pname, psid := parseFQName(fqname)
 				container := self.containerTable[fqname]
 				self.mailer.Sendmail(
 					[]string{},
@@ -337,6 +370,11 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 			self.runListMutex.Lock()
 			delete(self.copyTable, fqname)
 			self.runListMutex.Unlock()
+			if err == nil && pname == "BCL_PROCESSOR_PD" {
+				self.runListMutex.Lock()
+				self.analysisQueue = append(self.analysisQueue, &AnalysisNotification{Fcid: psid})
+				self.runListMutex.Unlock()
+			}
 		}()
 	}
 }
@@ -363,8 +401,8 @@ func (self *PipestanceManager) processRunList() {
 				// cache as completed, and flush the cache.
 				core.LogInfo("pipeman", "Complete and removing from runList: %s.", fqname)
 
-				// Cleanup
-				pipestance.Cleanup()
+				// Post processing.
+				pipestance.PostProcess()
 
 				// Immortalization.
 				pipestance.Immortalize()
@@ -392,7 +430,7 @@ func (self *PipestanceManager) processRunList() {
 				} else {
 					// For ANALYZER_PD, queue up notification for batch email of users.
 					self.runListMutex.Lock()
-					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
+					self.mailQueue = append(self.mailQueue, &PipestanceNotification{
 						State:     "complete",
 						Container: self.containerTable[fqname],
 						Pname:     pname,
@@ -426,7 +464,7 @@ func (self *PipestanceManager) processRunList() {
 				} else {
 					// For ANALYZER_PD, queue up notification for batch email of users.
 					self.runListMutex.Lock()
-					self.notifyQueue = append(self.notifyQueue, &PipestanceNotification{
+					self.mailQueue = append(self.mailQueue, &PipestanceNotification{
 						State:     "failed",
 						Container: self.containerTable[fqname],
 						Pname:     pname,
@@ -651,7 +689,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	}
 
 	// Reattach to the pipestance.
-	pipestance, err := self.rt.ReattachToPipestance(psid, psPath)
+	pipestance, err := self.ReattachToPipestance(psid, psPath)
 	if err != nil {
 		return nil, false
 	}
@@ -659,6 +697,10 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	// Load its metadata and return.
 	pipestance.LoadMetadata()
 	return pipestance, true
+}
+
+func (self *PipestanceManager) ReattachToPipestance(psid string, psPath string) (*core.Pipestance, error) {
+	return self.rt.ReattachToPipestance(psid, psPath, "", false)
 }
 
 func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline string, psid string) (string, error) {
@@ -673,4 +715,17 @@ func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline
 		return "", err
 	}
 	return string(data), nil
+}
+
+func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline string, psid string, forkIndex int) map[string]interface{} {
+	if psPath, err := self.getPipestancePath(container, pipeline, psid); err == nil {
+		fpath := path.Join(psPath, pipeline, fmt.Sprintf("fork%d", forkIndex), "_outs")
+		if data, err := ioutil.ReadFile(fpath); err == nil {
+			var v map[string]interface{}
+			if err := json.Unmarshal(data, &v); err == nil {
+				return v
+			}
+		}
+	}
+	return map[string]interface{}{}
 }

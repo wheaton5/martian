@@ -55,11 +55,17 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.sampi = 0
     $scope.samples = null
     $scope.showbutton = true
+    $scope.autoinvoke = { button: true, state: false }
     
     $http.get('/api/get-runs').success((data) ->
         $scope.runs = data
         $scope.runTable = _.indexBy($scope.runs, 'fcid')
     )
+
+    if $scope.admin
+        $http.get('/api/get-auto-invoke-status').success((data) ->
+            $scope.autoinvoke.state = data.state
+        )
 
     $scope.refreshRuns = () ->
         $http.get('/api/get-runs').success((runs) ->
@@ -71,6 +77,11 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
                 $scope.showbutton = true
             )
         )
+        if $scope.admin
+            $http.get('/api/get-auto-invoke-status').success((data) ->
+                $scope.autoinvoke.state = data.state
+                $scope.autoinvoke.button = true
+            )
 
     $scope.selectRun = (run) ->
         $scope.samples = null
@@ -88,6 +99,13 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.invokePreprocess = () ->
         $scope.showbutton = false
         $http.post('/api/invoke-preprocess', { fcid: $scope.selrun.fcid }).success((data) ->
+            $scope.refreshRuns()
+            if data then window.alert(data.toString())
+        )
+
+    $scope.archivePreprocess = () ->
+        $scope.showbutton = false
+        $http.post('/api/archive-preprocess', { fcid: $scope.selrun.fcid }).success((data) ->
             $scope.refreshRuns()
             if data then window.alert(data.toString())
         )
@@ -116,8 +134,21 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.allDone = () ->
         _.every($scope.samples, (s) -> s.psstate == 'complete')
 
-    $scope.allFail = () ->
-        _.every($scope.samples, (s) -> s.psstate == 'failed')
+    $scope.someFail = () ->
+        _.some($scope.samples, (s) -> s.psstate == 'failed')
+
+    $scope.getAutoInvokeClass = () ->
+        if $scope.autoinvoke.state
+            return "complete"
+        else
+            return "failed"
+
+    $scope.setAutoInvoke = () ->
+        $scope.autoinvoke.button = false
+        $http.post('/api/set-auto-invoke-status', { state: !$scope.autoinvoke.state }).success((data) ->
+            $scope.refreshRuns()
+            if data then window.alert(data.toString())
+        )
         
     # Only admin pages get auto-refresh.
     if admin then $interval((() -> $scope.refreshRuns()), 5000)
