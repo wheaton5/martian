@@ -14,6 +14,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -33,7 +35,7 @@ func makePipestancePath(pipestancesPath string, container string, pipeline strin
 	return path.Join(pipestancesPath, container, pipeline, psid, "HEAD")
 }
 
-type PipestanceFunc func(string, string, string, os.FileInfo, *sync.WaitGroup)
+type PipestanceFunc func(string, string, string, string, string, *sync.WaitGroup)
 
 type PipestanceNotification struct {
 	State     string
@@ -177,9 +179,14 @@ func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []strin
 			for _, pipeline := range self.pipelines {
 				psidInfos, _ := ioutil.ReadDir(path.Join(pipestancesPath, container, pipeline))
 				for _, psidInfo := range psidInfos {
-					wg.Add(1)
+					psid := psidInfo.Name()
 					pscount += 1
-					go pipestanceFunc(pipestancesPath, container, pipeline, psidInfo, &wg)
+					mroVersionInfos, _ := ioutil.ReadDir(path.Join(pipestancesPath, container, pipeline, psid))
+					for _, mroVersionInfo := range mroVersionInfos {
+						wg.Add(1)
+						mroVersion := mroVersionInfo.Name()
+						go pipestanceFunc(pipestancesPath, container, pipeline, psid, mroVersion, &wg)
+					}
 				}
 			}
 		}
@@ -197,30 +204,26 @@ func (self *PipestanceManager) inventoryPipestances() {
 	scratchPsPaths := map[string]bool{}
 
 	pscount := self.traversePipestancesPaths(self.paths,
-		func(pipestancesPath string, container string, pipeline string, psidInfo os.FileInfo, wg *sync.WaitGroup) {
-			psid := psidInfo.Name()
-			psPath := path.Join(pipestancesPath, container, pipeline, psid)
+		func(pipestancesPath string, container string, pipeline string, psid string, mroVersion string, wg *sync.WaitGroup) {
+			psPath := path.Join(pipestancesPath, container, pipeline, psid, mroVersion)
 			defer wg.Done()
 
-			// If psid has .tmp suffix and no psid without .tmp suffix exists,
+			// If mroVersion has .tmp suffix and no mroVersion without .tmp suffix exists,
 			// this pipestance was about to be renamed prior to Marsoc shutdown
-			if strings.HasSuffix(psid, ".tmp") {
-				permanentPsid := strings.TrimSuffix(psid, ".tmp")
-				newPsPath := path.Join(pipestancesPath, container, pipeline, permanentPsid)
-				if _, err := os.Stat(newPsPath); err == nil {
-					return
+			if strings.HasSuffix(mroVersion, ".tmp") {
+				permanentMroVersion := strings.TrimSuffix(mroVersion, ".tmp")
+				newPsPath := path.Join(pipestancesPath, container, pipeline, psid, permanentMroVersion)
+				if _, err := os.Stat(newPsPath); err != nil {
+					os.Rename(psPath, newPsPath)
 				}
-				os.Rename(psPath, newPsPath)
-
-				psid = permanentPsid
-				psPath = newPsPath
 			}
-			fqname := makeFQName(pipeline, psid)
 
-			// If pipestance has been archived, return.
-			if _, err := os.Stat(makePipestancePath(pipestancesPath, container, pipeline, psid)); err != nil {
+			// Only continue to process non-archived pipestances
+			if mroVersion != "HEAD" {
 				return
 			}
+
+			fqname := makeFQName(pipeline, psid)
 
 			// Cache the fqname to container mapping so we know what container
 			// an analysis pipestance is in for notification emails.
@@ -228,7 +231,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 			hardPsPath, _ := filepath.EvalSymlinks(psPath)
 			scratchPsPaths[hardPsPath] = true
 			self.containerTable[fqname] = container
-			self.pathTable[fqname] = makePipestancePath(pipestancesPath, container, pipeline, psid)
+			self.pathTable[fqname] = psPath
 			// If we already know the state of this pipestance, move on.
 			if self.completed[fqname] {
 				self.copyPipestance(fqname)
@@ -242,7 +245,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 			self.runListMutex.Unlock()
 
 			// If pipestance has _finalstate, consider it complete.
-			if _, err := os.Stat(path.Join(makePipestancePath(pipestancesPath, container, pipeline, psid), "_finalstate")); err == nil {
+			if _, err := os.Stat(path.Join(psPath, "_finalstate")); err == nil {
 				self.runListMutex.Lock()
 				self.completed[fqname] = true
 				self.copyPipestance(fqname)
@@ -250,7 +253,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 				return
 			}
 
-			pipestance, err := self.ReattachToPipestance(psid, makePipestancePath(pipestancesPath, container, pipeline, psid))
+			pipestance, err := self.ReattachToPipestance(psid, psPath)
 			if err != nil {
 				// If we could not reattach, it's because _invocation was
 				// missing, or will no longer parse due to changes in MRO
@@ -314,7 +317,7 @@ func parseFQName(fqname string) (string, string) {
 }
 
 func (self *PipestanceManager) copyPipestance(fqname string) {
-	psPath := path.Dir(self.pathTable[fqname])
+	psPath, _ := os.Readlink(self.pathTable[fqname])
 	pname, psid := parseFQName(fqname)
 	if fileinfo, _ := os.Lstat(psPath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
 		// Check to make sure this isn't already being copied
@@ -538,15 +541,26 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	self.runListMutex.Unlock()
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
+	suffix := 0
 	psDir := path.Join(self.writePath, container, pipeline, psid)
-	scratchDir := path.Join(scratchPath, fmt.Sprintf("%s.%s.%s", container, pipeline, psid))
-	if _, err := os.Stat(psDir); err != nil {
-		os.RemoveAll(scratchDir)
-		os.MkdirAll(scratchDir, 0755)
-		os.MkdirAll(path.Dir(psDir), 0755)
-		os.Symlink(scratchDir, psDir)
+	psInfos, _ := ioutil.ReadDir(psDir)
+	re := regexp.MustCompile(fmt.Sprintf("^%s.(\\d+)$", self.mroVersion))
+	for _, psInfo := range psInfos {
+		if m := re.FindStringSubmatch(psInfo.Name()); m != nil {
+			psInfoSuffix, _ := strconv.Atoi(m[1])
+			if suffix <= psInfoSuffix {
+				suffix = psInfoSuffix + 1
+			}
+		}
 	}
-	psPath := path.Join(psDir, self.mroVersion)
+	mroVersion := fmt.Sprintf("%s-%d", self.mroVersion)
+	psPath := path.Join(psDir, mroVersion)
+
+	scratchPsPath := path.Join(scratchPath, fmt.Sprintf("%s.%s.%s.%s", container, pipeline, psid, mroVersion))
+	os.RemoveAll(scratchPsPath)
+	os.MkdirAll(scratchPsPath, 0755)
+	os.MkdirAll(path.Dir(psPath), 0755)
+	os.Symlink(scratchPsPath, psPath)
 
 	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
 	if err != nil {
