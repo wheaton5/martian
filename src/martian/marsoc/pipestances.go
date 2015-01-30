@@ -33,7 +33,8 @@ func makeFQName(pipeline string, psid string) string {
 	return fmt.Sprintf("ID.%s.%s", psid, pipeline)
 }
 
-type PipestanceFunc func(string, string, string, string, string, *sync.WaitGroup)
+type PipestanceFunc func(string, string, string) error
+type PipestanceInventoryFunc func(string, string, string, string, string, *sync.WaitGroup)
 
 type PipestanceNotification struct {
 	State     string
@@ -155,7 +156,7 @@ func (self *PipestanceManager) writeCache() {
 	}
 }
 
-func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []string, pipestanceFunc PipestanceFunc) int {
+func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []string, pipestanceInventoryFunc PipestanceInventoryFunc) int {
 	var wg sync.WaitGroup
 	pscount := 0
 
@@ -172,7 +173,7 @@ func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []strin
 					for _, mroVersionInfo := range mroVersionInfos {
 						wg.Add(1)
 						mroVersion := mroVersionInfo.Name()
-						go pipestanceFunc(pipestancesPath, container, pipeline, psid, mroVersion, &wg)
+						go pipestanceInventoryFunc(pipestancesPath, container, pipeline, psid, mroVersion, &wg)
 					}
 				}
 			}

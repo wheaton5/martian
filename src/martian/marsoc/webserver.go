@@ -147,6 +147,40 @@ func InvokeAnalysis(fcid string, rt *core.Runtime, lena *Lena, argshim *ArgShim,
 	return strings.Join(errors, "\n")
 }
 
+func callMetasamplePipestanceAPI(body MetasampleIdForm, lena *Lena, pipestanceFunc PipestanceFunc) string {
+	// Get the sample with this id.
+	sample := lena.getSampleWithId(body.Id)
+	if sample == nil {
+		return fmt.Sprintf("Sample '%s' not found.", body.Id)
+	}
+
+	if err := pipestanceFunc(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+func callFcidPipestanceAPI(body FcidForm, lena *Lena, pipestanceFunc PipestanceFunc) string {
+	// Get all the samples for this fcid.
+	samples := lena.getSamplesForFlowcell(body.Fcid)
+
+	errors := []string{}
+	for _, sample := range samples {
+		if err := pipestanceFunc(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+			errors = append(errors, err.Error())
+		}
+	}
+	return strings.Join(errors, "\n")
+}
+
+func callPreprocessAPI(body FcidForm, pipestanceFunc PipestanceFunc) string {
+	fcid := body.Fcid
+	if err := pipestanceFunc(fcid, "BCL_PROCESSOR_PD", fcid); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
 func runWebServer(uiport string, instanceName string, martianVersion string,
 	mroVersion string, rt *core.Runtime, pool *SequencerPool,
 	pman *PipestanceManager, lena *Lena, argshim *ArgShim, info map[string]string) {
@@ -336,54 +370,22 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Restart failed metasample analysis.
 	app.Post("/api/restart-metasample-analysis", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
-		sample := lena.getSampleWithId(body.Id)
-		if sample == nil {
-			return fmt.Sprintf("Sample '%s' not found.", body.Id)
-		}
-
-		if err := pman.UnfailPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-			return err.Error()
-		}
-		return ""
+		return callMetasamplePipestanceAPI(body, lena, pman.UnfailPipestance)
 	})
 
 	// API: Archive metasample pipestance.
 	app.Post("/api/archive-metasample", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
-		sample := lena.getSampleWithId(body.Id)
-		if sample == nil {
-			return fmt.Sprintf("Sample '%s' not found.", body.Id)
-		}
-
-		if err := pman.ArchivePipestanceHead(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-			return err.Error()
-		}
-		return ""
+		return callMetasamplePipestanceAPI(body, lena, pman.ArchivePipestanceHead)
 	})
 
 	// API: Wipe metasample pipestance.
 	app.Post("/api/wipe-metasample", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
-		sample := lena.getSampleWithId(body.Id)
-		if sample == nil {
-			return fmt.Sprintf("Sample '%s' not found.", body.Id)
-		}
-
-		if err := pman.WipePipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-			return err.Error()
-		}
-		return ""
+		return callMetasamplePipestanceAPI(body, lena, pman.WipePipestance)
 	})
 
 	// API: Kill metasample pipestance.
 	app.Post("/api/kill-metasample", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
-		sample := lena.getSampleWithId(body.Id)
-		if sample == nil {
-			return fmt.Sprintf("Sample '%s' not found.", body.Id)
-		}
-
-		if err := pman.KillPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-			return err.Error()
-		}
-		return ""
+		return callMetasamplePipestanceAPI(body, lena, pman.KillPipestance)
 	})
 
 	//=========================================================================
@@ -460,29 +462,17 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Archive BCL_PROCESSOR_PD.
 	app.Post("/api/archive-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		fcid := body.Fcid
-		if err := pman.ArchivePipestanceHead(fcid, "BCL_PROCESSOR_PD", fcid); err != nil {
-			return err.Error()
-		}
-		return ""
+		return callPreprocessAPI(body, pman.ArchivePipestanceHead)
 	})
 
 	// API: Wipe BCL_PROCESSOR_PD.
 	app.Post("/api/wipe-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		fcid := body.Fcid
-		if err := pman.WipePipestance(fcid, "BCL_PROCESSOR_PD", fcid); err != nil {
-			return err.Error()
-		}
-		return ""
+		return callPreprocessAPI(body, pman.WipePipestance)
 	})
 
 	// API: Kill BCL_PROCESSOR_PD.
 	app.Post("/api/kill-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		fcid := body.Fcid
-		if err := pman.KillPipestance(fcid, "BCL_PROCESSOR_PD", fcid); err != nil {
-			return err.Error()
-		}
-		return ""
+		return callPreprocessAPI(body, pman.KillPipestance)
 	})
 
 	// API: Invoke analysis.
@@ -500,62 +490,22 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Archive pipestance.
 	app.Post("/api/archive-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Get all the samples for this fcid.
-		samples := lena.getSamplesForFlowcell(body.Fcid)
-
-		// Archive the samples.
-		errors := []string{}
-		for _, sample := range samples {
-			if err := pman.ArchivePipestanceHead(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-				errors = append(errors, err.Error())
-			}
-		}
-		return strings.Join(errors, "\n")
+		return callFcidPipestanceAPI(body, lena, pman.ArchivePipestanceHead)
 	})
 
 	// API: Wipe pipestances.
 	app.Post("/api/wipe-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Get all the samples for this fcid.
-		samples := lena.getSamplesForFlowcell(body.Fcid)
-
-		// Wipe the samples.
-		errors := []string{}
-		for _, sample := range samples {
-			if err := pman.WipePipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-				errors = append(errors, err.Error())
-			}
-		}
-		return strings.Join(errors, "\n")
+		return callFcidPipestanceAPI(body, lena, pman.WipePipestance)
 	})
 
 	// API: Kill pipestances.
 	app.Post("/api/kill-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Get all the samples for this fcid.
-		samples := lena.getSamplesForFlowcell(body.Fcid)
-
-		// Kill the samples.
-		errors := []string{}
-		for _, sample := range samples {
-			if err := pman.KillPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-				errors = append(errors, err.Error())
-			}
-		}
-		return strings.Join(errors, "\n")
+		return callFcidPipestanceAPI(body, lena, pman.KillPipestance)
 	})
 
 	// API: Restart failed pipestances associated to a flow cell.
 	app.Post("/api/restart-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Get all the samples for this fcid.
-		samples := lena.getSamplesForFlowcell(body.Fcid)
-
-		// Unfail the pipestances.
-		errors := []string{}
-		for _, sample := range samples {
-			if err := pman.UnfailPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-				errors = append(errors, err.Error())
-			}
-		}
-		return strings.Join(errors, "\n")
+		return callFcidPipestanceAPI(body, lena, pman.UnfailPipestance)
 	})
 
 	app.Post("/api/set-auto-invoke-status", binding.Bind(AutoInvokeForm{}), func(body AutoInvokeForm, p martini.Params) string {
