@@ -220,6 +220,12 @@ func (self *PipestanceManager) inventoryPipestances() {
 
 			// Only continue to process non-archived pipestances
 			if mroVersion != "HEAD" {
+				// If the pipestance path is a dead symlink, remove it.
+				if fileinfo, _ := os.Lstat(psPath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
+					if _, err := os.Stat(psPath); err != nil {
+						os.Remove(psPath)
+					}
+				}
 				return
 			}
 
@@ -586,15 +592,56 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 }
 
 func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline string, psid string) error {
-	self.runListMutex.Lock()
-	delete(self.completed, makeFQName(pipeline, psid))
-	self.writeCache()
-	self.runListMutex.Unlock()
 	headPath, err := self.getPipestancePath(container, pipeline, psid)
 	if err != nil {
 		return err
 	}
+	self.runListMutex.Lock()
+	delete(self.completed, makeFQName(pipeline, psid))
+	self.writeCache()
+	self.runListMutex.Unlock()
 	return os.Remove(headPath)
+}
+
+func (self *PipestanceManager) WipePipestance(container string, pipeline string, psid string) error {
+	fqname := makeFQName(pipeline, psid)
+
+	self.runListMutex.Lock()
+	if state, _ := self.getPipestanceState(container, pipeline, psid); state != "failed" {
+		self.runListMutex.Unlock()
+		return &core.PipestanceNotFailedError{psid}
+	}
+	delete(self.failed, fqname)
+	self.pendingTable[fqname] = true
+	self.runListMutex.Unlock()
+
+	psPath, err := self.getPipestancePath(container, pipeline, psid)
+	if err != nil {
+		self.removePendingPipestance(fqname, true)
+		return err
+	}
+	versionPsPath, _ := os.Readlink(psPath)
+	hardPsPath, _ := filepath.EvalSymlinks(psPath)
+	for _, scratchPath := range self.scratchPaths {
+		if strings.HasPrefix(hardPsPath, scratchPath) {
+			core.LogInfo("pipeman", "Wiping pipestance: %s.", fqname)
+			go func() {
+				os.Remove(psPath)
+				os.Remove(versionPsPath)
+				os.RemoveAll(hardPsPath)
+
+				core.LogInfo("pipeman", "Finished wiping pipestance: %s.", fqname)
+				self.runListMutex.Lock()
+				self.writeCache()
+				delete(self.pendingTable, fqname)
+				self.runListMutex.Unlock()
+			}()
+			return nil
+		}
+	}
+
+	self.removePendingPipestance(fqname, true)
+	return &core.PipestanceWipeError{psid}
 }
 
 func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string) error {
