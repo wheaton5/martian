@@ -47,6 +47,17 @@ app.filter('momentFormat',  () -> (time, fmt) -> moment(time).format(fmt)
     "#{dpred.hours() + 24 * dpred.days()}h #{dpred.minutes()}m (#{eta})"
 )
 
+callApiWithConfirmation = ($scope, $url) ->
+    $scope.showbutton = false
+    fcid = window.prompt("Please type the flowcell ID to confirm")
+    if fcid == $scope.selrun.fcid
+        $http.post($url, { fcid: $scope.selrun.fcid }).success((data) ->
+            $scope.refreshRuns()
+            if data then window.alert(data.toString())
+        )
+    else
+        window.alert("Incorrect flowcell ID")
+
 app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.admin = admin
     $scope.urlprefix = if admin then '/admin' else ''
@@ -103,6 +114,12 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
             if data then window.alert(data.toString())
         )
 
+    $scope.wipePreprocess = () ->
+        callApiWithConfirmation($scope, '/api/wipe-preprocess')
+
+    $scope.killPreprocess = () ->
+        callApiWithConfirmation($scope,	'/api/kill-preprocess')
+
     $scope.archivePreprocess = () ->
         $scope.showbutton = false
         $http.post('/api/archive-preprocess', { fcid: $scope.selrun.fcid }).success((data) ->
@@ -124,6 +141,12 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
             if data then window.alert(data.toString())
         )
 
+    $scope.wipeSamples = () ->
+        callApiWithConfirmation($scope, '/api/wipe-fcid-samples')
+
+    $scope.killSamples = () ->
+        callApiWithConfirmation($scope, '/api/kill-fcid-samples')
+
     $scope.unfailSamples = () ->
         $scope.showbutton = false
         $http.post('/api/restart-fcid-samples', { fcid: $scope.selrun.fcid }).success((data) ->
@@ -136,6 +159,9 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
 
     $scope.someFail = () ->
         _.some($scope.samples, (s) -> s.psstate == 'failed')
+
+    $scope.someRunning = () ->
+        _.some($scope.samples, (s) -> s.psstate == 'running')
 
     $scope.getAutoInvokeClass = () ->
         if $scope.autoinvoke.state

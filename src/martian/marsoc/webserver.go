@@ -441,6 +441,24 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		return ""
 	})
 
+	// API: Wipe BCL_PROCESSOR_PD.
+	app.Post("/api/wipe-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		fcid := body.Fcid
+		if err := pman.WipePipestance(fcid, "BCL_PROCESSOR_PD", fcid); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
+	// API: Kill BCL_PROCESSOR_PD.
+	app.Post("/api/kill-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		fcid := body.Fcid
+		if err := pman.KillPipestance(fcid, "BCL_PROCESSOR_PD", fcid); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
 	// API: Invoke analysis.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
 		return InvokeAnalysis(body.Fcid, rt, lena, argshim, pman)
@@ -463,6 +481,36 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		errors := []string{}
 		for _, sample := range samples {
 			if err := pman.ArchivePipestanceHead(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+				errors = append(errors, err.Error())
+			}
+		}
+		return strings.Join(errors, "\n")
+	})
+
+	// API: Wipe pipestances.
+	app.Post("/api/wipe-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		// Get all the samples for this fcid.
+		samples := lena.getSamplesForFlowcell(body.Fcid)
+
+		// Wipe the samples.
+		errors := []string{}
+		for _, sample := range samples {
+			if err := pman.WipePipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+				errors = append(errors, err.Error())
+			}
+		}
+		return strings.Join(errors, "\n")
+	})
+
+	// API: Kill pipestances.
+	app.Post("/api/kill-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		// Get all the samples for this fcid.
+		samples := lena.getSamplesForFlowcell(body.Fcid)
+
+		// Kill the samples.
+		errors := []string{}
+		for _, sample := range samples {
+			if err := pman.KillPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
 				errors = append(errors, err.Error())
 			}
 		}

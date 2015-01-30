@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"martian/core"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -550,7 +551,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	suffix := 0
 	psDir := path.Join(self.writePath, container, pipeline, psid)
 	psInfos, _ := ioutil.ReadDir(psDir)
-	re := regexp.MustCompile(fmt.Sprintf("^%s.(\\d+)$", self.mroVersion))
+	re := regexp.MustCompile(fmt.Sprintf("^%s-(\\d+)$", self.mroVersion))
 	for _, psInfo := range psInfos {
 		if m := re.FindStringSubmatch(psInfo.Name()); m != nil {
 			psInfoSuffix, _ := strconv.Atoi(m[1])
@@ -601,6 +602,39 @@ func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline 
 	self.writeCache()
 	self.runListMutex.Unlock()
 	return os.Remove(headPath)
+}
+
+func (self *PipestanceManager) KillPipestance(container string, pipeline string, psid string) error {
+	fqname := makeFQName(pipeline, psid)
+
+	self.runListMutex.Lock()
+	pipestance, ok := self.runTable[fqname]
+	if !ok {
+		self.runListMutex.Unlock()
+		return &core.PipestanceNotRunningError{psid}
+	}
+	delete(self.runTable, fqname)
+	self.pendingTable[fqname] = true
+	self.runListMutex.Unlock()
+
+	cmd := exec.Command("qdel", fmt.Sprintf("'%s*'", fqname))
+	if output, err := cmd.CombinedOutput(); err != nil {
+		core.LogError(err, "pipeman", "qdel for pipestance '%s' failed: %s", fqname, output)
+		self.runListMutex.Lock()
+		self.runTable[fqname] = pipestance
+		delete(self.pendingTable, fqname)
+		self.runListMutex.Unlock()
+		return err
+	}
+	pipestance.Kill()
+	pipestance.Immortalize()
+
+	self.runListMutex.Lock()
+	self.failed[fqname] = true
+	self.writeCache()
+	delete(self.pendingTable, fqname)
+	self.runListMutex.Unlock()
+	return nil
 }
 
 func (self *PipestanceManager) WipePipestance(container string, pipeline string, psid string) error {

@@ -1,5 +1,5 @@
 (function() {
-  var actualSeconds, app, predictedSeconds;
+  var actualSeconds, app, callApiWithConfirmation, predictedSeconds;
 
   actualSeconds = function(run) {
     var d;
@@ -76,6 +76,24 @@
     };
   });
 
+  callApiWithConfirmation = function($scope, $url) {
+    var fcid;
+    $scope.showbutton = false;
+    fcid = window.prompt("Please type the flowcell ID to confirm");
+    if (fcid === $scope.selrun.fcid) {
+      return $http.post($url, {
+        fcid: $scope.selrun.fcid
+      }).success(function(data) {
+        $scope.refreshRuns();
+        if (data) {
+          return window.alert(data.toString());
+        }
+      });
+    } else {
+      return window.alert("Incorrect flowcell ID");
+    }
+  };
+
   app.controller('MartianRunCtrl', function($scope, $http, $interval) {
     $scope.admin = admin;
     $scope.urlprefix = admin ? '/admin' : '';
@@ -151,6 +169,12 @@
         }
       });
     };
+    $scope.wipePreprocess = function() {
+      return callApiWithConfirmation($scope, '/api/wipe-preprocess');
+    };
+    $scope.killPreprocess = function() {
+      return callApiWithConfirmation($scope, '/api/kill-preprocess');
+    };
     $scope.archivePreprocess = function() {
       $scope.showbutton = false;
       return $http.post('/api/archive-preprocess', {
@@ -184,6 +208,12 @@
         }
       });
     };
+    $scope.wipeSamples = function() {
+      return callApiWithConfirmation($scope, '/api/wipe-fcid-samples');
+    };
+    $scope.killSamples = function() {
+      return callApiWithConfirmation($scope, '/api/kill-fcid-samples');
+    };
     $scope.unfailSamples = function() {
       $scope.showbutton = false;
       return $http.post('/api/restart-fcid-samples', {
@@ -203,6 +233,11 @@
     $scope.someFail = function() {
       return _.some($scope.samples, function(s) {
         return s.psstate === 'failed';
+      });
+    };
+    $scope.someRunning = function() {
+      return _.some($scope.samples, function(s) {
+        return s.psstate === 'running';
       });
     };
     $scope.getAutoInvokeClass = function() {
