@@ -13,6 +13,7 @@ import (
 	"martian/core"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -630,11 +631,16 @@ func (self *PipestanceManager) KillPipestance(container string, pipeline string,
 	cmd := exec.Command("qdel", fmt.Sprintf("%s*", fqname))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		core.LogError(err, "pipeman", "qdel for pipestance '%s' failed: %s", fqname, output)
-		self.runListMutex.Lock()
-		self.runTable[fqname] = pipestance
-		delete(self.pendingTable, fqname)
-		self.runListMutex.Unlock()
-		return err
+		// If qdel failed because jobs didn't exist, we ignore the error since local stages
+		// could be running.
+		user, _ := user.Current()
+		if !strings.Contains(string(output), fmt.Sprintf("The job %s* of user(s) %s does not exist", fqname, user.Username)) {
+			self.runListMutex.Lock()
+			self.runTable[fqname] = pipestance
+			delete(self.pendingTable, fqname)
+			self.runListMutex.Unlock()
+			return err
+		}
 	}
 	pipestance.Kill()
 	pipestance.Immortalize()
