@@ -559,7 +559,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 			}
 		}
 	}
-	mroVersion := fmt.Sprintf("%s-%d", self.mroVersion)
+	mroVersion := fmt.Sprintf("%s-%d", self.mroVersion, suffix)
 	psPath := path.Join(psDir, mroVersion)
 
 	scratchPsPath := path.Join(scratchPath, fmt.Sprintf("%s.%s.%s.%s", container, pipeline, psid, mroVersion))
@@ -627,7 +627,7 @@ func (self *PipestanceManager) KillPipestance(container string, pipeline string,
 	self.pendingTable[fqname] = true
 	self.runListMutex.Unlock()
 
-	cmd := exec.Command("qdel", fmt.Sprintf("'%s*'", fqname))
+	cmd := exec.Command("qdel", fmt.Sprintf("%s*", fqname))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		core.LogError(err, "pipeman", "qdel for pipestance '%s' failed: %s", fqname, output)
 		self.runListMutex.Lock()

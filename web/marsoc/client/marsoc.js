@@ -76,18 +76,18 @@
     };
   });
 
-  callApiWithConfirmation = function($scope, $url) {
+  callApiWithConfirmation = function($scope, $http, $url) {
     var fcid;
     $scope.showbutton = false;
     fcid = window.prompt("Please type the flowcell ID to confirm");
     if (fcid === $scope.selrun.fcid) {
-      return callApi($scope, $url);
+      return callApi($scope, $http, $url);
     } else {
       return window.alert("Incorrect flowcell ID");
     }
   };
 
-  callApi = function($scope, $url) {
+  callApi = function($scope, $http, $url) {
     $scope.showbutton = false;
     return $http.post($url, {
       fcid: $scope.selrun.fcid
@@ -164,31 +164,31 @@
       });
     };
     $scope.invokePreprocess = function() {
-      return callApi($scope, '/api/invoke-preprocess');
+      return callApi($scope, $http, '/api/invoke-preprocess');
     };
     $scope.wipePreprocess = function() {
-      return callApiWithConfirmation($scope, '/api/wipe-preprocess');
+      return callApiWithConfirmation($scope, $http, '/api/wipe-preprocess');
     };
     $scope.killPreprocess = function() {
-      return callApiWithConfirmation($scope, '/api/kill-preprocess');
+      return callApiWithConfirmation($scope, $http, '/api/kill-preprocess');
     };
     $scope.archivePreprocess = function() {
-      return callApi($scope, '/api/archive-preprocess');
+      return callApi($scope, $http, '/api/archive-preprocess');
     };
     $scope.invokeAnalysis = function() {
-      return callApi($scope, '/api/invoke-analysis');
+      return callApi($scope, $http, '/api/invoke-analysis');
     };
     $scope.archiveSamples = function() {
-      return callApi($scope, '/api/archive-fcid-samples');
+      return callApi($scope, $http, '/api/archive-fcid-samples');
     };
     $scope.wipeSamples = function() {
-      return callApiWithConfirmation($scope, '/api/wipe-fcid-samples');
+      return callApiWithConfirmation($scope, $http, '/api/wipe-fcid-samples');
     };
     $scope.killSamples = function() {
-      return callApiWithConfirmation($scope, '/api/kill-fcid-samples');
+      return callApiWithConfirmation($scope, $http, '/api/kill-fcid-samples');
     };
     $scope.unfailSamples = function() {
-      return callApi($scope, '/api/restart-fcid-samples');
+      return callApi($scope, $http, '/api/restart-fcid-samples');
     };
     $scope.allDone = function() {
       return _.every($scope.samples, function(s) {

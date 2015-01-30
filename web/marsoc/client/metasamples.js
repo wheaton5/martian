@@ -3,18 +3,18 @@
 
   app = angular.module('app', ['ui.bootstrap']);
 
-  callApiWithConfirmation = function($scope, $url) {
+  callApiWithConfirmation = function($scope, $http, $url) {
     var id, _ref;
     $scope.showbutton = false;
     id = window.prompt("Please type the sample ID to confirm");
     if (id === ((_ref = scope.selsample) != null ? _ref.id.toString() : void 0)) {
-      return callApi($scope, $url);
+      return callApi($scope, $http, $url);
     } else {
       return window.alert("Incorrect sample id");
     }
   };
 
-  callApi = function($scope, $url) {
+  callApi = function($scope, $http, $url) {
     var _ref;
     $scope.showbutton = false;
     return $http.post($url, {
@@ -58,19 +58,19 @@
       });
     };
     $scope.invokeAnalysis = function() {
-      return callApi($scope, '/api/invoke-metasample-analysis');
+      return callApi($scope, $http, '/api/invoke-metasample-analysis');
     };
     $scope.archiveSample = function() {
-      return callApi($scope, '/api/archive-metasample');
+      return callApi($scope, $http, '/api/archive-metasample');
     };
     $scope.unfailSample = function() {
-      return callApi($scope, '/api/restart-metasample-analysis');
+      return callApi($scope, $http, '/api/restart-metasample-analysis');
     };
     $scope.wipeSample = function() {
-      return callApiWithConfirmation($scope, '/api/wipe-metasample');
+      return callApiWithConfirmation($scope, $http, '/api/wipe-metasample');
     };
     $scope.killSample = function() {
-      return callApiWithConfirmation($scope, '/api/kill-metasample');
+      return callApiWithConfirmation($scope, $http, '/api/kill-metasample');
     };
     if (admin) {
       return $interval((function() {

@@ -47,15 +47,15 @@ app.filter('momentFormat',  () -> (time, fmt) -> moment(time).format(fmt)
     "#{dpred.hours() + 24 * dpred.days()}h #{dpred.minutes()}m (#{eta})"
 )
 
-callApiWithConfirmation = ($scope, $url) ->
+callApiWithConfirmation = ($scope, $http, $url) ->
     $scope.showbutton = false
     fcid = window.prompt("Please type the flowcell ID to confirm")
     if fcid == $scope.selrun.fcid
-        callApi($scope, $url)
+        callApi($scope, $http, $url)
     else
         window.alert("Incorrect flowcell ID")
 
-callApi = ($scope, $url) ->
+callApi = ($scope, $http, $url) ->
     $scope.showbutton = false
     $http.post($url, { fcid: $scope.selrun.fcid }).success((data) ->
         $scope.refreshRuns()
@@ -112,31 +112,31 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
         )
 
     $scope.invokePreprocess = () ->
-        callApi($scope, '/api/invoke-preprocess')
+        callApi($scope, $http, '/api/invoke-preprocess')
 
     $scope.wipePreprocess = () ->
-        callApiWithConfirmation($scope, '/api/wipe-preprocess')
+        callApiWithConfirmation($scope, $http, '/api/wipe-preprocess')
 
     $scope.killPreprocess = () ->
-        callApiWithConfirmation($scope, '/api/kill-preprocess')
+        callApiWithConfirmation($scope, $http, '/api/kill-preprocess')
 
     $scope.archivePreprocess = () ->
-        callApi($scope, '/api/archive-preprocess')
+        callApi($scope, $http, '/api/archive-preprocess')
 
     $scope.invokeAnalysis = () ->
-        callApi($scope, '/api/invoke-analysis')
+        callApi($scope, $http, '/api/invoke-analysis')
 
     $scope.archiveSamples = () ->
-        callApi($scope, '/api/archive-fcid-samples')
+        callApi($scope, $http, '/api/archive-fcid-samples')
 
     $scope.wipeSamples = () ->
-        callApiWithConfirmation($scope, '/api/wipe-fcid-samples')
+        callApiWithConfirmation($scope, $http, '/api/wipe-fcid-samples')
 
     $scope.killSamples = () ->
-        callApiWithConfirmation($scope, '/api/kill-fcid-samples')
+        callApiWithConfirmation($scope, $http, '/api/kill-fcid-samples')
 
     $scope.unfailSamples = () ->
-        callApi($scope, '/api/restart-fcid-samples')
+        callApi($scope, $http, '/api/restart-fcid-samples')
 
     $scope.allDone = () ->
         _.every($scope.samples, (s) -> s.psstate == 'complete')
