@@ -6,6 +6,21 @@
 
 app = angular.module('app', ['ui.bootstrap'])
 
+callApiWithConfirmation = ($scope, $url) ->
+    $scope.showbutton = false
+    id = window.prompt("Please type the sample ID to confirm")
+    if id == scope.selsample?.id.toString()
+        callApi($scope, $url)
+    else
+        window.alert("Incorrect sample id")
+
+callApi = ($scope, $url) ->
+    $scope.showbutton = false
+    $http.post($url, { id: $scope.selsample?.id.toString() }).success((data) ->
+        $scope.refreshSamples()
+        if data then window.alert(data.toString())
+    )
+
 app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.admin = admin
     $scope.urlprefix = if admin then '/admin' else ''
@@ -32,25 +47,19 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
         )
 
     $scope.invokeAnalysis = () ->
-        $scope.showbutton = false
-        $http.post('/api/invoke-metasample-analysis', { id: $scope.selsample?.id.toString() }).success((data) ->
-            $scope.refreshSamples()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, '/api/invoke-metasample-analysis')
 
     $scope.archiveSample = () ->
-        $scope.showbutton = false
-        $http.post('/api/archive-metasample', { id: $scope.selsample?.id.toString() }).success((data) ->
-            $scope.refreshSamples()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, '/api/archive-metasample')
 
     $scope.unfailSample = () ->
-        $scope.showbutton = false
-        $http.post('/api/restart-metasample-analysis', { id: $scope.selsample?.id.toString() }).success((data) ->
-            $scope.refreshSamples()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, '/api/restart-metasample-analysis')
+
+    $scope.wipeSample = () ->
+        callApiWithConfirmation($scope, '/api/wipe-metasample')
+
+    $scope.killSample = () ->
+        callApiWithConfirmation($scope, '/api/kill-metasample')
 
     # Only admin pages get auto-refresh.
     if admin then $interval((() -> $scope.refreshSamples()), 5000)

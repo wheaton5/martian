@@ -360,6 +360,32 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		return ""
 	})
 
+	// API: Wipe metasample pipestance.
+	app.Post("/api/wipe-metasample", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
+		sample := lena.getSampleWithId(body.Id)
+		if sample == nil {
+			return fmt.Sprintf("Sample '%s' not found.", body.Id)
+		}
+
+		if err := pman.WipePipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
+	// API: Kill metasample pipestance.
+	app.Post("/api/kill-metasample", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
+		sample := lena.getSampleWithId(body.Id)
+		if sample == nil {
+			return fmt.Sprintf("Sample '%s' not found.", body.Id)
+		}
+
+		if err := pman.KillPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
 	//=========================================================================
 	// Pipestance graph UI.
 	//=========================================================================

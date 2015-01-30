@@ -51,12 +51,16 @@ callApiWithConfirmation = ($scope, $url) ->
     $scope.showbutton = false
     fcid = window.prompt("Please type the flowcell ID to confirm")
     if fcid == $scope.selrun.fcid
-        $http.post($url, { fcid: $scope.selrun.fcid }).success((data) ->
-            $scope.refreshRuns()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, $url)
     else
         window.alert("Incorrect flowcell ID")
+
+callApi = ($scope, $url) ->
+    $scope.showbutton = false
+    $http.post($url, { fcid: $scope.selrun.fcid }).success((data) ->
+        $scope.refreshRuns()
+        if data then window.alert(data.toString())
+    )
 
 app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.admin = admin
@@ -108,38 +112,22 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
         )
 
     $scope.invokePreprocess = () ->
-        $scope.showbutton = false
-        $http.post('/api/invoke-preprocess', { fcid: $scope.selrun.fcid }).success((data) ->
-            $scope.refreshRuns()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, '/api/invoke-preprocess')
 
     $scope.wipePreprocess = () ->
         callApiWithConfirmation($scope, '/api/wipe-preprocess')
 
     $scope.killPreprocess = () ->
-        callApiWithConfirmation($scope,	'/api/kill-preprocess')
+        callApiWithConfirmation($scope, '/api/kill-preprocess')
 
     $scope.archivePreprocess = () ->
-        $scope.showbutton = false
-        $http.post('/api/archive-preprocess', { fcid: $scope.selrun.fcid }).success((data) ->
-            $scope.refreshRuns()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, '/api/archive-preprocess')
 
     $scope.invokeAnalysis = () ->
-        $scope.showbutton = false
-        $http.post('/api/invoke-analysis', { fcid: $scope.selrun.fcid }).success((data) ->
-            $scope.refreshRuns()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, '/api/invoke-analysis')
 
     $scope.archiveSamples = () ->
-        $scope.showbutton = false
-        $http.post('/api/archive-fcid-samples', { fcid: $scope.selrun.fcid }).success((data) ->
-            $scope.refreshRuns()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, '/api/archive-fcid-samples')
 
     $scope.wipeSamples = () ->
         callApiWithConfirmation($scope, '/api/wipe-fcid-samples')
@@ -148,11 +136,7 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
         callApiWithConfirmation($scope, '/api/kill-fcid-samples')
 
     $scope.unfailSamples = () ->
-        $scope.showbutton = false
-        $http.post('/api/restart-fcid-samples', { fcid: $scope.selrun.fcid }).success((data) ->
-            $scope.refreshRuns()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, '/api/restart-fcid-samples')
 
     $scope.allDone = () ->
         _.every($scope.samples, (s) -> s.psstate == 'complete')

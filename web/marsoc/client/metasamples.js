@@ -1,7 +1,31 @@
 (function() {
-  var app;
+  var app, callApi, callApiWithConfirmation;
 
   app = angular.module('app', ['ui.bootstrap']);
+
+  callApiWithConfirmation = function($scope, $url) {
+    var id, _ref;
+    $scope.showbutton = false;
+    id = window.prompt("Please type the sample ID to confirm");
+    if (id === ((_ref = scope.selsample) != null ? _ref.id.toString() : void 0)) {
+      return callApi($scope, $url);
+    } else {
+      return window.alert("Incorrect sample id");
+    }
+  };
+
+  callApi = function($scope, $url) {
+    var _ref;
+    $scope.showbutton = false;
+    return $http.post($url, {
+      id: (_ref = $scope.selsample) != null ? _ref.id.toString() : void 0
+    }).success(function(data) {
+      $scope.refreshSamples();
+      if (data) {
+        return window.alert(data.toString());
+      }
+    });
+  };
 
   app.controller('MartianRunCtrl', function($scope, $http, $interval) {
     $scope.admin = admin;
@@ -34,40 +58,19 @@
       });
     };
     $scope.invokeAnalysis = function() {
-      var _ref;
-      $scope.showbutton = false;
-      return $http.post('/api/invoke-metasample-analysis', {
-        id: (_ref = $scope.selsample) != null ? _ref.id.toString() : void 0
-      }).success(function(data) {
-        $scope.refreshSamples();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, '/api/invoke-metasample-analysis');
     };
     $scope.archiveSample = function() {
-      var _ref;
-      $scope.showbutton = false;
-      return $http.post('/api/archive-metasample', {
-        id: (_ref = $scope.selsample) != null ? _ref.id.toString() : void 0
-      }).success(function(data) {
-        $scope.refreshSamples();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, '/api/archive-metasample');
     };
     $scope.unfailSample = function() {
-      var _ref;
-      $scope.showbutton = false;
-      return $http.post('/api/restart-metasample-analysis', {
-        id: (_ref = $scope.selsample) != null ? _ref.id.toString() : void 0
-      }).success(function(data) {
-        $scope.refreshSamples();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, '/api/restart-metasample-analysis');
+    };
+    $scope.wipeSample = function() {
+      return callApiWithConfirmation($scope, '/api/wipe-metasample');
+    };
+    $scope.killSample = function() {
+      return callApiWithConfirmation($scope, '/api/kill-metasample');
     };
     if (admin) {
       return $interval((function() {

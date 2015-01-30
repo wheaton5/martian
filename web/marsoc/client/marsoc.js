@@ -1,5 +1,5 @@
 (function() {
-  var actualSeconds, app, callApiWithConfirmation, predictedSeconds;
+  var actualSeconds, app, callApi, callApiWithConfirmation, predictedSeconds;
 
   actualSeconds = function(run) {
     var d;
@@ -81,17 +81,22 @@
     $scope.showbutton = false;
     fcid = window.prompt("Please type the flowcell ID to confirm");
     if (fcid === $scope.selrun.fcid) {
-      return $http.post($url, {
-        fcid: $scope.selrun.fcid
-      }).success(function(data) {
-        $scope.refreshRuns();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, $url);
     } else {
       return window.alert("Incorrect flowcell ID");
     }
+  };
+
+  callApi = function($scope, $url) {
+    $scope.showbutton = false;
+    return $http.post($url, {
+      fcid: $scope.selrun.fcid
+    }).success(function(data) {
+      $scope.refreshRuns();
+      if (data) {
+        return window.alert(data.toString());
+      }
+    });
   };
 
   app.controller('MartianRunCtrl', function($scope, $http, $interval) {
@@ -159,15 +164,7 @@
       });
     };
     $scope.invokePreprocess = function() {
-      $scope.showbutton = false;
-      return $http.post('/api/invoke-preprocess', {
-        fcid: $scope.selrun.fcid
-      }).success(function(data) {
-        $scope.refreshRuns();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, '/api/invoke-preprocess');
     };
     $scope.wipePreprocess = function() {
       return callApiWithConfirmation($scope, '/api/wipe-preprocess');
@@ -176,37 +173,13 @@
       return callApiWithConfirmation($scope, '/api/kill-preprocess');
     };
     $scope.archivePreprocess = function() {
-      $scope.showbutton = false;
-      return $http.post('/api/archive-preprocess', {
-        fcid: $scope.selrun.fcid
-      }).success(function(data) {
-        $scope.refreshRuns();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, '/api/archive-preprocess');
     };
     $scope.invokeAnalysis = function() {
-      $scope.showbutton = false;
-      return $http.post('/api/invoke-analysis', {
-        fcid: $scope.selrun.fcid
-      }).success(function(data) {
-        $scope.refreshRuns();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, '/api/invoke-analysis');
     };
     $scope.archiveSamples = function() {
-      $scope.showbutton = false;
-      return $http.post('/api/archive-fcid-samples', {
-        fcid: $scope.selrun.fcid
-      }).success(function(data) {
-        $scope.refreshRuns();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, '/api/archive-fcid-samples');
     };
     $scope.wipeSamples = function() {
       return callApiWithConfirmation($scope, '/api/wipe-fcid-samples');
@@ -215,15 +188,7 @@
       return callApiWithConfirmation($scope, '/api/kill-fcid-samples');
     };
     $scope.unfailSamples = function() {
-      $scope.showbutton = false;
-      return $http.post('/api/restart-fcid-samples', {
-        fcid: $scope.selrun.fcid
-      }).success(function(data) {
-        $scope.refreshRuns();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, '/api/restart-fcid-samples');
     };
     $scope.allDone = function() {
       return _.every($scope.samples, function(s) {
