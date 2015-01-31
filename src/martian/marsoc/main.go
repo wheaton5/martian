@@ -147,8 +147,6 @@ Usage:
     marsoc -h | --help | --version
 
 Options:
-    --maxmem=<num>  Set max GB each job may use at one time.
-                      Defaults to 4 GB.
     --autoinvoke    Turns on automatic pipestance invocation.
     --debug         Enable debug printing for argshim.
     -h --help       Show this message.
@@ -181,22 +179,14 @@ Options:
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
-	// Verify SGE job manager configuration
-	core.VerifyJobManager("sge")
-
 	// Do not log the value of these environment variables.
 	envPrivate := core.EnvRequire([][]string{
 		{"LENA_AUTH_TOKEN", "token"},
 	}, false)
 
 	// Parse options.
-	reqMemPerJob := -1
-	if value := opts["--maxmem"]; value != nil {
-		if value, err := strconv.Atoi(value.(string)); err == nil {
-			reqMemPerJob = value
-		}
-	}
 	autoInvoke := opts["--autoinvoke"].(bool)
+	debug := opts["--debug"].(bool)
 
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
@@ -216,7 +206,6 @@ Options:
 	stepSecs := 5
 	mroVersion, _ := core.GetGitTag(mroPath)
 	mroBranch, _ := core.GetGitBranch(mroPath)
-	debug := opts["--debug"].(bool)
 
 	//=========================================================================
 	// Setup Martian Runtime with pipelines path.
@@ -228,7 +217,7 @@ Options:
 	stackVars := false
 	checkSrcPath := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, mroPath, martianVersion, mroVersion,
-		-1, -1, reqMemPerCore, reqMemPerJob, profile, stackVars, debug, false)
+		-1, -1, reqMemPerCore, profile, stackVars, debug, false)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
