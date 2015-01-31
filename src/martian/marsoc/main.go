@@ -196,7 +196,7 @@ Options:
 			reqMemPerJob = value
 		}
 	}
-	autoInvoke := opts["--auto-invoke"].(bool)
+	autoInvoke := opts["--autoinvoke"].(bool)
 
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
