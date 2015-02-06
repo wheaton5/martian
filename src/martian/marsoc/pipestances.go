@@ -319,13 +319,18 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 	// Calculate permanent storage version path
 	headPath := self.makePipestancePath(container, pname, psid)
 	aggregatePsPath, _ := os.Readlink(headPath)
-	psPath, _ := os.Readlink(aggregatePsPath)
-	// If pipestance path has scratch prefix, we know the permanent storage version path is on the aggregate
-	for _, scratchPath := range self.scratchPaths {
-		if strings.HasPrefix(psPath, scratchPath) {
-			psPath = aggregatePsPath
-			break
+	psPath, err := os.Readlink(aggregatePsPath)
+	if err == nil {
+		// If pipestance path has scratch prefix, we know the permanent storage version path is on the aggregate
+		for _, scratchPath := range self.scratchPaths {
+			if strings.HasPrefix(psPath, scratchPath) {
+				psPath = aggregatePsPath
+				break
+			}
 		}
+	} else {
+		// Aggregate pipestance path is not a symlink so the pipestance has already been copied
+		return
 	}
 
 	if fileinfo, _ := os.Lstat(psPath); fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
