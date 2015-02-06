@@ -133,6 +133,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 }
 
 func main() {
+	core.SetupSignalHandlers()
 	core.LogInfo("*", "MARSOC")
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
@@ -143,19 +144,26 @@ func main() {
 	doc := `MARSOC: Martian SeqOps Command
 
 Usage: 
-    marsoc [--debug]
+    marsoc [options]
     marsoc -h | --help | --version
 
 Options:
-    --debug    Enable debug printing for argshim.
-    -h --help  Show this message.
-    --version  Show version.`
+    --maxmem=<num>  Set max GB each job may use at one time.
+                      Defaults to 4 GB.
+    --autoinvoke    Turns on automatic pipestance invocation.
+    --debug         Enable debug printing for argshim.
+    -h --help       Show this message.
+    --version       Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
-	_ = opts
 	core.LogInfo("*", "MARSOC")
 	core.LogInfo("version", martianVersion)
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
+
+	if martianFlags := os.Getenv("MROFLAGS"); len(martianFlags) > 0 {
+		martianOptions := strings.Split(martianFlags, " ")
+		core.ParseMroFlags(opts, doc, martianOptions, []string{})
+	}
 
 	// Required Martian environment variables.
 	env := core.EnvRequire([][]string{
@@ -171,7 +179,6 @@ Options:
 		{"MARSOC_EMAIL_HOST", "smtp.server.local"},
 		{"MARSOC_EMAIL_SENDER", "email@address.com"},
 		{"MARSOC_EMAIL_RECIPIENT", "email@address.com"},
-		{"MARSOC_AUTO_INVOKE", "true/false"},
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
@@ -182,6 +189,15 @@ Options:
 	envPrivate := core.EnvRequire([][]string{
 		{"LENA_AUTH_TOKEN", "token"},
 	}, false)
+
+	// Parse options.
+	reqMemPerJob := -1
+	if value := opts["--maxmem"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			reqMemPerJob = value
+		}
+	}
+	autoInvoke := opts["--autoinvoke"].(bool)
 
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
@@ -198,10 +214,6 @@ Options:
 	emailHost := env["MARSOC_EMAIL_HOST"]
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
-	autoInvoke := true
-	if value, err := strconv.ParseBool(env["MARSOC_AUTO_INVOKE"]); err == nil {
-		autoInvoke = value
-	}
 	stepSecs := 5
 	mroVersion, _ := core.GetGitTag(mroPath)
 	mroBranch, _ := core.GetGitBranch(mroPath)
@@ -217,7 +229,7 @@ Options:
 	stackVars := false
 	checkSrcPath := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, mroPath, martianVersion, mroVersion,
-		-1, -1, reqMemPerCore, profile, stackVars, debug, false)
+		-1, -1, reqMemPerCore, reqMemPerJob, profile, stackVars, debug, false)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)

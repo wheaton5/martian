@@ -762,16 +762,16 @@ func (self *PipestanceManager) GetPipestanceState(container string, pipeline str
 	return state, ok
 }
 
-func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string) (interface{}, bool) {
+func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string, name string) (interface{}, bool) {
 	psPath := self.makePipestancePath(container, pipeline, psid)
-	if ser, ok := self.rt.GetSerialization(psPath); ok {
+	if ser, ok := self.rt.GetSerialization(psPath, name); ok {
 		return ser, true
 	}
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
 		return nil, false
 	}
-	return pipestance.Serialize(), true
+	return pipestance.Serialize(name), true
 }
 
 func (self *PipestanceManager) GetPipestance(container string, pipeline string, psid string) (*core.Pipestance, bool) {
