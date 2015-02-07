@@ -37,7 +37,8 @@
     });
     $scope.refreshSamples = function() {
       return $http.get('/api/get-metasamples').success(function(data) {
-        return $scope.samples = data;
+        $scope.samples = data;
+        return $scope.showbutton = true;
       });
     };
     $scope.selectSample = function(sample) {
@@ -61,7 +62,7 @@
       return callApi($scope, $http, '/api/invoke-metasample-analysis');
     };
     $scope.archiveSample = function() {
-      return callApi($scope, $http, '/api/archive-metasample');
+      return callApiWithConfirmation($scope, $http, '/api/archive-metasample');
     };
     $scope.unfailSample = function() {
       return callApi($scope, $http, '/api/restart-metasample-analysis');

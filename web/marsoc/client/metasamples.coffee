@@ -35,6 +35,7 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.refreshSamples = () ->
         $http.get('/api/get-metasamples').success((data) ->
             $scope.samples = data
+            $scope.showbutton = true
         )
 
     $scope.selectSample = (sample) ->
@@ -50,7 +51,7 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
         callApi($scope, $http, '/api/invoke-metasample-analysis')
 
     $scope.archiveSample = () ->
-        callApi($scope, $http, '/api/archive-metasample')
+        callApiWithConfirmation($scope, $http, '/api/archive-metasample')
 
     $scope.unfailSample = () ->
         callApi($scope, $http, '/api/restart-metasample-analysis')

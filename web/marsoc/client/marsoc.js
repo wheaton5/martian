@@ -173,13 +173,13 @@
       return callApiWithConfirmation($scope, $http, '/api/kill-preprocess');
     };
     $scope.archivePreprocess = function() {
-      return callApi($scope, $http, '/api/archive-preprocess');
+      return callApiWithConfirmation($scope, $http, '/api/archive-preprocess');
     };
     $scope.invokeAnalysis = function() {
       return callApi($scope, $http, '/api/invoke-analysis');
     };
     $scope.archiveSamples = function() {
-      return callApi($scope, $http, '/api/archive-fcid-samples');
+      return callApiWithConfirmation($scope, $http, '/api/archive-fcid-samples');
     };
     $scope.wipeSamples = function() {
       return callApiWithConfirmation($scope, $http, '/api/wipe-fcid-samples');

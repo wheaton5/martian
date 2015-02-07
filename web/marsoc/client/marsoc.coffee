@@ -121,13 +121,13 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
         callApiWithConfirmation($scope, $http, '/api/kill-preprocess')
 
     $scope.archivePreprocess = () ->
-        callApi($scope, $http, '/api/archive-preprocess')
+        callApiWithConfirmation($scope, $http, '/api/archive-preprocess')
 
     $scope.invokeAnalysis = () ->
         callApi($scope, $http, '/api/invoke-analysis')
 
     $scope.archiveSamples = () ->
-        callApi($scope, $http, '/api/archive-fcid-samples')
+        callApiWithConfirmation($scope, $http, '/api/archive-fcid-samples')
 
     $scope.wipeSamples = () ->
         callApiWithConfirmation($scope, $http, '/api/wipe-fcid-samples')
