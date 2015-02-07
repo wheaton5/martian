@@ -401,11 +401,11 @@ func (self *PipestanceManager) processRunList() {
 				// cache as completed, and flush the cache.
 				core.LogInfo("pipeman", "Complete and removing from runList: %s.", fqname)
 
+				// Unlock.
+				pipestance.Unlock()
+
 				// Post processing.
 				pipestance.PostProcess()
-
-				// Immortalization.
-				pipestance.Immortalize()
 
 				// VDR Kill
 				core.LogInfo("pipeman", "Starting VDR kill for %s.", fqname)
@@ -444,8 +444,8 @@ func (self *PipestanceManager) processRunList() {
 				// cache as failed, and flush the cache.
 				core.LogInfo("pipeman", "Failed and removing from runList: %s.", fqname)
 
-				// Immortalization.
-				pipestance.Immortalize()
+				// Unlock.
+				pipestance.Unlock()
 
 				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
@@ -612,7 +612,6 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 		self.removePendingPipestance(fqname, true)
 		return err
 	}
-	pipestance.Unimmortalize()
 
 	core.LogInfo("pipeman", "Finished unfailing and pushing to runList: %s.", fqname)
 	self.runListMutex.Lock()
