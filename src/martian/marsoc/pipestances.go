@@ -649,6 +649,7 @@ func (self *PipestanceManager) KillPipestance(container string, pipeline string,
 		}
 	}
 	pipestance.Kill()
+	pipestance.Unlock()
 
 	self.runListMutex.Lock()
 	self.failed[fqname] = true
