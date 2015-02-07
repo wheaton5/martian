@@ -402,10 +402,22 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		psinfo["pname"] = pname
 		psinfo["psid"] = psid
 		psinfo["invokesrc"], _ = pman.GetPipestanceInvokeSrc(container, pname, psid)
-		ser, _ := pman.GetPipestanceSerialization(container, pname, psid)
+		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
 		state["nodes"] = ser
 		state["info"] = psinfo
 		js := makeJSON(state)
+		return js
+	})
+
+	// API: Get pipestance performance stats.
+	app.Get("/api/get-perf/:container/:pname/:psid", func(p martini.Params) string {
+		container := p["container"]
+		pname := p["pname"]
+		psid := p["psid"]
+		perf := map[string]interface{}{}
+		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "perf")
+		perf["nodes"] = ser
+		js := makeJSON(perf)
 		return js
 	})
 

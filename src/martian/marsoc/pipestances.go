@@ -401,11 +401,11 @@ func (self *PipestanceManager) processRunList() {
 				// cache as completed, and flush the cache.
 				core.LogInfo("pipeman", "Complete and removing from runList: %s.", fqname)
 
+				// Unlock.
+				pipestance.Unlock()
+
 				// Post processing.
 				pipestance.PostProcess()
-
-				// Immortalization.
-				pipestance.Immortalize()
 
 				// VDR Kill
 				core.LogInfo("pipeman", "Starting VDR kill for %s.", fqname)
@@ -444,8 +444,8 @@ func (self *PipestanceManager) processRunList() {
 				// cache as failed, and flush the cache.
 				core.LogInfo("pipeman", "Failed and removing from runList: %s.", fqname)
 
-				// Immortalization.
-				pipestance.Immortalize()
+				// Unlock.
+				pipestance.Unlock()
 
 				self.runListMutex.Lock()
 				delete(self.runTable, fqname)
@@ -612,7 +612,6 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 		self.removePendingPipestance(fqname, true)
 		return err
 	}
-	pipestance.Unimmortalize()
 
 	core.LogInfo("pipeman", "Finished unfailing and pushing to runList: %s.", fqname)
 	self.runListMutex.Lock()
@@ -651,19 +650,19 @@ func (self *PipestanceManager) GetPipestanceState(container string, pipeline str
 	return state, ok
 }
 
-func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string) (interface{}, bool) {
+func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string, name string) (interface{}, bool) {
 	psPath, err := self.getPipestancePath(container, pipeline, psid)
 	if err != nil {
 		return nil, false
 	}
-	if ser, ok := self.rt.GetSerialization(psPath); ok {
+	if ser, ok := self.rt.GetSerialization(psPath, name); ok {
 		return ser, true
 	}
 	pipestance, ok := self.GetPipestance(container, pipeline, psid)
 	if !ok {
 		return nil, false
 	}
-	return pipestance.Serialize(), true
+	return pipestance.Serialize(name), true
 }
 
 func (self *PipestanceManager) GetPipestance(container string, pipeline string, psid string) (*core.Pipestance, bool) {

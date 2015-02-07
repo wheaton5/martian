@@ -90,6 +90,11 @@ type MetasamplePrereq struct {
 	State string `json:"state"`
 }
 
+type Pipeline struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 type Sample struct {
 	Id                       int          `json:"id"`
 	Description              string       `json:"description"`
@@ -103,6 +108,7 @@ type Sample struct {
 	Template_input_mass      float32      `json:"template_input_mass"`
 	User                     *User        `json:"user"`
 	Cell_line                *CellLine    `json:"cell_line"`
+	Pipeline                 *Pipeline    `json:"pipeline"`
 	Exclude_non_bc_reads     bool         `json:"exclude_non_bc_reads"`
 	Sample_defs              []*SampleDef `json:"sample_defs"`
 	Pname                    string       `json:"pname"`

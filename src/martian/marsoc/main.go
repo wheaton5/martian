@@ -133,6 +133,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 }
 
 func main() {
+	core.SetupSignalHandlers()
 	core.LogInfo("*", "MARSOC")
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
