@@ -104,7 +104,10 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 }
 
 func (self *PipestanceManager) CountRunningPipestances() int {
-	return len(self.runList)
+	self.runListMutex.Lock()
+	count := len(self.runList)
+	self.runListMutex.Unlock()
+	return count
 }
 
 func (self *PipestanceManager) CopyAndClearMailQueue() []*PipestanceNotification {
