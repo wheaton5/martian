@@ -91,11 +91,9 @@
       $scope.runs = data;
       return $scope.runTable = _.indexBy($scope.runs, 'fcid');
     });
-    if ($scope.admin) {
-      $http.get('/api/get-auto-invoke-status').success(function(data) {
-        return $scope.autoinvoke.state = data.state;
-      });
-    }
+    $http.get('/api/get-auto-invoke-status').success(function(data) {
+      return $scope.autoinvoke.state = data.state;
+    });
     $scope.refreshRuns = function() {
       $http.get('/api/get-runs').success(function(runs) {
         var run, _i, _len, _ref;
@@ -111,12 +109,10 @@
           return $scope.showbutton = true;
         });
       });
-      if ($scope.admin) {
-        return $http.get('/api/get-auto-invoke-status').success(function(data) {
-          $scope.autoinvoke.state = data.state;
-          return $scope.autoinvoke.button = true;
-        });
-      }
+      return $http.get('/api/get-auto-invoke-status').success(function(data) {
+        $scope.autoinvoke.state = data.state;
+        return $scope.autoinvoke.button = true;
+      });
     };
     $scope.selectRun = function(run) {
       var r, _i, _len, _ref, _ref1, _ref2;

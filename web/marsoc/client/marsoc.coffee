@@ -62,10 +62,9 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
         $scope.runTable = _.indexBy($scope.runs, 'fcid')
     )
 
-    if $scope.admin
-        $http.get('/api/get-auto-invoke-status').success((data) ->
-            $scope.autoinvoke.state = data.state
-        )
+    $http.get('/api/get-auto-invoke-status').success((data) ->
+        $scope.autoinvoke.state = data.state
+    )
 
     $scope.refreshRuns = () ->
         $http.get('/api/get-runs').success((runs) ->
@@ -77,11 +76,10 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
                 $scope.showbutton = true
             )
         )
-        if $scope.admin
-            $http.get('/api/get-auto-invoke-status').success((data) ->
-                $scope.autoinvoke.state = data.state
-                $scope.autoinvoke.button = true
-            )
+        $http.get('/api/get-auto-invoke-status').success((data) ->
+            $scope.autoinvoke.state = data.state
+            $scope.autoinvoke.button = true
+        )
 
     $scope.selectRun = (run) ->
         $scope.samples = null

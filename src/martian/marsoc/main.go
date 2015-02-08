@@ -10,6 +10,7 @@ import (
 	"martian/core"
 	"os"
 	"os/user"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -134,8 +135,6 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 
 func main() {
 	core.SetupSignalHandlers()
-	core.LogInfo("*", "MARSOC")
-	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	//=========================================================================
 	// Commandline argument and environment variables.
@@ -156,8 +155,7 @@ Options:
     --version       Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
-	core.LogInfo("*", "MARSOC")
-	core.LogInfo("version", martianVersion)
+	core.Println("MARSOC - %s\n", martianVersion)
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	if martianFlags := os.Getenv("MROFLAGS"); len(martianFlags) > 0 {
@@ -172,6 +170,7 @@ Options:
 		{"MARSOC_SEQUENCERS", "miseq001;hiseq001"},
 		{"MARSOC_SEQUENCERS_PATH", "path/to/sequencers"},
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
+		{"MARSOC_LOG_PATH", "path/to/marsoc/logs"},
 		{"MARSOC_ARGSHIM_PATH", "path/to/argshim"},
 		{"MARSOC_MROPATH", "path/to/mros"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
@@ -182,8 +181,10 @@ Options:
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
+	core.LogTee(path.Join(env["MARSOC_LOG_PATH"], time.Now().Format("20060102150405")+".log"))
+
 	// Verify SGE job manager configuration
-	core.VerifyJobManager("sge")
+	//core.VerifyJobManager("sge")
 
 	// Do not log the value of these environment variables.
 	envPrivate := core.EnvRequire([][]string{
@@ -215,8 +216,8 @@ Options:
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	stepSecs := 5
-	mroVersion, _ := core.GetGitTag(mroPath)
-	mroBranch, _ := core.GetGitBranch(mroPath)
+	mroVersion := core.GetGitTag(mroPath)
+	mroBranch := core.GetGitBranch(mroPath)
 	debug := opts["--debug"].(bool)
 
 	//=========================================================================
@@ -266,6 +267,11 @@ Options:
 	lena.loadDatabase()
 
 	//=========================================================================
+	// Setup SGE qstat'er.
+	//=========================================================================
+	sge := NewSGE()
+
+	//=========================================================================
 	// Setup argshim.
 	//=========================================================================
 	argshim := NewArgShim(argshimPath, debug)
@@ -276,6 +282,7 @@ Options:
 	pool.goInventoryLoop()
 	pman.goRunListLoop()
 	lena.goDownloadLoop()
+	sge.goQStatLoop()
 	emailNotifierLoop(pman, lena, mailer)
 	processRunLoop(pool, pman, lena, argshim, rt, mailer)
 
@@ -318,7 +325,7 @@ Options:
 	// Start web server.
 	//=========================================================================
 	runWebServer(uiport, instanceName, martianVersion, mroVersion, rt, pool, pman,
-		lena, argshim, info)
+		lena, argshim, sge, info)
 
 	// Let daemons take over.
 	done := make(chan bool)
