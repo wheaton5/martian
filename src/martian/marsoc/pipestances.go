@@ -249,7 +249,8 @@ func (self *PipestanceManager) inventoryPipestances() {
 				return
 			}
 
-			pipestance, err := self.ReattachToPipestance(psid, psPath)
+			readOnly := false
+			pipestance, err := self.ReattachToPipestance(psid, psPath, readOnly)
 			if err != nil {
 				// If we could not reattach, it's because _invocation was
 				// missing, or will no longer parse due to changes in MRO
@@ -723,7 +724,8 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	self.runListMutex.Unlock()
 	core.LogInfo("pipeman", "Unfailing and pushed to pendingList: %s.", fqname)
 
-	pipestance, ok := self.GetPipestance(container, pipeline, psid)
+	readOnly := false
+	pipestance, ok := self.GetPipestance(container, pipeline, psid, readOnly)
 	if !ok {
 		self.removePendingPipestance(fqname, true)
 		return &core.PipestanceNotExistsError{psid}
@@ -775,14 +777,17 @@ func (self *PipestanceManager) GetPipestanceSerialization(container string, pipe
 	if ser, ok := self.rt.GetSerialization(psPath, name); ok {
 		return ser, true
 	}
-	pipestance, ok := self.GetPipestance(container, pipeline, psid)
+
+	readOnly := true
+	pipestance, ok := self.GetPipestance(container, pipeline, psid, readOnly)
 	if !ok {
 		return nil, false
 	}
+
 	return pipestance.Serialize(name), true
 }
 
-func (self *PipestanceManager) GetPipestance(container string, pipeline string, psid string) (*core.Pipestance, bool) {
+func (self *PipestanceManager) GetPipestance(container string, pipeline string, psid string, readOnly bool) (*core.Pipestance, bool) {
 	fqname := makeFQName(pipeline, psid)
 
 	// Check if requested pipestance actually exists.
@@ -800,7 +805,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 
 	// Reattach to the pipestance.
 	psPath := self.makePipestancePath(container, pipeline, psid)
-	pipestance, err := self.ReattachToPipestance(psid, psPath)
+	pipestance, err := self.ReattachToPipestance(psid, psPath, readOnly)
 	if err != nil {
 		return nil, false
 	}
@@ -810,8 +815,8 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	return pipestance, true
 }
 
-func (self *PipestanceManager) ReattachToPipestance(psid string, psPath string) (*core.Pipestance, error) {
-	return self.rt.ReattachToPipestance(psid, psPath, "", false)
+func (self *PipestanceManager) ReattachToPipestance(psid string, psPath string, readOnly bool) (*core.Pipestance, error) {
+	return self.rt.ReattachToPipestance(psid, psPath, "", false, readOnly)
 }
 
 func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline string, psid string) (string, error) {
