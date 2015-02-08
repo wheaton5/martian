@@ -35,19 +35,19 @@ Options:
     --version     Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
-	core.LogInfo("*", "Martian MRO Editor")
-	core.LogInfo("version", martianVersion)
-	core.LogInfo("cmdline", strings.Join(os.Args, " "))
+	core.Println("Martian MRO Editor - %s", martianVersion)
+	core.PrintInfo("cmdline", strings.Join(os.Args, " "))
 
 	// Compute UI port.
 	uiport := "3601"
 	if value := os.Getenv("MROPORT_EDITOR"); len(value) > 0 {
-		core.LogInfo("environ", "MROPORT_EDITOR = %s", value)
+		core.PrintInfo("environ", "MROPORT_EDITOR=%s", value)
 		uiport = value
 	}
 	if value := opts["--port"]; value != nil {
 		uiport = value.(string)
 	}
+	core.PrintInfo("options", "--uiport=%s", uiport)
 
 	// Compute MRO path.
 	cwd, _ := filepath.Abs(path.Dir(os.Args[0]))
@@ -55,11 +55,11 @@ Options:
 	if value := os.Getenv("MROPATH"); len(value) > 0 {
 		mroPath = value
 	}
-	core.LogInfo("environ", "MROPATH = %s", mroPath)
+	core.PrintInfo("environ", "MROPATH=%s", mroPath)
 
 	// Compute version.
 	mroVersion := core.GetGitTag(mroPath)
-	core.LogInfo("version", "MRO Version= %s", mroVersion)
+	core.PrintInfo("version", "MRO Version=%s", mroVersion)
 
 	//=========================================================================
 	// Configure Martian runtime.
