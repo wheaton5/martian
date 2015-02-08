@@ -1,8 +1,9 @@
 {
   "name": "martian-marsoc-web",
   "version": "0.0.1",
-  "description": "",
+  "description": "MARSOC UI",
   "main": "",
+  "private": true,
   "dependencies": {},
   "scripts": {},
   "author": "",
