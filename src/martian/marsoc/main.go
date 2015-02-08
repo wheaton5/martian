@@ -184,7 +184,7 @@ Options:
 	core.LogTee(path.Join(env["MARSOC_LOG_PATH"], time.Now().Format("20060102150405")+".log"))
 
 	// Verify SGE job manager configuration
-	//core.VerifyJobManager("sge")
+	core.VerifyJobManager("sge")
 
 	// Do not log the value of these environment variables.
 	envPrivate := core.EnvRequire([][]string{
