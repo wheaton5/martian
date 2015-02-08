@@ -2,4 +2,5 @@
 # 
 # marsoc startup script
 #
-nohup marsoc > $MARTIAN_VAR/logs/`date "+%Y%m%d%H%M"`.log &
+marsoc &
+disown

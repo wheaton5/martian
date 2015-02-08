@@ -58,10 +58,8 @@ Options:
 	core.LogInfo("environ", "MROPATH = %s", mroPath)
 
 	// Compute version.
-	mroVersion, err := core.GetGitTag(mroPath)
-	if err == nil {
-		core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
-	}
+	mroVersion := core.GetGitTag(mroPath)
+	core.LogInfo("version", "MRO Version= %s", mroVersion)
 
 	//=========================================================================
 	// Configure Martian runtime.

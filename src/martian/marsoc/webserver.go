@@ -60,6 +60,7 @@ type MainPage struct {
 	Admin            bool
 	MarsocVersion    string
 	PipelinesVersion string
+	PipestanceCount  int
 }
 type GraphPage struct {
 	InstanceName string
@@ -183,7 +184,8 @@ func callPreprocessAPI(body FcidForm, pipestanceFunc PipestanceFunc) string {
 
 func runWebServer(uiport string, instanceName string, martianVersion string,
 	mroVersion string, rt *core.Runtime, pool *SequencerPool,
-	pman *PipestanceManager, lena *Lena, argshim *ArgShim, info map[string]string) {
+	pman *PipestanceManager, lena *Lena, argshim *ArgShim, sge *SGE,
+	info map[string]string) {
 
 	//=========================================================================
 	// Configure server.
@@ -211,6 +213,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 				Admin:            false,
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
 
@@ -222,6 +225,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 				Admin:            true,
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
 
@@ -326,9 +330,20 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		return render("web/marsoc/templates", "metasamples.html",
 			&MainPage{
 				InstanceName:     instanceName,
+				Admin:            false,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+	app.Get("/admin/metasamples", func() string {
+		return render("web/marsoc/templates", "metasamples.html",
+			&MainPage{
+				InstanceName:     instanceName,
 				Admin:            true,
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
 
@@ -529,6 +544,36 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		return makeJSON(map[string]interface{}{
 			"state": pman.autoInvoke,
 		})
+	})
+
+	//=========================================================================
+	// SGE qstat UI.
+	//=========================================================================
+	// Render: main qstat UI.
+	app.Get("/razor", func() string {
+		return render("web/marsoc/templates", "sge.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            false,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+	app.Get("/admin/razor", func() string {
+		return render("web/marsoc/templates", "sge.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            true,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+
+	// API: Parser qstat output
+	app.Get("/api/qstat", func() string {
+		return sge.getJSON()
 	})
 
 	//=========================================================================
