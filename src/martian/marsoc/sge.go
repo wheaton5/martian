@@ -80,7 +80,7 @@ func (self *SGE) goQStatLoop() {
 					self.SGEMutex.Lock()
 					self.QStatData = map[string]interface{}{
 						"running_count": len(v.QueueInfo[0].JobList),
-						"pending_count": len(v.JobInfo[0].JobList),
+						"pending_count": len(v.JobInfo[0].JobList) - error_count,
 						"slots":         slots,
 						"jobs":          append(v.QueueInfo[0].JobList, v.JobInfo[0].JobList...),
 						"error_count":   error_count,
