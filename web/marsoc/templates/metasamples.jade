@@ -75,6 +75,8 @@ html(ng-app="app")
                             button.btn.btn-default(ng-if="admin && showbutton && selsample.ready_to_invoke && !selsample.psstate" ng-click="invokeAnalysis()" style="margin-bottom: 15px") Invoke 
                             button.btn.btn-default(ng-if="selsample.psstate == 'complete' && admin && showbutton" ng-click="archiveSample()" style="margin-bottom: 15px") Archive
                             button.btn.btn-default(ng-if="selsample.psstate == 'failed' && admin && showbutton" ng-click="unfailSample()" style="margin-bottom: 15px") Unfail
+                            button.btn.btn-default(ng-if="selsample.psstate == 'failed' && admin && showbutton" ng-click="wipeSample()" style="margin-bottom: 15px") Wipe
+                            button.btn.btn-default(ng-if="selsample.psstate == 'running' && admin && showbutton" ng-click="killSample()" style="margin-bottom: 15px") Kill
                             div(style="margin-top: 5px")
                                 .minibox(ng-class="selsample.psstate" style="text-align:center; margin-right:2px; margin-bottom: 2px; width: 85px; ") 
                                     a(href="{{urlprefix}}/pipestance/{{selsample.pscontainer}}/{{selsample.pname}}/{{selsample.id}}" style="" ng-mouseover="$parent.sampi=$index") {{selsample.id}}<br>{{selsample.psstate}}
