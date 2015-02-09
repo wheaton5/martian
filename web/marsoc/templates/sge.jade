@@ -75,7 +75,7 @@ html(ng-app="app")
                     tbody
                         tr(ng-repeat="job in qstat.jobs")
                             td {{$index+1}}
-                            td {{job.JB_owner}}
+                            td {{job.JB_owner=='mario'?'marsoc':job.JB_owner}}
                             td 
                                 .minibox(ng-class="job.State") {{job.State}} 
                             td {{job.StateCode}}

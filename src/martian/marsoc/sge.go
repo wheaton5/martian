@@ -55,7 +55,7 @@ func (self *SGE) goQStatLoop() {
 	go func() {
 		for {
 			// Run qstat in xml mode, and gather stdout.
-			if qstatxml, err := exec.Command("qstat", "-u", "\"*\"", "-xml").Output(); err != nil {
+			if qstatxml, err := exec.Command("qstat", "-u", "*", "-xml").Output(); err != nil {
 				self.QStatData = fmt.Sprintf("SGE Error: %v", err)
 			} else {
 				// Parse the XML.
