@@ -245,7 +245,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 		sbagTable[int(fspid)] = iface
 	}
 
-	sort.Sort(BySampleId(metasamples))
+	sort.Sort(sort.Reverse(BySampleId(metasamples)))
 
 	self.lenaDbMutex.Lock()
 	self.fcidTable = fcidTable
