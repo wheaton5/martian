@@ -790,6 +790,14 @@ func (self *PipestanceManager) GetPipestanceSerialization(container string, pipe
 		return nil, false
 	}
 
+	// Cache serialization if pipestance is complete
+	if state, _ := self.GetPipestanceState(container, pipeline, psid); state == "complete" {
+		pipestance.Immortalize()
+		if ser, ok := self.rt.GetSerialization(psPath, name); ok {
+			return ser, true
+		}
+	}
+
 	return pipestance.Serialize(name), true
 }
 
