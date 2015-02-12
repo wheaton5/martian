@@ -54,6 +54,7 @@ callApiWithConfirmation = ($scope, $http, $url) ->
         callApi($scope, $http, $url)
     else
         window.alert("Incorrect flowcell ID")
+        $scope.showbutton = true
 
 callApi = ($scope, $http, $url) ->
     $scope.showbutton = false

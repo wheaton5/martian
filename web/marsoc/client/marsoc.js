@@ -83,7 +83,8 @@
     if (fcid === $scope.selrun.fcid) {
       return callApi($scope, $http, $url);
     } else {
-      return window.alert("Incorrect flowcell ID");
+      window.alert("Incorrect flowcell ID");
+      return $scope.showbutton = true;
     }
   };
 

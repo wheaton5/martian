@@ -89,6 +89,12 @@ type AutoInvokeForm struct {
 	State bool
 }
 
+type PipestanceForm struct {
+	Fcid     string
+	Pipeline string
+	Psid     string
+}
+
 // For a given sample, update the following fields:
 // Pname    The analysis pipeline to be run on it, according to argshim
 // Psstate  Current state of the sample's pipestance, if any
@@ -146,6 +152,13 @@ func InvokeAnalysis(fcid string, rt *core.Runtime, lena *Lena, argshim *ArgShim,
 		}
 	}
 	return strings.Join(errors, "\n")
+}
+
+func callPipestanceAPI(body PipestanceForm, pipestanceFunc PipestanceFunc) string {
+	if err := pipestanceFunc(body.Fcid, body.Pipeline, body.Psid); err != nil {
+		return err.Error()
+	}
+	return ""
 }
 
 func callMetasamplePipestanceAPI(body MetasampleIdForm, lena *Lena, pipestanceFunc PipestanceFunc) string {
@@ -320,6 +333,117 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			return argshim.buildCallSourceForRun(rt, run)
 		}
 		return fmt.Sprintf("Could not find run with fcid %s.", body.Fcid)
+	})
+
+	//
+	//=========================================================================
+	// Pipestances UI.
+	//=========================================================================
+	app.Get("/pipestances", func() string {
+		return render("web/marsoc/templates", "pipestances.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            false,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+
+	app.Get("/admin/pipestances", func() string {
+		return render("web/marsoc/templates", "pipestances.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            true,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+
+	app.Get("/api/get-pipestances", func() string {
+		pipestances := []interface{}{}
+		pipestanceMutex := &sync.Mutex{}
+
+		var wg sync.WaitGroup
+		wg.Add(len(pool.runList))
+		for _, run := range pool.runList {
+			go func(wg *sync.WaitGroup, run *Run) {
+				defer wg.Done()
+
+				runPipestances := []interface{}{}
+				state, ok := pman.GetPipestanceState(run.Fcid, "BCL_PROCESSOR_PD", run.Fcid)
+				if ok {
+					runPipestances = append(runPipestances,
+						map[string]interface{}{
+							"fcid":     run.Fcid,
+							"pipeline": "BCL_PROCESSOR_PD",
+							"psid":     run.Fcid,
+							"state":    state,
+						})
+				}
+
+				if state == "complete" {
+					samples := lena.getSamplesForFlowcell(run.Fcid)
+					for _, sample := range samples {
+						pipeline := argshim.getPipelineForSample(sample)
+						psid := strconv.Itoa(sample.Id)
+
+						if state, ok := pman.GetPipestanceState(run.Fcid, pipeline, psid); ok {
+							runPipestances = append(runPipestances,
+								map[string]interface{}{
+									"fcid":     run.Fcid,
+									"pipeline": pipeline,
+									"psid":     psid,
+									"state":    state,
+								})
+						}
+					}
+				}
+
+				if len(runPipestances) > 0 {
+					pipestanceMutex.Lock()
+					pipestances = append(pipestances, runPipestances...)
+					pipestanceMutex.Unlock()
+				}
+			}(&wg, run)
+		}
+		metasamples := lena.getMetasamples()
+		for _, metasample := range metasamples {
+			fcid := metasample.Pscontainer
+			pipeline := argshim.getPipelineForSample(metasample)
+			psid := strconv.Itoa(metasample.Id)
+
+			if state, ok := pman.GetPipestanceState(fcid, pipeline, psid); ok {
+				pipestanceMutex.Lock()
+				pipestances = append(pipestances,
+					map[string]interface{}{
+						"fcid":     fcid,
+						"pipeline": pipeline,
+						"psid":     psid,
+						"state":    state,
+					})
+				pipestanceMutex.Unlock()
+			}
+		}
+		wg.Wait()
+		return makeJSON(pipestances)
+	})
+
+	app.Post("/api/restart-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.UnfailPipestance)
+	})
+
+	app.Post("/api/archive-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.ArchivePipestanceHead)
+	})
+
+	app.Post("/api/wipe-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.WipePipestance)
+	})
+
+	app.Post("/api/kill-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.KillPipestance)
 	})
 
 	//=========================================================================
