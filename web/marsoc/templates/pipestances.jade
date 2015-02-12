@@ -51,31 +51,38 @@ html(ng-app="app")
                             button.btn.btn-default.aibutton.btn-checkbox(ng-if="admin" ng-model="autoinvoke.state" ng-click="setAutoInvoke()" ng-class="getAutoInvokeClass()") AI is {{autoinvoke.state?"ON":"OFF"}}
                             span(ng-if="!admin") AI is {{autoinvoke.state?"ON":"OFF"}}
         #ps
-            table
-                tr
-                    td
-                        | Flowcell
-                        input.form-control(type="text" ng-model="fcid" typeahead="fcid for fcid in fcids | filter:$viewValue | limitTo: 8")
-                    td
-                        | Pipeline
-                        input.form-control(type="text" ng-model="pipeline" typeahead="pipeline for pipeline in pipelines | filter:$viewValue | limitTo: 8")
-                    td
-                        | Sample ID
-                        input.form-control(type="text" ng-model="psid" typeahead="psid for psid in psids | filter:$viewValue | limitTo: 8")
-                    td
-                        div.btn-group(dropdown)
-                            button.btn.btn-default.dropdown(dropdown-toggle) {{ capitalize(state) }}
-                            ul.dropdown-menu(role="menu")
-                                li
-                                    a(ng-click="state='running'") Running
-                                li
-                                    a(ng-click="state='complete'") Complete
-                                li
-                                    a(ng-click="state='failed'") Failed
-                                li
-                                    a(ng-click="state='copying'") Copying
-                                li
-                                    a(ng-click="state='waiting'") Waiting
+            #ps_filter
+                table
+                    tr
+                        td
+                            div.input-group
+                                label Flowcell
+                                input.form-control(type="text" ng-model="fcid" typeahead="fcid for fcid in fcids | filter:$viewValue | limitTo: 8")
+                        td
+                            div.input-group
+                                label Pipeline
+                                input.form-control(type="text" ng-model="pipeline" typeahead="pipeline for pipeline in pipelines | filter:$viewValue | limitTo: 8")
+                        td
+                            div.input-group
+                                label Sample ID
+                                input.form-control(type="text" ng-model="psid" typeahead="psid for psid in psids | filter:$viewValue | limitTo: 8")
+                        td
+                            div.dropdown#ps_filter_state
+                                button.btn.btn-default.dropdown-toggle
+                                    | {{ capitalize(state) }}
+                                    | &nbsp;
+                                    span.caret
+                                ul.dropdown-menu(role="menu")
+                                    li
+                                        a(ng-click="state='running'") Running
+                                    li
+                                        a(ng-click="state='complete'") Complete
+                                    li
+                                        a(ng-click="state='failed'") Failed
+                                    li
+                                        a(ng-click="state='copying'") Copying
+                                    li
+                                        a(ng-click="state='waiting'") Waiting
             table.table#ps_table(style="margin-top: 50px")
                 thead
                     tr
