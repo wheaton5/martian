@@ -383,29 +383,29 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 						})
 				}
 
-				if state != "complete" {
-					return
-				}
+				if state == "complete" {
+					samples := lena.getSamplesForFlowcell(run.Fcid)
+					for _, sample := range samples {
+						pipeline := argshim.getPipelineForSample(sample)
+						psid := strconv.Itoa(sample.Id)
 
-				samples := lena.getSamplesForFlowcell(run.Fcid)
-				for _, sample := range samples {
-					pipeline := argshim.getPipelineForSample(sample)
-					psid := strconv.Itoa(sample.Id)
-
-					if state, ok := pman.GetPipestanceState(run.Fcid, pipeline, psid); ok {
-						runPipestances = append(runPipestances,
-							map[string]interface{}{
-								"fcid":     run.Fcid,
-								"pipeline": pipeline,
-								"psid":     psid,
-								"state":    state,
-							})
+						if state, ok := pman.GetPipestanceState(run.Fcid, pipeline, psid); ok {
+							runPipestances = append(runPipestances,
+								map[string]interface{}{
+									"fcid":     run.Fcid,
+									"pipeline": pipeline,
+									"psid":     psid,
+									"state":    state,
+								})
+						}
 					}
 				}
 
-				pipestanceMutex.Lock()
-				pipestances = append(pipestances, runPipestances...)
-				pipestanceMutex.Unlock()
+				if len(runPipestances) > 0 {
+					pipestanceMutex.Lock()
+					pipestances = append(pipestances, runPipestances...)
+					pipestanceMutex.Unlock()
+				}
 			}(&wg, run)
 		}
 		metasamples := lena.getMetasamples()

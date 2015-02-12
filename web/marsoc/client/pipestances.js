@@ -1,5 +1,5 @@
 (function() {
-  var app, callApiWithConfirmation;
+  var app, callApi, callApiWithConfirmation;
 
   app = angular.module('app', ['ui.bootstrap']);
 
@@ -8,19 +8,24 @@
     $scope.showbutton = false;
     psid = window.prompt("Please type the sample ID to confirm");
     if (psid === $p.psid) {
-      return $http.post($url, {
-        fcid: $p.fcid,
-        pipeline: $p.pipeline,
-        psid: $p.psid
-      }).success(function(data) {
-        $scope.refreshPipestances();
-        if (data) {
-          return window.alert(data.toString());
-        }
-      });
+      return callApi($scope, $http, $p, $url);
     } else {
       return window.alert("Incorrect sample ID");
     }
+  };
+
+  callApi = function($scope, $http, $p, $url) {
+    $scope.showbutton = false;
+    return $http.post($url, {
+      fcid: $p.fcid,
+      pipeline: $p.pipeline,
+      psid: $p.psid
+    }).success(function(data) {
+      $scope.refreshPipestances();
+      if (data) {
+        return window.alert(data.toString());
+      }
+    });
   };
 
   app.controller('PipestancesCtrl', function($scope, $http, $interval) {
@@ -41,19 +46,19 @@
         $scope.pipestances = _.sortBy(data, function(p) {
           return [p.fcid, p.pipeline, p.psid, p.state];
         });
-        fcids = [];
-        pipelines = [];
-        psids = [];
+        fcids = {};
+        pipelines = {};
+        psids = {};
         _ref = $scope.pipestances;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           p = _ref[_i];
-          fcids.push(p.fcid);
-          pipelines.push(p.pipeline);
-          psids.push(p.psid);
+          fcids[p.fcid] = true;
+          pipelines[p.pipeline] = true;
+          psids[p.psid] = true;
         }
-        $scope.fcids = _.uniq(fcids);
-        $scope.pipelines = _.uniq(pipelines);
-        $scope.psids = _.uniq(psids);
+        $scope.fcids = _.keys(fcids);
+        $scope.pipelines = _.keys(pipelines);
+        $scope.psids = _.keys(psids);
         return $scope.showbutton = true;
       });
       return $http.get('/api/get-auto-invoke-status').success(function(data) {
@@ -83,7 +88,7 @@
       return callApiWithConfirmation($scope, $http, p, '/api/kill-sample');
     };
     $scope.unfailPipestance = function(p) {
-      return callApiWithConfirmation($scope, $http, p, '/api/restart-sample');
+      return callApi($scope, $http, p, '/api/restart-sample');
     };
     $scope.capitalize = function(str) {
       return str[0].toUpperCase() + str.slice(1);

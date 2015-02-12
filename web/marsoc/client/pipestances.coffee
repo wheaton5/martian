@@ -10,12 +10,16 @@ callApiWithConfirmation = ($scope, $http, $p, $url) ->
     $scope.showbutton = false
     psid = window.prompt("Please type the sample ID to confirm")
     if psid == $p.psid
-        $http.post($url, { fcid: $p.fcid, pipeline: $p.pipeline, psid: $p.psid }).success((data) ->
-            $scope.refreshPipestances()
-            if data then window.alert(data.toString())
-        )
+        callApi($scope, $http, $p, $url)
     else
         window.alert("Incorrect sample ID")
+
+callApi = ($scope, $http, $p, $url) ->
+    $scope.showbutton = false
+    $http.post($url, { fcid: $p.fcid, pipeline: $p.pipeline, psid: $p.psid }).success((data) ->
+        $scope.refreshPipestances()
+        if data then window.alert(data.toString())
+    )
 
 app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
     $scope.admin = admin
@@ -33,16 +37,16 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
             $scope.pipestances = _.sortBy(data, (p) ->
                 [p.fcid, p.pipeline, p.psid, p.state]
             )
-            fcids = []
-            pipelines = []
-            psids = []
+            fcids = {}
+            pipelines = {}
+            psids = {}
             for p in $scope.pipestances
-                fcids.push p.fcid
-                pipelines.push p.pipeline
-                psids.push p.psid
-            $scope.fcids = _.uniq(fcids)
-            $scope.pipelines = _.uniq(pipelines)
-            $scope.psids = _.uniq(psids)
+                fcids[p.fcid] = true
+                pipelines[p.pipeline] = true
+                psids[p.psid] = true
+            $scope.fcids = _.keys(fcids)
+            $scope.pipelines = _.keys(pipelines)
+            $scope.psids = _.keys(psids)
             $scope.showbutton = true
         )
         $http.get('/api/get-auto-invoke-status').success((data) ->
@@ -68,7 +72,7 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
         callApiWithConfirmation($scope, $http, p, '/api/kill-sample')
 
     $scope.unfailPipestance = (p) ->
-        callApiWithConfirmation($scope, $http, p, '/api/restart-sample')
+        callApi($scope, $http, p, '/api/restart-sample')
 
     $scope.capitalize = (str) ->
        return str[0].toUpperCase() + str[1..]
