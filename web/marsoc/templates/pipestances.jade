@@ -75,6 +75,8 @@ html(ng-app="app")
                                     span.caret
                                 ul.dropdown-menu(role="menu")
                                     li
+                                        a(ng-click="state=null") Any
+                                    li
                                         a(ng-click="state='running'") Running
                                     li
                                         a(ng-click="state='complete'") Complete
@@ -84,8 +86,6 @@ html(ng-app="app")
                                         a(ng-click="state='copying'") Copying
                                     li
                                         a(ng-click="state='waiting'") Waiting
-                                    li
-                                        a(ng-click="state=null") Any
             table.table#ps_table(style="margin-top: 50px")
                 thead
                     tr

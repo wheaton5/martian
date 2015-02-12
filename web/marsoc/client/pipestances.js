@@ -40,7 +40,7 @@
     $scope.fcid = null;
     $scope.pipeline = null;
     $scope.psid = null;
-    $scope.state = "running";
+    $scope.state = null;
     $scope.refreshPipestances = function() {
       $http.get('/api/get-pipestances').success(function(data) {
         var fcids, p, pipelines, psids, _i, _len, _ref;

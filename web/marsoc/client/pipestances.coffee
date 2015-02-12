@@ -31,7 +31,7 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
     $scope.fcid = null
     $scope.pipeline = null
     $scope.psid = null
-    $scope.state = "running"
+    $scope.state = null
 
     $scope.refreshPipestances = () ->
         $http.get('/api/get-pipestances').success((data) ->
