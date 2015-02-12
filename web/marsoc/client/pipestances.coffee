@@ -6,11 +6,11 @@
 
 app = angular.module('app', ['ui.bootstrap'])
 
-callApiWithConfirmation = ($scope, $http, $url) ->
+callApiWithConfirmation = ($scope, $http, $p, $url) ->
     $scope.showbutton = false
     psid = window.prompt("Please type the sample ID to confirm")
-    if psid == $scope.selps.psid
-        $http.post($url, { psid: $scope.selps.psid }).success((data) ->
+    if psid == $p.psid
+        $http.post($url, { fcid: $p.fcid, pipeline: $p.pipeline, psid: $p.psid }).success((data) ->
             $scope.refreshPipestances()
             if data then window.alert(data.toString())
         )
@@ -30,7 +30,9 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
 
     $scope.refreshPipestances = () ->
         $http.get('/api/get-pipestances').success((data) ->
-            $scope.pipestances = data
+            $scope.pipestances = _.sortBy(data, (p) ->
+                [p.fcid, p.pipeline, p.psid, p.state]
+            )
             fcids = []
             pipelines = []
             psids = []
@@ -50,17 +52,26 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
 
     $scope.refreshPipestances()
 
-    $scope.archivePipestance = () ->
-        callApiWithConfirmation($scope, $http, '/api/archive-sample')
+    $scope.filterPipestance = (p) ->
+        for prop in ['fcid', 'pipeline', 'psid', 'state']
+            if $scope[prop] && $scope[prop] != p[prop]
+                return false
+        return true
 
-    $scope.wipePipestance = () ->
-        callApiWithConfirmation($scope, $http, '/api/wipe-sample')
+    $scope.archivePipestance = (p) ->
+        callApiWithConfirmation($scope, $http, p, '/api/archive-sample')
 
-    $scope.killPipestance = () ->
-        callApiWithConfirmation($scope, $http, '/api/kill-sample')
+    $scope.wipePipestance = (p) ->
+        callApiWithConfirmation($scope, $http, p, '/api/wipe-sample')
 
-    $scope.unfailPipestance = () ->
-        callApiWithConfirmation($scope, $http, '/api/unfail-sample')
+    $scope.killPipestance = (p) ->
+        callApiWithConfirmation($scope, $http, p, '/api/kill-sample')
+
+    $scope.unfailPipestance = (p) ->
+        callApiWithConfirmation($scope, $http, p, '/api/restart-sample')
+
+    $scope.capitalize = (str) ->
+       return str[0].toUpperCase() + str[1..]
 
     $scope.getAutoInvokeClass = () ->
     if $scope.autoinvoke.state

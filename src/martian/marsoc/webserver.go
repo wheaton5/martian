@@ -90,9 +90,9 @@ type AutoInvokeForm struct {
 }
 
 type PipestanceForm struct {
-	Fcid   string
-	Sample string
-	State  string
+	Fcid     string
+	Pipeline string
+	Psid     string
 }
 
 // For a given sample, update the following fields:
@@ -152,6 +152,13 @@ func InvokeAnalysis(fcid string, rt *core.Runtime, lena *Lena, argshim *ArgShim,
 		}
 	}
 	return strings.Join(errors, "\n")
+}
+
+func callPipestanceAPI(body PipestanceForm, pipestanceFunc PipestanceFunc) string {
+	if err := pipestanceFunc(body.Fcid, body.Pipeline, body.Psid); err != nil {
+		return err.Error()
+	}
+	return ""
 }
 
 func callMetasamplePipestanceAPI(body MetasampleIdForm, lena *Lena, pipestanceFunc PipestanceFunc) string {
@@ -354,7 +361,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			})
 	})
 
-	app.Get("/api/get-pipestances", binding.Bind(PipestanceForm{}), func(body PipestanceForm, params martini.Params) string {
+	app.Get("/api/get-pipestances", func() string {
 		pipestances := []interface{}{}
 		pipestanceMutex := &sync.Mutex{}
 
@@ -421,6 +428,22 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		}
 		wg.Wait()
 		return makeJSON(pipestances)
+	})
+
+	app.Post("/api/restart-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.UnfailPipestance)
+	})
+
+	app.Post("/api/archive-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.ArchivePipestanceHead)
+	})
+
+	app.Post("/api/wipe-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.WipePipestance)
+	})
+
+	app.Post("/api/kill-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.KillPipestance)
 	})
 
 	//=========================================================================
