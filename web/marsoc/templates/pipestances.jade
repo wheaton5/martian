@@ -69,7 +69,8 @@ html(ng-app="app")
                         td
                             div.dropdown#ps_filter_state
                                 button.btn.btn-default.dropdown-toggle
-                                    | {{ capitalize(state) }}
+                                    span(ng-if="state") {{ capitalize(state) }}
+                                    span(ng-if="!state") Any
                                     | &nbsp;
                                     span.caret
                                 ul.dropdown-menu(role="menu")
@@ -83,6 +84,8 @@ html(ng-app="app")
                                         a(ng-click="state='copying'") Copying
                                     li
                                         a(ng-click="state='waiting'") Waiting
+                                    li
+                                        a(ng-click="state=null") Any
             table.table#ps_table(style="margin-top: 50px")
                 thead
                     tr
