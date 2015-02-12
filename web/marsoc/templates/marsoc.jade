@@ -34,6 +34,9 @@ html(ng-app="app")
                         a(ng-if="admin" href="/admin") HOME
                         a(ng-if="!admin" href="/") HOME
                         | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(ng-if="admin" href="/admin/pipestances") PIPESTANCES
+                        a(ng-if="!admin" href="/pipestances") PIPESTANCES
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
                         a(ng-if="admin" href="/admin/metasamples") METASAMPLES
                         a(ng-if="!admin" href="/metasamples") METASAMPLES
                         | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;

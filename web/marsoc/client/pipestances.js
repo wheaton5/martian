@@ -1,6 +1,8 @@
 (function() {
   var app, callApiWithConfirmation;
 
+  app = angular.module('app', ['ui.bootstrap']);
+
   callApiWithConfirmation = function($scope, $http, $url) {
     var psid;
     $scope.showbutton = false;
@@ -19,34 +21,43 @@
     }
   };
 
-  app = angular.module('app', ['ui.bootstrap']);
-
   app.controller('PipestancesCtrl', function($scope, $http, $interval) {
     $scope.admin = admin;
     $scope.urlprefix = admin ? '/admin' : '';
+    $scope.autoinvoke = {
+      button: true,
+      state: false
+    };
     $scope.showbutton = true;
     $scope.fcid = null;
     $scope.pipeline = null;
     $scope.psid = null;
     $scope.state = "running";
-    $scope.refreshPipestances();
     $scope.refreshPipestances = function() {
-      return $http.get('/api/get-pipestances').success(function(data) {
-        var p, _i, _len, _ref;
+      $http.get('/api/get-pipestances').success(function(data) {
+        var fcids, p, pipelines, psids, _i, _len, _ref;
         $scope.pipestances = data;
+        fcids = [];
+        pipelines = [];
+        psids = [];
         _ref = $scope.pipestances;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           p = _ref[_i];
-          $scope.fcids.push(p.fcid);
-          $scope.pipelines.push(p.pipeline);
-          $scope.psids.push(p.psid);
+          fcids.push(p.fcid);
+          pipelines.push(p.pipeline);
+          psids.push(p.psid);
         }
         $scope.fcids = _.uniq(fcids);
         $scope.pipelines = _.uniq(pipelines);
         $scope.psids = _.uniq(psids);
         return $scope.showbutton = true;
       });
+      return $http.get('/api/get-auto-invoke-status').success(function(data) {
+        $scope.autoinvoke.state = data.state;
+        return $scope.autoinvoke.button = true;
+      });
     };
+    $scope.refreshPipestances();
     $scope.archivePipestance = function() {
       return callApiWithConfirmation($scope, $http, '/api/archive-sample');
     };
@@ -58,6 +69,23 @@
     };
     $scope.unfailPipestance = function() {
       return callApiWithConfirmation($scope, $http, '/api/unfail-sample');
+    };
+    $scope.getAutoInvokeClass = function() {};
+    if ($scope.autoinvoke.state) {
+      return "complete";
+    } else {
+      return "failed";
+    }
+    $scope.setAutoInvoke = function() {
+      $scope.autoinvoke.button = false;
+      return $http.post('/api/set-auto-invoke-status', {
+        state: !$scope.autoinvoke.state
+      }).success(function(data) {
+        $scope.refreshPipestances();
+        if (data) {
+          return window.alert(data.toString());
+        }
+      });
     };
     if (admin) {
       return $interval((function() {

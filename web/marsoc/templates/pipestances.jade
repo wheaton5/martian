@@ -20,11 +20,16 @@ html(ng-app="app")
                 .navbar-brand
                     .logo_container
                         img.logo(src="/images/10X_Logo_Reversed.png")
-                    .navbar-upper(ng-class="{admin: admin}") Razor Cluster Status
+                    .navbar-upper(ng-class="{admin: admin}") [[.InstanceName]] &middot; Pipestances
                         span(ng-if="admin")
                             | &nbsp;(
                             a.admin-exit(href="/") exit admin mode
                             | )
+                        span.navbar-right
+                            | Martian&nbsp;
+                            a.sampleid(href="https://github.com/10XDev/martian/releases") [[.MarsocVersion]]
+                            | &nbsp;Pipelines&nbsp;
+                            a.sampleid(href="https://10xtech.atlassian.net/wiki/display/COMPBIO/Pipelines+Version+Tracking") [[.PipelinesVersion]]
                     .navbar-lower
                         a(ng-if="admin" href="/admin") HOME
                         a(ng-if="!admin" href="/") HOME
@@ -40,6 +45,11 @@ html(ng-app="app")
                         a(href="http://compute2.fuzzplex.com:9090") MRV
                         | &nbsp;&nbsp;&nbsp;&nbsp;
                         a(href="http://lena.fuzzplex.com") LENA
+                        span.navbar-right
+                            | [[.PipestanceCount]] Pipestances In-Flight
+                            | &nbsp;&middot;&nbsp;&nbsp;
+                            button.btn.btn-default.aibutton.btn-checkbox(ng-if="admin" ng-model="autoinvoke.state" ng-click="setAutoInvoke()" ng-class="getAutoInvokeClass()") AI is {{autoinvoke.state?"ON":"OFF"}}
+                            span(ng-if="!admin") AI is {{autoinvoke.state?"ON":"OFF"}}
         #pipestances-filter
             input(type="text" ng-model="fcid" typeahead="fcid for fcid in fcids | filter:$viewValue | limitTo: 8")
             input(type="text" ng-model="pipeline" typeahead="pipeline for pipeline in pipelines | filter:$viewValue | limitTo: 8")
@@ -72,3 +82,6 @@ html(ng-app="app")
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="unfailPipestance()") Unfail
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="wipePipestance()") Wipe
                             button.btn.btn-default(ng-if="p.state == 'running' && admin && showbutton" ng-click="killPipestance()") Kill
+    script
+        | admin = [[.Admin]]
+    script(src="/pipestances.js")
