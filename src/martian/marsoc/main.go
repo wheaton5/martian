@@ -29,15 +29,16 @@ func sendNotificationMail(users []string, mailer *Mailer, notices []*PipestanceN
 		psids = append(psids, notice.Psid)
 		var url string
 		if notice.State == "complete" {
-			url = fmt.Sprintf("lena/seq_results/sample%strim10/", notice.Psid)
+			url = fmt.Sprintf("lena.fuzzplex.com/seq_results/sample%strim10/", notice.Psid)
 		} else {
-			url = fmt.Sprintf("%s/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
+			url = fmt.Sprintf("%s.fuzzplex.com/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
 		}
 		result := fmt.Sprintf("%s of %s/%s is %s (http://%s)", notice.Pname, notice.Container, notice.Psid, strings.ToUpper(notice.State), url)
 		results = append(results, result)
 		vdrsize += notice.Vdrsize
 		if notice.State == "failed" {
 			worstState = notice.State
+			results = append(results, "    "+notice.Summary)
 		}
 	}
 

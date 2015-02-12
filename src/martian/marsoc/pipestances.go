@@ -41,6 +41,7 @@ type PipestanceNotification struct {
 	Container string
 	Pname     string
 	Psid      string
+	Summary   string
 	Vdrsize   uint64
 }
 
@@ -478,12 +479,13 @@ func (self *PipestanceManager) processRunList() {
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
+				_, summary, _, _, _ := pipestance.GetFatalError()
 				if pname == "BCL_PROCESSOR_PD" {
 					// For BCL_PROCESSOR_PD, just email the admins.
 					self.mailer.Sendmail(
 						[]string{},
 						fmt.Sprintf("%s of %s has failed!", pname, psid),
-						fmt.Sprintf("Hey Preppie,\n\n%s of %s failed.\n\nDon't feel bad, but check out what you messed up at http://%s/pipestance/%s/%s/%s.", pname, psid, self.mailer.InstanceName, psid, pname, psid),
+						fmt.Sprintf("Hey Preppie,\n\n%s of %s failed.\n\n%s\n\nDon't feel bad, but check out what you messed up at http://%s/pipestance/%s/%s/%s.", pname, psid, summary, self.mailer.InstanceName, psid, pname, psid),
 					)
 				} else {
 					// For ANALYZER_PD, queue up notification for batch email of users.
@@ -494,6 +496,7 @@ func (self *PipestanceManager) processRunList() {
 						Pname:     pname,
 						Psid:      psid,
 						Vdrsize:   0,
+						Summary:   summary,
 					})
 					self.runListMutex.Unlock()
 				}

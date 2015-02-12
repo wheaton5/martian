@@ -1,0 +1,74 @@
+//-
+    Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+
+    Pipestances UI.
+
+doctype html
+html(ng-app="app")
+    head
+        title [[.InstanceName]] / Metasamples
+        link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/marsoc.css")
+        link(rel="stylesheet" href="/css/main.css")
+        script(src="/js/angular.min.js")
+        script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="/js/lodash.min.js")
+        script(src="/js/moment.min.js")
+    body(ng-controller="PipestancesCtrl")
+        header.navbar.navbar-fixed-top
+            .navbar-header
+                .navbar-brand
+                    .logo_container
+                        img.logo(src="/images/10X_Logo_Reversed.png")
+                    .navbar-upper(ng-class="{admin: admin}") Razor Cluster Status
+                        span(ng-if="admin")
+                            | &nbsp;(
+                            a.admin-exit(href="/") exit admin mode
+                            | )
+                    .navbar-lower
+                        a(ng-if="admin" href="/admin") HOME
+                        a(ng-if="!admin" href="/") HOME
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(ng-if="admin" href="/admin/pipestances") PIPESTANCES
+                        a(ng-if="!admin" href="/pipestances") PIPESTANCES
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(ng-if="admin" href="/admin/metasamples") METASAMPLES
+                        a(ng-if="!admin" href="/metasamples") METASAMPLES
+                        | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
+                        a(href="/razor") RAZOR
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://compute2.fuzzplex.com:9090") MRV
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://lena.fuzzplex.com") LENA
+        #pipestances-filter
+            input(type="text" ng-model="fcid" typeahead="fcid for fcid in fcids | filter:$viewValue | limitTo: 8")
+            input(type="text" ng-model="pipeline" typeahead="pipeline for pipeline in pipelines | filter:$viewValue | limitTo: 8")
+            input(type="text" ng-model="psid" typeahead="psid for psid in psids | filter:$viewValue | limitTo: 8")
+            div.btn-group(dropdown)
+                button(dropdown-toggle) State
+                ul(role="menu")
+                    li(ng-click="state='running'") Running
+                    li(ng-click="state='failed'") Failed
+                    li(ng-click="state='complete'") Complete
+        #pipestances
+            table.table#pipestances-table(style="margin-top: 50px")
+                thead
+                    tr
+                        th.col-date(style="padding-left: 20px") Flowcell
+                        th Pipeline
+                        th Sample ID
+                        th State
+                        th(ng-if="admin") Actions
+                tbody
+                    tr(ng-repeat="p in pipestances")
+                        td.col-date(style="padding-left: 20px") {{p.fcid}}
+                        td {{p.pipeline}}
+                        td
+                            a(href="/pipestance/{{p.fcid}}/{{p.pipeline}}/{{p.psid}}") {{p.psid}}
+                        td
+                            span.minibox(ng-class="p.state") {{p.state}}
+                        td(ng-if="admin")
+                            button.btn.btn-default(ng-if="p.state == 'complete' && admin && showbutton" ng-click="archivePipestance()") Archive
+                            button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="unfailPipestance()") Unfail
+                            button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="wipePipestance()") Wipe
+                            button.btn.btn-default(ng-if="p.state == 'running' && admin && showbutton" ng-click="killPipestance()") Kill
