@@ -10,7 +10,8 @@
     if (psid === $p.psid) {
       return callApi($scope, $http, $p, $url);
     } else {
-      return window.alert("Incorrect sample ID");
+      window.alert("Incorrect sample ID");
+      return $scope.showbutton = true;
     }
   };
 

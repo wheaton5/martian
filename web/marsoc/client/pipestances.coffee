@@ -13,6 +13,7 @@ callApiWithConfirmation = ($scope, $http, $p, $url) ->
         callApi($scope, $http, $p, $url)
     else
         window.alert("Incorrect sample ID")
+        $scope.showbutton = true
 
 callApi = ($scope, $http, $p, $url) ->
     $scope.showbutton = false

@@ -10,7 +10,8 @@
     if (id === ((_ref = scope.selsample) != null ? _ref.id.toString() : void 0)) {
       return callApi($scope, $http, $url);
     } else {
-      return window.alert("Incorrect sample id");
+      window.alert("Incorrect sample id");
+      return $scope.showbutton = true;
     }
   };
 
