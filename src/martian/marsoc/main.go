@@ -124,7 +124,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 
 				for _, notice := range analysisQueue {
 					fcid := notice.Fcid
-					InvokeAnalysis(fcid, rt, lena, argshim, pman)
+					InvokeAllSamples(fcid, rt, argshim, pman, lena)
 				}
 			}
 

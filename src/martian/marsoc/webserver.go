@@ -129,26 +129,42 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 	return fastqPaths
 }
 
-func InvokeAnalysis(fcid string, rt *core.Runtime, lena *Lena, argshim *ArgShim, pman *PipestanceManager) string {
+func InvokePreprocess(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, pool *SequencerPool) string {
+	run := pool.find(fcid)
+	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+func InvokeSample(sample *Sample, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena) string {
+	// Invoke the pipestance.
+	fastqPaths := updateSampleState(sample, rt, lena, argshim, pman)
+	errors := []string{}
+	every := true
+	for _, fastqPath := range fastqPaths {
+		if _, err := os.Stat(fastqPath); err != nil {
+			errors = append(errors, err.Error())
+			every = false
+		}
+	}
+	if every {
+		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
+			errors = append(errors, err.Error())
+		}
+	}
+	return strings.Join(errors, "\n")
+}
+
+func InvokeAllSamples(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena) string {
 	// Get all the samples for this fcid.
 	samples := lena.getSamplesForFlowcell(fcid)
 
 	// Invoke the appropriate pipeline on each sample.
 	errors := []string{}
 	for _, sample := range samples {
-		// Invoke the pipestance.
-		fastqPaths := updateSampleState(sample, rt, lena, argshim, pman)
-		every := true
-		for _, fastqPath := range fastqPaths {
-			if _, err := os.Stat(fastqPath); err != nil {
-				errors = append(errors, err.Error())
-				every = false
-			}
-		}
-		if every {
-			if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
-				errors = append(errors, err.Error())
-			}
+		if error := InvokeSample(sample, rt, argshim, pman, lena); len(error) > 0 {
+			errors = append(errors, error)
 		}
 	}
 	return strings.Join(errors, "\n")
@@ -371,17 +387,22 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			go func(wg *sync.WaitGroup, run *Run) {
 				defer wg.Done()
 
+				if run.State != "complete" {
+					return
+				}
+
 				runPipestances := []interface{}{}
 				state, ok := pman.GetPipestanceState(run.Fcid, "BCL_PROCESSOR_PD", run.Fcid)
-				if ok {
-					runPipestances = append(runPipestances,
-						map[string]interface{}{
-							"fcid":     run.Fcid,
-							"pipeline": "BCL_PROCESSOR_PD",
-							"psid":     run.Fcid,
-							"state":    state,
-						})
+				if !ok {
+					state = "ready"
 				}
+				runPipestances = append(runPipestances,
+					map[string]interface{}{
+						"fcid":     run.Fcid,
+						"pipeline": "BCL_PROCESSOR_PD",
+						"psid":     run.Fcid,
+						"state":    state,
+					})
 
 				if state == "complete" {
 					samples := lena.getSamplesForFlowcell(run.Fcid)
@@ -389,15 +410,17 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 						pipeline := argshim.getPipelineForSample(sample)
 						psid := strconv.Itoa(sample.Id)
 
-						if state, ok := pman.GetPipestanceState(run.Fcid, pipeline, psid); ok {
-							runPipestances = append(runPipestances,
-								map[string]interface{}{
-									"fcid":     run.Fcid,
-									"pipeline": pipeline,
-									"psid":     psid,
-									"state":    state,
-								})
+						state, ok := pman.GetPipestanceState(run.Fcid, pipeline, psid)
+						if !ok {
+							state = "ready"
 						}
+						runPipestances = append(runPipestances,
+							map[string]interface{}{
+								"fcid":     run.Fcid,
+								"pipeline": pipeline,
+								"psid":     psid,
+								"state":    state,
+							})
 					}
 				}
 
@@ -444,6 +467,18 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	app.Post("/api/kill-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
 		return callPipestanceAPI(body, pman.KillPipestance)
+	})
+
+	app.Post("/api/invoke-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		if body.Pipeline == "BCL_PROCESSOR_PD" {
+			return InvokePreprocess(body.Fcid, rt, argshim, pman, pool)
+		}
+
+		sample := lena.getSampleWithId(body.Psid)
+		if sample == nil {
+			return fmt.Sprintf("Sample '%s' not found.", body.Psid)
+		}
+		return InvokeSample(sample, rt, argshim, pman, lena)
 	})
 
 	//=========================================================================
@@ -499,12 +534,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Id)
 		}
-
-		// Invoke the pipestance.
-		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
-			return err.Error()
-		}
-		return ""
+		return InvokeSample(sample, rt, argshim, pman, lena)
 	})
 
 	// API: Restart failed metasample analysis.
@@ -602,13 +632,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Invoke BCL_PROCESSOR_PD.
 	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Use argshim to build MRO call source and invoke.
-		fcid := body.Fcid
-		run := pool.find(fcid)
-		if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
-			return err.Error()
-		}
-		return ""
+		return InvokePreprocess(body.Fcid, rt, argshim, pman, pool)
 	})
 
 	// API: Archive BCL_PROCESSOR_PD.
@@ -628,7 +652,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Invoke analysis.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		return InvokeAnalysis(body.Fcid, rt, lena, argshim, pman)
+		return InvokeAllSamples(body.Fcid, rt, argshim, pman, lena)
 	})
 
 	// API: Restart failed stage.

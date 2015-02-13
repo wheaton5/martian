@@ -79,6 +79,9 @@
       }
       return true;
     };
+    $scope.invokePipestance = function(p) {
+      return callApi($scope, $http, p, '/api/invoke-sample');
+    };
     $scope.archivePipestance = function(p) {
       return callApiWithConfirmation($scope, $http, p, '/api/archive-sample');
     };

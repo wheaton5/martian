@@ -63,6 +63,9 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
                 return false
         return true
 
+    $scope.invokePipestance = (p) ->
+        callApi($scope, $http, p, '/api/invoke-sample')
+
     $scope.archivePipestance = (p) ->
         callApiWithConfirmation($scope, $http, p, '/api/archive-sample')
 

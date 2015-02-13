@@ -83,6 +83,8 @@ html(ng-app="app")
                                     li
                                         a(ng-click="state='failed'") Failed
                                     li
+                                        a(ng-click="state='ready'") Ready
+                                    li
                                         a(ng-click="state='copying'") Copying
                                     li
                                         a(ng-click="state='waiting'") Waiting
@@ -103,6 +105,7 @@ html(ng-app="app")
                         td
                             span.minibox(ng-class="p.state") {{p.state}}
                         td(ng-if="admin")
+                            button.btn.btn-default(ng-if="p.state == 'ready' && admin && showbutton" ng-click="invokePipestance(p)") Invoke
                             button.btn.btn-default(ng-if="p.state == 'complete' && admin && showbutton" ng-click="archivePipestance(p)") Archive
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="unfailPipestance(p)") Unfail
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="wipePipestance(p)") Wipe
