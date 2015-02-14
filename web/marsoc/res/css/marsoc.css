@@ -4,15 +4,180 @@
  * Styles for MARSOC main page.
  *
  */
-#one-run {
-    position: absolute;
-    left: 650px;
-    top: 50px;
+
+@font-face {
+    font-family: "Avenir";
+    src: url("../fonts/AvenirLTStd-Book.otf");
 }
 
+@font-face {
+    font-family: "Avenir Roman";
+    src: url("../fonts/AvenirLTStd-Roman.otf");
+}
+
+@font-face {
+    font-family: "Avenir Medium";
+    src: url("../fonts/AvenirLTStd-Medium.otf");
+}
+
+@font-face {
+    font-family: "Avenir Heavy";
+    src: url("../fonts/AvenirLTStd-Heavy.otf");
+}
+
+@font-face {
+    font-family: "Avenir Black";
+    src: url("../fonts/AvenirLTStd-Black.otf");
+}
+
+/*
+ * 10X Common Header
+ */
+.navbar {
+    border-bottom: 0;
+    height: 100px;
+    font-family: "Avenir";
+}
+
+.navbar-right {
+    right: 135px;
+    top: 0px;
+    position: absolute;
+}
+
+.logo_container {
+    height: 100px;
+    width: 120px;
+    background-color: rgba(0,0,0,0.8);
+    position: relative;
+}
+img.logo {
+    position: absolute;
+    top: 18px; 
+    left: 18px;
+    height: 60px;
+}
+
+.navbar .navbar-brand {
+    position: fixed;
+    width: 100%;
+    color: white;
+    font-size: 18px;
+    padding: 0px;
+    /*border: 1px solid red;*/
+    height: 100px;    
+}
+
+.navbar-upper {
+    position: absolute;
+    background-color: rgba(255,255,255,1.0);
+    top: 0px;
+    left: 120px;
+    height: 50px;
+    width: 100%;
+    box-shadow: rgba(0, 0, 0, 0.14902) 0px 1px 4px 0px;
+    z-index: 5;
+    line-height: 50px;
+    color: #666;
+    padding-left: 15px;
+}
+
+.navbar-right a.sampleid {
+    color: #33b5e5;
+}
+
+.navbar-lower {
+    position: absolute;
+    background-color: rgba(240,240,240,1.0);
+    top: 50px;
+    left: 120px;
+    height: 50px;
+    width: 100%;   
+    z-index: 2;
+    line-height: 50px;
+    color: #666;
+    padding-left: 15px;
+    font-size: 14px;
+}
+.navbar-lower a {
+    color: #666;
+}
+
+/*
+ * Page Body
+ */
+.page-body {
+    clear: both;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: auto;
+    width: 1000px;
+    padding: 0;
+}
+/** END 10X Common Header **/
+
+.aibutton {
+    font-size: 12px;
+    line-height: 31px;
+    height: 29px;
+    padding: 0px 10px;
+}
+
+#ps {
+    margin-top: 100px;
+}
+
+#ps_filter_state {
+    margin-top: 25px;
+}
+
+#qstat {
+    margin-top: 100px;
+}
+
+#qstat td {
+    font-family: "Menlo";
+    font-size: 12px;
+}
+
+#qstat_summary {
+    height: 110px;
+    border-bottom: 1px solid #ddd;
+    border-top: 1px solid #ddd;
+}
+
+#qstat_summary table {
+    width: 100%;
+    height: 110px;
+}
+
+#qstat_summary table td {
+    font-family: "Avenir Roman";
+    text-align: center;
+    vertical-align: middle;
+    width: 25%;
+    font-size: 14px;
+}
+
+#qstat .table thead tr th {
+    border-bottom: 1px solid #ddd;
+    background: #eee;
+    font-family: "Avenir Medium";
+}
+
+#qstat_summary table td span.hero {
+    font-size: 40px;
+    color: rgba(52,167,118,1.0)
+}
+
+#one-run {
+    position: absolute;
+    left: 640px;
+    top: 100px;
+}
 .detail {
-    margin-top: 50px;
-    height: 768px;
+    padding-top: 100px;
+    height: 100vh;
     overflow-y: scroll;
     position: absolute;
 }

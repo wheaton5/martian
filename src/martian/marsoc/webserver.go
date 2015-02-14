@@ -60,6 +60,7 @@ type MainPage struct {
 	Admin            bool
 	MarsocVersion    string
 	PipelinesVersion string
+	PipestanceCount  int
 }
 type GraphPage struct {
 	InstanceName string
@@ -86,6 +87,12 @@ type MetadataForm struct {
 
 type AutoInvokeForm struct {
 	State bool
+}
+
+type PipestanceForm struct {
+	Fcid     string
+	Pipeline string
+	Psid     string
 }
 
 // For a given sample, update the following fields:
@@ -122,15 +129,26 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 	return fastqPaths
 }
 
-func InvokeAnalysis(fcid string, rt *core.Runtime, lena *Lena, argshim *ArgShim, pman *PipestanceManager) string {
-	// Get all the samples for this fcid.
-	samples := lena.getSamplesForFlowcell(fcid)
+func InvokePreprocess(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, pool *SequencerPool) string {
+	run := pool.find(fcid)
+	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
+		return err.Error()
+	}
+	return ""
+}
 
-	// Invoke the appropriate pipeline on each sample.
+func InvokeSample(sample *Sample, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena) string {
+	// Invoke the pipestance.
+	fastqPaths := updateSampleState(sample, rt, lena, argshim, pman)
 	errors := []string{}
-	for _, sample := range samples {
-		// Invoke the pipestance.
-		updateSampleState(sample, rt, lena, argshim, pman)
+	every := true
+	for _, fastqPath := range fastqPaths {
+		if _, err := os.Stat(fastqPath); err != nil {
+			errors = append(errors, err.Error())
+			every = false
+		}
+	}
+	if every {
 		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
 			errors = append(errors, err.Error())
 		}
@@ -138,9 +156,65 @@ func InvokeAnalysis(fcid string, rt *core.Runtime, lena *Lena, argshim *ArgShim,
 	return strings.Join(errors, "\n")
 }
 
+func InvokeAllSamples(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena) string {
+	// Get all the samples for this fcid.
+	samples := lena.getSamplesForFlowcell(fcid)
+
+	// Invoke the appropriate pipeline on each sample.
+	errors := []string{}
+	for _, sample := range samples {
+		if error := InvokeSample(sample, rt, argshim, pman, lena); len(error) > 0 {
+			errors = append(errors, error)
+		}
+	}
+	return strings.Join(errors, "\n")
+}
+
+func callPipestanceAPI(body PipestanceForm, pipestanceFunc PipestanceFunc) string {
+	if err := pipestanceFunc(body.Fcid, body.Pipeline, body.Psid); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+func callMetasamplePipestanceAPI(body MetasampleIdForm, lena *Lena, pipestanceFunc PipestanceFunc) string {
+	// Get the sample with this id.
+	sample := lena.getSampleWithId(body.Id)
+	if sample == nil {
+		return fmt.Sprintf("Sample '%s' not found.", body.Id)
+	}
+
+	if err := pipestanceFunc(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+func callFcidPipestanceAPI(body FcidForm, lena *Lena, pipestanceFunc PipestanceFunc) string {
+	// Get all the samples for this fcid.
+	samples := lena.getSamplesForFlowcell(body.Fcid)
+
+	errors := []string{}
+	for _, sample := range samples {
+		if err := pipestanceFunc(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
+			errors = append(errors, err.Error())
+		}
+	}
+	return strings.Join(errors, "\n")
+}
+
+func callPreprocessAPI(body FcidForm, pipestanceFunc PipestanceFunc) string {
+	fcid := body.Fcid
+	if err := pipestanceFunc(fcid, "BCL_PROCESSOR_PD", fcid); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
 func runWebServer(uiport string, instanceName string, martianVersion string,
 	mroVersion string, rt *core.Runtime, pool *SequencerPool,
-	pman *PipestanceManager, lena *Lena, argshim *ArgShim, info map[string]string) {
+	pman *PipestanceManager, lena *Lena, argshim *ArgShim, sge *SGE,
+	info map[string]string) {
 
 	//=========================================================================
 	// Configure server.
@@ -168,6 +242,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 				Admin:            false,
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
 
@@ -179,6 +254,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 				Admin:            true,
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
 
@@ -275,6 +351,136 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		return fmt.Sprintf("Could not find run with fcid %s.", body.Fcid)
 	})
 
+	//
+	//=========================================================================
+	// Pipestances UI.
+	//=========================================================================
+	app.Get("/pipestances", func() string {
+		return render("web/marsoc/templates", "pipestances.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            false,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+
+	app.Get("/admin/pipestances", func() string {
+		return render("web/marsoc/templates", "pipestances.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            true,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+
+	app.Get("/api/get-pipestances", func() string {
+		pipestances := []interface{}{}
+		pipestanceMutex := &sync.Mutex{}
+
+		var wg sync.WaitGroup
+		wg.Add(len(pool.runList))
+		for _, run := range pool.runList {
+			go func(wg *sync.WaitGroup, run *Run) {
+				defer wg.Done()
+
+				if run.State != "complete" {
+					return
+				}
+
+				runPipestances := []interface{}{}
+				state, ok := pman.GetPipestanceState(run.Fcid, "BCL_PROCESSOR_PD", run.Fcid)
+				if !ok {
+					state = "ready"
+				}
+				runPipestances = append(runPipestances,
+					map[string]interface{}{
+						"fcid":     run.Fcid,
+						"pipeline": "BCL_PROCESSOR_PD",
+						"psid":     run.Fcid,
+						"state":    state,
+					})
+
+				if state == "complete" {
+					samples := lena.getSamplesForFlowcell(run.Fcid)
+					for _, sample := range samples {
+						pipeline := argshim.getPipelineForSample(sample)
+						psid := strconv.Itoa(sample.Id)
+
+						state, ok := pman.GetPipestanceState(run.Fcid, pipeline, psid)
+						if !ok {
+							state = "ready"
+						}
+						runPipestances = append(runPipestances,
+							map[string]interface{}{
+								"fcid":     run.Fcid,
+								"pipeline": pipeline,
+								"psid":     psid,
+								"state":    state,
+							})
+					}
+				}
+
+				if len(runPipestances) > 0 {
+					pipestanceMutex.Lock()
+					pipestances = append(pipestances, runPipestances...)
+					pipestanceMutex.Unlock()
+				}
+			}(&wg, run)
+		}
+		metasamples := lena.getMetasamples()
+		for _, metasample := range metasamples {
+			fcid := metasample.Pscontainer
+			pipeline := argshim.getPipelineForSample(metasample)
+			psid := strconv.Itoa(metasample.Id)
+
+			if state, ok := pman.GetPipestanceState(fcid, pipeline, psid); ok {
+				pipestanceMutex.Lock()
+				pipestances = append(pipestances,
+					map[string]interface{}{
+						"fcid":     fcid,
+						"pipeline": pipeline,
+						"psid":     psid,
+						"state":    state,
+					})
+				pipestanceMutex.Unlock()
+			}
+		}
+		wg.Wait()
+		return makeJSON(pipestances)
+	})
+
+	app.Post("/api/restart-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.UnfailPipestance)
+	})
+
+	app.Post("/api/archive-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.ArchivePipestanceHead)
+	})
+
+	app.Post("/api/wipe-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.WipePipestance)
+	})
+
+	app.Post("/api/kill-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		return callPipestanceAPI(body, pman.KillPipestance)
+	})
+
+	app.Post("/api/invoke-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
+		if body.Pipeline == "BCL_PROCESSOR_PD" {
+			return InvokePreprocess(body.Fcid, rt, argshim, pman, pool)
+		}
+
+		sample := lena.getSampleWithId(body.Psid)
+		if sample == nil {
+			return fmt.Sprintf("Sample '%s' not found.", body.Psid)
+		}
+		return InvokeSample(sample, rt, argshim, pman, lena)
+	})
+
 	//=========================================================================
 	// Metasamples UI.
 	//=========================================================================
@@ -283,9 +489,20 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		return render("web/marsoc/templates", "metasamples.html",
 			&MainPage{
 				InstanceName:     instanceName,
+				Admin:            false,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+	app.Get("/admin/metasamples", func() string {
+		return render("web/marsoc/templates", "metasamples.html",
+			&MainPage{
+				InstanceName:     instanceName,
 				Admin:            true,
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
 
@@ -317,38 +534,27 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Id)
 		}
-
-		// Invoke the pipestance.
-		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
-			return err.Error()
-		}
-		return ""
+		return InvokeSample(sample, rt, argshim, pman, lena)
 	})
 
 	// API: Restart failed metasample analysis.
 	app.Post("/api/restart-metasample-analysis", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
-		sample := lena.getSampleWithId(body.Id)
-		if sample == nil {
-			return fmt.Sprintf("Sample '%s' not found.", body.Id)
-		}
-
-		if err := pman.UnfailPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-			return err.Error()
-		}
-		return ""
+		return callMetasamplePipestanceAPI(body, lena, pman.UnfailPipestance)
 	})
 
 	// API: Archive metasample pipestance.
 	app.Post("/api/archive-metasample", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
-		sample := lena.getSampleWithId(body.Id)
-		if sample == nil {
-			return fmt.Sprintf("Sample '%s' not found.", body.Id)
-		}
+		return callMetasamplePipestanceAPI(body, lena, pman.ArchivePipestanceHead)
+	})
 
-		if err := pman.ArchivePipestanceHead(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-			return err.Error()
-		}
-		return ""
+	// API: Wipe metasample pipestance.
+	app.Post("/api/wipe-metasample", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
+		return callMetasamplePipestanceAPI(body, lena, pman.WipePipestance)
+	})
+
+	// API: Kill metasample pipestance.
+	app.Post("/api/kill-metasample", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, p martini.Params) string {
+		return callMetasamplePipestanceAPI(body, lena, pman.KillPipestance)
 	})
 
 	//=========================================================================
@@ -393,10 +599,22 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		psinfo["pname"] = pname
 		psinfo["psid"] = psid
 		psinfo["invokesrc"], _ = pman.GetPipestanceInvokeSrc(container, pname, psid)
-		ser, _ := pman.GetPipestanceSerialization(container, pname, psid)
+		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
 		state["nodes"] = ser
 		state["info"] = psinfo
 		js := makeJSON(state)
+		return js
+	})
+
+	// API: Get pipestance performance stats.
+	app.Get("/api/get-perf/:container/:pname/:psid", func(p martini.Params) string {
+		container := p["container"]
+		pname := p["pname"]
+		psid := p["psid"]
+		perf := map[string]interface{}{}
+		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "perf")
+		perf["nodes"] = ser
+		js := makeJSON(perf)
 		return js
 	})
 
@@ -414,18 +632,27 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Invoke BCL_PROCESSOR_PD.
 	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Use argshim to build MRO call source and invoke.
-		fcid := body.Fcid
-		run := pool.find(fcid)
-		if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
-			return err.Error()
-		}
-		return ""
+		return InvokePreprocess(body.Fcid, rt, argshim, pman, pool)
+	})
+
+	// API: Archive BCL_PROCESSOR_PD.
+	app.Post("/api/archive-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		return callPreprocessAPI(body, pman.ArchivePipestanceHead)
+	})
+
+	// API: Wipe BCL_PROCESSOR_PD.
+	app.Post("/api/wipe-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		return callPreprocessAPI(body, pman.WipePipestance)
+	})
+
+	// API: Kill BCL_PROCESSOR_PD.
+	app.Post("/api/kill-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		return callPreprocessAPI(body, pman.KillPipestance)
 	})
 
 	// API: Invoke analysis.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		return InvokeAnalysis(body.Fcid, rt, lena, argshim, pman)
+		return InvokeAllSamples(body.Fcid, rt, argshim, pman, lena)
 	})
 
 	// API: Restart failed stage.
@@ -438,32 +665,22 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Archive pipestance.
 	app.Post("/api/archive-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Get all the samples for this fcid.
-		samples := lena.getSamplesForFlowcell(body.Fcid)
+		return callFcidPipestanceAPI(body, lena, pman.ArchivePipestanceHead)
+	})
 
-		// Archive the samples.
-		errors := []string{}
-		for _, sample := range samples {
-			if err := pman.ArchivePipestanceHead(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-				errors = append(errors, err.Error())
-			}
-		}
-		return strings.Join(errors, "\n")
+	// API: Wipe pipestances.
+	app.Post("/api/wipe-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		return callFcidPipestanceAPI(body, lena, pman.WipePipestance)
+	})
+
+	// API: Kill pipestances.
+	app.Post("/api/kill-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
+		return callFcidPipestanceAPI(body, lena, pman.KillPipestance)
 	})
 
 	// API: Restart failed pipestances associated to a flow cell.
 	app.Post("/api/restart-fcid-samples", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		// Get all the samples for this fcid.
-		samples := lena.getSamplesForFlowcell(body.Fcid)
-
-		// Unfail the pipestances.
-		errors := []string{}
-		for _, sample := range samples {
-			if err := pman.UnfailPipestance(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id)); err != nil {
-				errors = append(errors, err.Error())
-			}
-		}
-		return strings.Join(errors, "\n")
+		return callFcidPipestanceAPI(body, lena, pman.UnfailPipestance)
 	})
 
 	app.Post("/api/set-auto-invoke-status", binding.Bind(AutoInvokeForm{}), func(body AutoInvokeForm, p martini.Params) string {
@@ -475,6 +692,36 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		return makeJSON(map[string]interface{}{
 			"state": pman.autoInvoke,
 		})
+	})
+
+	//=========================================================================
+	// SGE qstat UI.
+	//=========================================================================
+	// Render: main qstat UI.
+	app.Get("/razor", func() string {
+		return render("web/marsoc/templates", "sge.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            false,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+	app.Get("/admin/razor", func() string {
+		return render("web/marsoc/templates", "sge.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            true,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: mroVersion,
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+
+	// API: Parser qstat output
+	app.Get("/api/qstat", func() string {
+		return sge.getJSON()
 	})
 
 	//=========================================================================
