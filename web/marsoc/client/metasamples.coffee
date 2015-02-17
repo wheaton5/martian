@@ -9,7 +9,7 @@ app = angular.module('app', ['ui.bootstrap'])
 callApiWithConfirmation = ($scope, $http, $url) ->
     $scope.showbutton = false
     id = window.prompt("Please type the sample ID to confirm")
-    if id == scope.selsample?.id.toString()
+    if id == $scope.selsample?.id.toString()
         callApi($scope, $http, $url)
     else
         window.alert("Incorrect sample id")

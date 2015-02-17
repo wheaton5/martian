@@ -7,7 +7,7 @@
     var id, _ref;
     $scope.showbutton = false;
     id = window.prompt("Please type the sample ID to confirm");
-    if (id === ((_ref = scope.selsample) != null ? _ref.id.toString() : void 0)) {
+    if (id === ((_ref = $scope.selsample) != null ? _ref.id.toString() : void 0)) {
       return callApi($scope, $http, $url);
     } else {
       window.alert("Incorrect sample id");
