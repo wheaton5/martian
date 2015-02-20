@@ -226,12 +226,12 @@ Options:
 	//=========================================================================
 	jobMode := "sge"
 	vdrMode := "rolling"
+	profileMode := "cpu"
 	reqMemPerCore := 8
-	profile := true
 	stackVars := false
 	checkSrcPath := true
-	rt := core.NewRuntimeWithCores(jobMode, vdrMode, mroPath, martianVersion, mroVersion,
-		-1, -1, reqMemPerCore, reqMemPerJob, profile, stackVars, debug, false)
+	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, mroPath, martianVersion, mroVersion,
+		-1, -1, reqMemPerCore, reqMemPerJob, stackVars, debug, false)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -316,7 +316,7 @@ Options:
 		"invokesrc":  "",
 		"MROPATH":    mroPath,
 		"MRONODUMP":  "false",
-		"MROPROFILE": fmt.Sprintf("%v", profile),
+		"MROPROFILE": profileMode,
 		"MROPORT":    uiport,
 		"mroversion": mroVersion,
 		"mrobranch":  mroBranch,
