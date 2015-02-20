@@ -505,10 +505,11 @@ func (self *PipestanceManager) processRunList() {
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
+				invocation := pipestance.GetInvocation()
 				stage, summary, errlog, kind, errpaths := pipestance.GetFatalError()
 
 				// Write pipestance to fail coop.
-				self.writePipestanceToFailCoop(fqname, stage, summary, errlog, kind, errpaths)
+				self.writePipestanceToFailCoop(fqname, stage, summary, errlog, kind, errpaths, invocation)
 
 				if pname == "BCL_PROCESSOR_PD" {
 					// For BCL_PROCESSOR_PD, just email the admins.
@@ -551,7 +552,7 @@ func (self *PipestanceManager) processRunList() {
 }
 
 func (self *PipestanceManager) writePipestanceToFailCoop(fqname string, stage string, summary string,
-	errlog string, kind string, errpaths []string) {
+	errlog string, kind string, errpaths []string, invocation interface{}) {
 	now := time.Now()
 	currentDatePath := path.Join(self.failCoopPath, now.Format("2006-01-02"))
 	if _, err := os.Stat(currentDatePath); err != nil {
@@ -569,6 +570,8 @@ func (self *PipestanceManager) writePipestanceToFailCoop(fqname string, stage st
 		"summary":    summary,
 		"errlog":     errlog,
 		"kind":       kind,
+		"invocation": invocation,
+		"instance":   self.mailer.InstanceName,
 		"timestamp":  now.Format("2006-01-02 03:04:05PM"),
 	}
 	summaryPath := path.Join(psPath, "summary.json")
