@@ -58,6 +58,7 @@ type PipestanceManager struct {
 	stepms         int
 	aggregatePath  string
 	writePath      string
+	failCoopPath   string
 	scratchIndex   int
 	scratchPaths   []string
 	paths          []string
@@ -75,9 +76,42 @@ type PipestanceManager struct {
 	mailer         *Mailer
 }
 
+func writeJson(fpath string, object interface{}) {
+	bytes, _ := json.MarshalIndent(object, "", "    ")
+	if err := ioutil.WriteFile(fpath, bytes, 0644); err != nil {
+		core.LogError(err, "pipeman", "Could not write JSON file %s.", fpath)
+	}
+}
+
+func copyFile(oldPath string, newPath string) error {
+	in, _ := os.Open(oldPath)
+	defer in.Close()
+
+	out, _ := os.Create(newPath)
+	defer out.Close()
+
+	_, err := io.Copy(out, in)
+	return err
+}
+
+func getFilenameWithSuffix(dir string, fname string) string {
+	suffix := 0
+	infos, _ := ioutil.ReadDir(dir)
+	re := regexp.MustCompile(fmt.Sprintf("^%s-(\\d+)$", fname))
+	for _, info := range infos {
+		if m := re.FindStringSubmatch(info.Name()); m != nil {
+			infoSuffix, _ := strconv.Atoi(m[1])
+			if suffix <= infoSuffix {
+				suffix = infoSuffix + 1
+			}
+		}
+	}
+	return fmt.Sprintf("%s-%d", fname, suffix)
+}
+
 func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 	mroVersion string, pipestancesPaths []string, scratchPaths []string, cachePath string,
-	stepms int, autoInvoke bool, mailer *Mailer) *PipestanceManager {
+	failCoopPath string, stepms int, autoInvoke bool, mailer *Mailer) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.martianVersion = martianVersion
@@ -88,6 +122,7 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 	self.scratchPaths = scratchPaths
 	self.scratchIndex = 0
 	self.cachePath = path.Join(cachePath, "pipestances")
+	self.failCoopPath = failCoopPath
 	self.stepms = stepms
 	self.autoInvoke = autoInvoke
 	self.pipelines = rt.PipelineNames
@@ -158,10 +193,7 @@ func (self *PipestanceManager) writeCache() {
 		"completed": self.completed,
 		"failed":    self.failed,
 	}
-	bytes, _ := json.MarshalIndent(cache, "", "    ")
-	if err := ioutil.WriteFile(self.cachePath, bytes, 0644); err != nil {
-		core.LogError(err, "pipeman", "Could not write cache file %s.", self.cachePath)
-	}
+	writeJson(self.cachePath, cache)
 }
 
 func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []string, pipestanceInventoryFunc PipestanceInventoryFunc) int {
@@ -365,13 +397,7 @@ func (self *PipestanceManager) copyPipestance(fqname string) {
 				}
 
 				if fileinfo.Mode().IsRegular() {
-					in, _ := os.Open(oldPath)
-					defer in.Close()
-
-					out, _ := os.Create(newPath)
-					defer out.Close()
-
-					_, err = io.Copy(out, in)
+					err = copyFile(oldPath, newPath)
 				}
 
 				if fileinfo.Mode()&os.ModeSymlink == os.ModeSymlink {
@@ -479,7 +505,11 @@ func (self *PipestanceManager) processRunList() {
 
 				// Email notification.
 				pname, psid := parseFQName(fqname)
-				_, summary, _, _, _ := pipestance.GetFatalError()
+				stage, summary, errlog, kind, errpaths := pipestance.GetFatalError()
+
+				// Write pipestance to fail coop.
+				self.writePipestanceToFailCoop(fqname, stage, summary, errlog, kind, errpaths)
+
 				if pname == "BCL_PROCESSOR_PD" {
 					// For BCL_PROCESSOR_PD, just email the admins.
 					self.mailer.Sendmail(
@@ -518,6 +548,37 @@ func (self *PipestanceManager) processRunList() {
 	self.runListMutex.Lock()
 	self.writeCache()
 	self.runListMutex.Unlock()
+}
+
+func (self *PipestanceManager) writePipestanceToFailCoop(fqname string, stage string, summary string,
+	errlog string, kind string, errpaths []string) {
+	now := time.Now()
+	currentDatePath := path.Join(self.failCoopPath, now.Format("2006-01-02"))
+	if _, err := os.Stat(currentDatePath); err != nil {
+		os.MkdirAll(currentDatePath, 0755)
+	}
+
+	filename := getFilenameWithSuffix(currentDatePath, fmt.Sprintf("%s-%s", self.mailer.InstanceName, fqname))
+	psPath := path.Join(currentDatePath, filename)
+	os.Mkdir(psPath, 0755)
+
+	// Create failure summary JSON.
+	summaryJson := map[string]interface{}{
+		"pipestance": fqname,
+		"stage":      stage,
+		"summary":    summary,
+		"errlog":     errlog,
+		"kind":       kind,
+		"timestamp":  now.Format("2006-01-02 03:04:05PM"),
+	}
+	summaryPath := path.Join(psPath, "summary.json")
+	writeJson(summaryPath, summaryJson)
+
+	// Copy all related metadata files.
+	for _, errpath := range errpaths {
+		newPath := path.Join(psPath, path.Base(errpath))
+		copyFile(errpath, newPath)
+	}
 }
 
 func (self *PipestanceManager) removePendingPipestance(fqname string, unfail bool) {
@@ -565,19 +626,8 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	self.runListMutex.Unlock()
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
-	suffix := 0
 	psDir := path.Join(self.writePath, container, pipeline, psid)
-	psInfos, _ := ioutil.ReadDir(psDir)
-	re := regexp.MustCompile(fmt.Sprintf("^%s-(\\d+)$", self.mroVersion))
-	for _, psInfo := range psInfos {
-		if m := re.FindStringSubmatch(psInfo.Name()); m != nil {
-			psInfoSuffix, _ := strconv.Atoi(m[1])
-			if suffix <= psInfoSuffix {
-				suffix = psInfoSuffix + 1
-			}
-		}
-	}
-	mroVersion := fmt.Sprintf("%s-%d", self.mroVersion, suffix)
+	mroVersion := getFilenameWithSuffix(psDir, self.mroVersion)
 	psPath := path.Join(psDir, mroVersion)
 
 	scratchPsPath := path.Join(scratchPath, fmt.Sprintf("%s.%s.%s.%s", container, pipeline, psid, mroVersion))
