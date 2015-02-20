@@ -176,6 +176,7 @@ Options:
 		{"MARSOC_MROPATH", "path/to/mros"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
 		{"MARSOC_SCRATCH_PATH", "path/to/scratch/pipestances"},
+		{"MARSOC_FAIL_COOP", "path/to/fail/coop"},
 		{"MARSOC_EMAIL_HOST", "smtp.server.local"},
 		{"MARSOC_EMAIL_SENDER", "email@address.com"},
 		{"MARSOC_EMAIL_RECIPIENT", "email@address.com"},
@@ -208,6 +209,7 @@ Options:
 	argshimPath := env["MARSOC_ARGSHIM_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQUENCERS_PATH"]
+	failCoopPath := env["MARSOC_FAIL_COOP"]
 	pipestancesPaths := strings.Split(env["MARSOC_PIPESTANCES_PATH"], ":")
 	scratchPaths := strings.Split(env["MARSOC_SCRATCH_PATH"], ":")
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
@@ -257,7 +259,7 @@ Options:
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
 	pman := NewPipestanceManager(rt, martianVersion, mroVersion, pipestancesPaths,
-		scratchPaths, cachePath, stepSecs, autoInvoke, mailer)
+		scratchPaths, cachePath, failCoopPath, stepSecs, autoInvoke, mailer)
 	pman.loadCache()
 	pman.inventoryPipestances()
 
