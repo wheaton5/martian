@@ -6,10 +6,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"martian/core"
 	"net/http"
@@ -23,33 +20,6 @@ import (
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/gzip"
 )
-
-//=============================================================================
-// Web server helpers.
-//=============================================================================
-
-// Render a page from template.
-func render(dir string, tname string, data interface{}) string {
-	tmpl, err := template.New(tname).Delims("[[", "]]").ParseFiles(core.RelPath(path.Join("..", dir, tname)))
-	if err != nil {
-		return err.Error()
-	}
-	var doc bytes.Buffer
-	err = tmpl.Execute(&doc, data)
-	if err != nil {
-		return err.Error()
-	}
-	return doc.String()
-}
-
-// Render JSON from data.
-func makeJSON(data interface{}) string {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return err.Error()
-	}
-	return string(bytes)
-}
 
 //=============================================================================
 // Page and form structs.
@@ -236,7 +206,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 	//=========================================================================
 	// Render: main UI.
 	app.Get("/", func() string {
-		return render("web/marsoc/templates", "marsoc.html",
+		return core.Render("web/marsoc/templates", "marsoc.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
@@ -248,7 +218,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// Render: admin mode main UI.
 	app.Get("/admin", func() string {
-		return render("web/marsoc/templates", "marsoc.html",
+		return core.Render("web/marsoc/templates", "marsoc.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -324,7 +294,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		wg.Wait()
 
 		// Send JSON for all runs in the sequencer pool.
-		return makeJSON(pool.runList)
+		return core.MakeJSON(pool.runList)
 	})
 
 	// API: Get samples for a given flowcell id.
@@ -340,7 +310,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			}(&wg, sample)
 		}
 		wg.Wait()
-		return makeJSON(samples)
+		return core.MakeJSON(samples)
 	})
 
 	// API: Build BCL_PROCESSOR_PD call source.
@@ -356,7 +326,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 	// Pipestances UI.
 	//=========================================================================
 	app.Get("/pipestances", func() string {
-		return render("web/marsoc/templates", "pipestances.html",
+		return core.Render("web/marsoc/templates", "pipestances.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
@@ -367,7 +337,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 	})
 
 	app.Get("/admin/pipestances", func() string {
-		return render("web/marsoc/templates", "pipestances.html",
+		return core.Render("web/marsoc/templates", "pipestances.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -450,7 +420,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			}
 		}
 		wg.Wait()
-		return makeJSON(pipestances)
+		return core.MakeJSON(pipestances)
 	})
 
 	app.Post("/api/restart-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
@@ -486,7 +456,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 	//=========================================================================
 	// Render: main metasample UI.
 	app.Get("/metasamples", func() string {
-		return render("web/marsoc/templates", "metasamples.html",
+		return core.Render("web/marsoc/templates", "metasamples.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
@@ -496,7 +466,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			})
 	})
 	app.Get("/admin/metasamples", func() string {
-		return render("web/marsoc/templates", "metasamples.html",
+		return core.Render("web/marsoc/templates", "metasamples.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -515,14 +485,14 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 				metasample.Psstate = state
 			}
 		}
-		return makeJSON(lena.getMetasamples())
+		return core.MakeJSON(lena.getMetasamples())
 	})
 
 	// API: Build analysis call source for a metasample with given id.
 	app.Post("/api/get-metasample-callsrc", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, params martini.Params) string {
 		if sample := lena.getSampleWithId(body.Id); sample != nil {
 			updateSampleState(sample, rt, lena, argshim, pman)
-			return makeJSON(sample)
+			return core.MakeJSON(sample)
 		}
 		return fmt.Sprintf("Could not find metasample with id %s.", body.Id)
 	})
@@ -562,7 +532,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 	//=========================================================================
 	// Render: pipestance graph UI.
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("web/martian/templates", "graph.html", &GraphPage{
+		return core.Render("web/martian/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
 			Container:    p["container"],
 			Pname:        p["pname"],
@@ -574,7 +544,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// Render: admin mode pipestance graph UI.
 	app.Get("/admin/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("web/martian/templates", "graph.html", &GraphPage{
+		return core.Render("web/martian/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
 			Container:    p["container"],
 			Pname:        p["pname"],
@@ -602,7 +572,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
 		state["nodes"] = ser
 		state["info"] = psinfo
-		js := makeJSON(state)
+		js := core.MakeJSON(state)
 		return js
 	})
 
@@ -614,7 +584,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		perf := map[string]interface{}{}
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "perf")
 		perf["nodes"] = ser
-		js := makeJSON(perf)
+		js := core.MakeJSON(perf)
 		return js
 	})
 
@@ -689,7 +659,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 	})
 
 	app.Get("/api/get-auto-invoke-status", func(p martini.Params) string {
-		return makeJSON(map[string]interface{}{
+		return core.MakeJSON(map[string]interface{}{
 			"state": pman.autoInvoke,
 		})
 	})
@@ -699,7 +669,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 	//=========================================================================
 	// Render: main qstat UI.
 	app.Get("/razor", func() string {
-		return render("web/marsoc/templates", "sge.html",
+		return core.Render("web/marsoc/templates", "sge.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
@@ -709,7 +679,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			})
 	})
 	app.Get("/admin/razor", func() string {
-		return render("web/marsoc/templates", "sge.html",
+		return core.Render("web/marsoc/templates", "sge.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -733,7 +703,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		if sample == nil {
 			return fmt.Sprintf("Sample %s not found in Lena.", sid)
 		}
-		return makeJSON(map[string]interface{}{
+		return core.MakeJSON(map[string]interface{}{
 			"ready_to_invoke": sample.Ready_to_invoke,
 			"sample_bag":      lena.getSampleBagWithId(sid),
 			"fastq_paths":     updateSampleState(sample, rt, lena, argshim, pman),
