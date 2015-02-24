@@ -1,0 +1,46 @@
+//-
+    Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+
+    Kepler UI for SQL queries.
+
+doctype html
+html(ng-app="app")
+    head
+        title [[.InstanceName]]
+        link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/marsoc.css")
+        link(rel="stylesheet" href="/css/main.css")
+        script(src="/js/angular.min.js")
+        script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+    body(ng-controller="SqlCtrl")
+        header.navbar.navbar-fixed-top
+            .navbar-header
+                .navbar-brand
+                    .logo_container
+                        img.logo(src="/images/10X_Logo_Reversed.png")
+                    .navbar-upper 
+                        | SQL Queries
+                        span.navbar-right
+                            | Martian&nbsp;
+                            a.sampleid(href="https://github.com/10XDev/martian/releases") [[.MartianVersion]]
+                    .navbar-lower
+                        a(href="/") HOME
+    #sql
+        #sql_filter
+            table
+                tr
+                    td
+                        div.input-group
+                            label Query
+                            input.form-control(type="text" ng-model="query")
+                    td
+                        button.btn.btn-default.filter_state(ng-click="getResult()") Enter
+                    td
+                        button.btn.btn-default.filter_state(ng-click="clearResult()") Clear
+        span(style="margin-top: 50px" ng-if="error") {{error}}
+        table.table(style="margin-top: 50px" ng-if="res")
+            tr
+                th(ng-repeat="column in res.columns") {{column}}
+            tr(ng-repeat="row in res.rows")
+                td(ng-repeat="value in row track by $index") {{value}}
+    script(src="/sql.js")

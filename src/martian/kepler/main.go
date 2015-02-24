@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/docopt/docopt.go"
 )
@@ -26,9 +27,12 @@ Options:
 
 	env := core.EnvRequire([][]string{
 		{"KEPLER_PORT", ">2000"},
+		{"KEPLER_LOG_PATH", "path/to/kepler/logs"},
 		{"KEPLER_DB_PATH", "path/to/db"},
 		{"KEPLER_PIPESTANCES_PATH", "path/to/pipestances"},
 	}, true)
+
+	core.LogTee(path.Join(env["KEPLER_LOG_PATH"], time.Now().Format("20060102150405")+".log"))
 
 	uiport := env["KEPLER_PORT"]
 	dbPath := env["KEPLER_DB_PATH"]

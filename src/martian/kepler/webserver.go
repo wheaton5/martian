@@ -17,12 +17,20 @@ type MainPage struct {
 }
 
 type SqlForm struct {
-	Statement string
+	Query string
 }
 
 func runWebServer(uiport string, martianVersion string, db *DatabaseManager) {
 	m := martini.New()
 	r := martini.NewRouter()
+	m.Use(martini.Recovery())
+	m.Use(martini.Static(core.RelPath("../web/kepler/client"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/marsoc/res"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/marsoc/client"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/martian/res"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/martian/client"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.MapTo(r, (*martini.Routes)(nil))
+	m.Action(r.Handle)
 	app := &martini.ClassicMartini{m, r}
 	app.Use(gzip.All())
 
@@ -35,9 +43,11 @@ func runWebServer(uiport string, martianVersion string, db *DatabaseManager) {
 	})
 
 	app.Post("/api/get-sql", binding.Bind(SqlForm{}), func(body SqlForm, params martini.Params) string {
-		result, err := db.Query(body.Statement)
+		result, err := db.Query(body.Query)
 		if err != nil {
-			return err.Error()
+			return core.MakeJSON(map[string]interface{}{
+				"error": err.Error(),
+			})
 		}
 		return core.MakeJSON(result)
 	})

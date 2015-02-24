@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"martian/core"
+	"os"
 	"path"
 	"sync"
 	"time"
@@ -31,7 +33,17 @@ func NewPipestanceManager(psPaths []string, db *DatabaseManager, rt *core.Runtim
 }
 
 func (self *PipestanceManager) loadCache() {
-	// TODO: Load already seen pipestances from database
+	self.cache = map[string]bool{}
+
+	paths, err := self.db.GetPipestances()
+	if err != nil {
+		core.LogError(err, "keplerd", "Failed to load pipestance cache: %s", err.Error())
+		os.Exit(1)
+	}
+
+	for _, path := range paths {
+		self.cache[path] = true
+	}
 }
 
 func (self *PipestanceManager) recursePath(root string) []string {
@@ -61,9 +73,75 @@ func (self *PipestanceManager) parseInvocation(path string) (string, map[string]
 	return v["call"].(string), v["args"].(map[string]interface{})
 }
 
-func (self *PipestanceManager) parseFqname(path string) string {
-	// TODO: Implement this!
-	return ""
+func (self *PipestanceManager) InsertPipestance(psPath string) error {
+	perfPath := path.Join(psPath, "_perf")
+	versionsPath := path.Join(psPath, "_versions")
+	invocationPath := path.Join(psPath, "_invocation")
+
+	martianVersion, pipelinesVersion := self.parseVersions(versionsPath)
+	call, args := self.parseInvocation(invocationPath)
+
+	var nodes []*core.NodePerfInfo
+	err := json.Unmarshal([]byte(read(perfPath)), &nodes)
+	if err != nil {
+		return err
+	}
+
+	if len(nodes) == 0 {
+		return &core.MartianError{fmt.Sprintf("Pipestance %s has empty _perf file", psPath)}
+	}
+
+	// Wrap database insertions in transaction
+	tx := NewDatabaseTx()
+	tx.Begin()
+	defer tx.End()
+
+	// Insert pipestance with its metadata
+	fqname := nodes[0].Fqname
+	err = self.db.InsertPipestance(tx, psPath, fqname, martianVersion,
+		pipelinesVersion, call, args)
+	if err != nil {
+		return err
+	}
+
+	// First pass: Insert all forks, chunks, splits, joins
+	for _, node := range nodes {
+		for _, fork := range node.Forks {
+			self.db.InsertFork(tx, node.Name, node.Fqname, node.Type, fork.Index, fork.ForkStats)
+			if fork.SplitStats != nil {
+				err := self.db.InsertSplit(tx, node.Fqname, fork.Index, fork.SplitStats)
+				if err != nil {
+					return err
+				}
+			}
+			if fork.JoinStats != nil {
+				err := self.db.InsertJoin(tx, node.Fqname, fork.Index, fork.JoinStats)
+				if err != nil {
+					return err
+				}
+			}
+			for _, chunk := range fork.Chunks {
+				err := self.db.InsertChunk(tx, node.Fqname, fork.Index, chunk.ChunkStats, chunk.Index)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// Second pass: Insert relationships between pipelines and stages
+	for _, node := range nodes {
+		for _, fork := range node.Forks {
+			for _, stage := range fork.Stages {
+				err := self.db.InsertRelationship(tx, node.Fqname, fork.Index, stage.Fqname, stage.Forki)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (self *PipestanceManager) Start() {
@@ -75,16 +153,12 @@ func (self *PipestanceManager) Start() {
 				defer wg.Done()
 				newPsPaths := self.recursePath(psPath)
 				for _, newPsPath := range newPsPaths {
-					perfPath := path.Join(newPsPath, "_perf")
-					versionsPath := path.Join(newPsPath, "_versions")
-					invocationPath := path.Join(newPsPath, "_invocation")
-
-					tx, _ := self.db.NewTransaction()
-					fqname := self.parseFqname(perfPath)
-					martianVersion, pipelinesVersion := self.parseVersions(versionsPath)
-					call, args := self.parseInvocation(invocationPath)
-					self.db.InsertPipestance(tx, newPsPath, fqname, martianVersion,
-						pipelinesVersion, call, args)
+					core.LogInfo("keplerd", "Adding pipestance %s", newPsPath)
+					if err := self.InsertPipestance(newPsPath); err != nil {
+						core.LogError(err, "keplerd", "Failed to add pipestance %s: %s",
+							newPsPath, err.Error())
+						delete(self.cache, newPsPath)
+					}
 				}
 			}(psPath)
 		}

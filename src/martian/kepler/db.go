@@ -23,9 +23,29 @@ type DatabaseManager struct {
 }
 
 type DatabaseTx struct {
-	tx      *sql.Tx
-	psid    int64
-	forkIds map[string]int64
+	psid  int64
+	table map[string]int64
+}
+
+type DatabaseError struct {
+	Fqname string
+}
+
+func (self *DatabaseError) Error() string {
+	return fmt.Sprintf("Fqname %s does not exist in current transaction", self.Fqname)
+}
+
+func makeForkFqname(fqname string, forki int) string {
+	return fmt.Sprintf("%s.fork%d", fqname, forki)
+}
+
+func findForkId(tx *DatabaseTx, forkFqname string, forkIndex int) (int64, error) {
+	fqname := makeForkFqname(forkFqname, forkIndex)
+	id, ok := tx.table[fqname]
+	if !ok {
+		return 0, &DatabaseError{fqname}
+	}
+	return id, nil
 }
 
 func NewDatabaseManager(name string, url string) *DatabaseManager {
@@ -33,7 +53,18 @@ func NewDatabaseManager(name string, url string) *DatabaseManager {
 	self.name = name
 	self.url = url
 
+	// Verify database driver to see whether Kepler supports it.
 	verifyDatabaseDriver(name)
+
+	// Open connection to database
+	if err := self.open(); err != nil {
+		core.LogInfo("keplerd", "Unable to establish connection with database %s: %s", self.url, err.Error())
+		os.Exit(1)
+	}
+
+	// Create tables (if they don't already exist)
+	self.createTables()
+
 	return self
 }
 
@@ -48,18 +79,21 @@ func verifyDatabaseDriver(name string) {
 	os.Exit(1)
 }
 
-func (self *DatabaseManager) NewTransaction() (*DatabaseTx, error) {
-	tx, err := self.conn.Begin()
-	if err != nil {
-		return nil, err
-	}
+func NewDatabaseTx() *DatabaseTx {
 	return &DatabaseTx{
-		tx:      tx,
-		forkIds: map[string]int64{},
-	}, nil
+		table: map[string]int64{},
+	}
 }
 
-func (self *DatabaseManager) Open() error {
+func (self *DatabaseTx) Begin() {
+	core.EnterCriticalSection()
+}
+
+func (self *DatabaseTx) End() {
+	core.ExitCriticalSection()
+}
+
+func (self *DatabaseManager) open() error {
 	conn, err := sql.Open(self.name, self.url)
 	if err != nil {
 		return err
@@ -72,6 +106,22 @@ func (self *DatabaseManager) Close() error {
 	return self.conn.Close()
 }
 
+func (self *DatabaseManager) GetPipestances() ([]string, error) {
+	res, err := self.Query("select path from pipestances")
+	if err != nil {
+		return nil, err
+	}
+
+	paths := []string{}
+	rows := res["rows"].([][]string)
+	for _, row := range rows {
+		if len(row) > 0 {
+			paths = append(paths, row[0])
+		}
+	}
+	return paths, nil
+}
+
 func (self *DatabaseManager) Query(statement string) (map[string]interface{}, error) {
 	rows, err := self.conn.Query(statement)
 	if err != nil {
@@ -79,17 +129,17 @@ func (self *DatabaseManager) Query(statement string) (map[string]interface{}, er
 	}
 	defer rows.Close()
 	cols, _ := rows.Columns()
-	vals := make([]interface{}, len(cols))
+	vals := make([][]byte, len(cols))
+	dest := make([]interface{}, len(cols))
 	for i, _ := range cols {
-		vals[i] = new(sql.RawBytes)
+		dest[i] = &vals[i]
 	}
-
 	rowLists := [][]string{}
 	for rows.Next() {
-		rows.Scan(vals...)
+		rows.Scan(dest...)
 		rowList := []string{}
 		for _, val := range vals {
-			rowList = append(rowList, fmt.Sprintf("%v", val))
+			rowList = append(rowList, string(val))
 		}
 		rowLists = append(rowLists, rowList)
 	}
@@ -99,7 +149,10 @@ func (self *DatabaseManager) Query(statement string) (map[string]interface{}, er
 	}, nil
 }
 
-func (self *DatabaseManager) CreateTables() {
+func (self *DatabaseManager) createTables() {
+	core.EnterCriticalSection()
+	defer core.ExitCriticalSection()
+
 	self.createTable("stats", []string{
 		"id integer not null primary key",
 		"core_hours float",
@@ -107,8 +160,8 @@ func (self *DatabaseManager) CreateTables() {
 		"walltime float",
 		"systemtime float",
 		"usertime float",
-		"start time",
-		"end time",
+		"start string",
+		"end string",
 		"num_jobs int",
 		"num_threads int",
 		"maxrss int",
@@ -143,47 +196,173 @@ func (self *DatabaseManager) CreateTables() {
 	self.createTable("forks", []string{
 		"id integer not null primary key",
 		"psid integer",
-		"sid integer",
+		"stats_id integer",
+		"name string",
 		"fqname string",
 		"type string",
+		"forki integer",
 		"foreign key(psid) references pipestances(id)",
-		"foreign key(sid) references stats(id)",
+		"foreign key(stats_id) references stats(id)",
 	})
-	self.createTable("pipeline_stages", []string{
+	self.createTable("relationships", []string{
 		"id integer not null primary key",
-		"pid integer",
-		"sid integer",
-		"foreign key(pid) references forks(id)",
-		"foreign key(sid) references forks(id)",
+		"pipeline_id integer",
+		"stage_id integer",
+		"foreign key(pipeline_id) references forks(id)",
+		"foreign key(stage_id) references forks(id)",
 	})
-	self.createTable("chunks", []string{
+	self.createTable("jobs", []string{
 		"id integer not null primary key",
-		"parent integer",
 		"psid integer",
-		"sid integer",
-		"fqname string",
-		"foreign key(parent) references forks(id)",
+		"fork_id integer",
+		"stats_id integer",
+		"type string",
+		"chunki integer",
 		"foreign key(psid) references pipestances(id)",
-		"foreign key(sid) references stats(id)",
+		"foreign key(fork_id) references forks(id)",
+		"foreign key(stats_id) references stats(id)",
 	})
 }
 
 func (self *DatabaseManager) InsertPipestance(tx *DatabaseTx, path string, fqname string, martianVersion string,
-	pipelinesVersion string, call string, args map[string]interface{}) {
-	tx.psid, _ = self.insert("pipestances", map[string]interface{}{
+	pipelinesVersion string, call string, args map[string]interface{}) error {
+	psid, err := self.insert("pipestances", map[string]interface{}{
 		"fqname":            fqname,
 		"call":              call,
 		"path":              path,
 		"martian_version":   martianVersion,
 		"pipelines_version": pipelinesVersion,
 	})
+	if err != nil {
+		return err
+	}
+
 	for key, value := range args {
-		self.insert("arguments", map[string]interface{}{
-			"psid":  tx.psid,
+		_, err := self.insert("arguments", map[string]interface{}{
+			"psid":  psid,
 			"key":   key,
 			"value": value,
 		})
+
+		if err != nil {
+			return err
+		}
 	}
+
+	tx.psid = psid
+	return nil
+}
+
+func (self *DatabaseManager) InsertChunk(tx *DatabaseTx, fqname string, forki int, stats *core.PerfInfo, chunki int) error {
+	return self.insertJob(tx, fqname, forki, stats, "chunk", chunki)
+}
+
+func (self *DatabaseManager) InsertSplit(tx *DatabaseTx, fqname string, forki int, stats *core.PerfInfo) error {
+	return self.insertJob(tx, fqname, forki, stats, "split", 0)
+}
+
+func (self *DatabaseManager) InsertJoin(tx *DatabaseTx, fqname string, forki int, stats *core.PerfInfo) error {
+	return self.insertJob(tx, fqname, forki, stats, "join", 0)
+}
+
+func (self *DatabaseManager) insertJob(tx *DatabaseTx, fqname string, forki int, stats *core.PerfInfo,
+	jobType string, jobi int) error {
+	// Find fork in transaction ID table
+	forkId, err := findForkId(tx, fqname, forki)
+	if err != nil {
+		return err
+	}
+
+	// Insert stats
+	statsId, err := self.insertStats(stats)
+	if err != nil {
+		return err
+	}
+
+	// Insert job
+	_, err = self.insert("jobs", map[string]interface{}{
+		"psid":     tx.psid,
+		"stats_id": statsId,
+		"fork_id":  forkId,
+		"type":     jobType,
+		"chunki":   jobi,
+	})
+	return err
+}
+
+func (self *DatabaseManager) InsertRelationship(tx *DatabaseTx, pipelineFqname string, pipelineIndex int, stageFqname string, stageIndex int) error {
+	// Find pipeline in transaction ID table
+	pipelineId, err := findForkId(tx, pipelineFqname, pipelineIndex)
+	if err != nil {
+		return err
+	}
+
+	// Find stage in transaction ID table
+	stageId, err := findForkId(tx, stageFqname, stageIndex)
+	if err != nil {
+		return err
+	}
+
+	// Insert pipeline-stage relationship
+	_, err = self.insert("relationships", map[string]interface{}{
+		"pipeline_id": pipelineId,
+		"stage_id":    stageId,
+	})
+	return err
+}
+
+func (self *DatabaseManager) InsertFork(tx *DatabaseTx, name string, fqname string, nodeType string,
+	forki int, stats *core.PerfInfo) error {
+	// Insert stats
+	statsId, err := self.insertStats(stats)
+	if err != nil {
+		return err
+	}
+
+	// Insert fork
+	forkId, err := self.insert("forks", map[string]interface{}{
+		"psid":     tx.psid,
+		"stats_id": statsId,
+		"name":     name,
+		"fqname":   fqname,
+		"type":     nodeType,
+		"forki":    forki,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Insert fork in transaction ID table
+	forkFqname := makeForkFqname(fqname, forki)
+	tx.table[forkFqname] = forkId
+	return nil
+}
+
+func (self *DatabaseManager) insertStats(stats *core.PerfInfo) (int64, error) {
+	return self.insert("stats", map[string]interface{}{
+		"num_jobs":          stats.NumJobs,
+		"num_threads":       stats.NumThreads,
+		"duration":          stats.Duration,
+		"core_hours":        stats.CoreHours,
+		"maxrss":            stats.MaxRss,
+		"in_blocks":         stats.InBlocks,
+		"out_blocks":        stats.OutBlocks,
+		"total_blocks":      stats.TotalBlocks,
+		"in_blocks_rate":    stats.InBlocksRate,
+		"out_blocks_rate":   stats.OutBlocksRate,
+		"total_blocks_rate": stats.TotalBlocksRate,
+		"start":             stats.Start,
+		"end":               stats.End,
+		"walltime":          stats.WallTime,
+		"usertime":          stats.UserTime,
+		"systemtime":        stats.SystemTime,
+		"total_files":       stats.TotalFiles,
+		"total_bytes":       stats.TotalBytes,
+		"output_files":      stats.OutputFiles,
+		"output_bytes":      stats.OutputBytes,
+		"vdr_files":         stats.VdrFiles,
+		"vdr_bytes":         stats.VdrBytes,
+	})
 }
 
 func (self *DatabaseManager) insert(tableName string, row map[string]interface{}) (int64, error) {
@@ -191,7 +370,7 @@ func (self *DatabaseManager) insert(tableName string, row map[string]interface{}
 	values := []string{}
 	for key, value := range row {
 		keys = append(keys, key)
-		values = append(values, fmt.Sprintf("%v", value))
+		values = append(values, fmt.Sprintf("'%v'", value))
 	}
 	cmd := fmt.Sprintf("insert into %s(%s) values(%s)", tableName, strings.Join(keys, ", "), strings.Join(values, ", "))
 	res, err := self.conn.Exec(cmd)
