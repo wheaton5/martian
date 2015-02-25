@@ -1,7 +1,7 @@
 (function() {
   var app;
 
-  app = angular.module('app', ['ui.bootstrap']);
+  app = angular.module('app', ['ui.bootstrap', 'ngSanitize', 'ngCsv']);
 
   app.controller('SqlCtrl', function($scope, $http, $interval) {
     $scope.res = null;
@@ -22,9 +22,12 @@
         return console.log('Server responded with an error for /api/get-sql.');
       });
     };
-    return $scope.clearResult = function() {
+    $scope.clearResult = function() {
       $scope.res = null;
       return $scope.error = null;
+    };
+    return $scope.csvResult = function() {
+      return [$scope.res.columns].concat($scope.res.rows);
     };
   });
 

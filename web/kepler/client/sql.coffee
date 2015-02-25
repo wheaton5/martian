@@ -4,7 +4,7 @@
 # Angular controller for Kepler UI.
 #
 
-app = angular.module('app', ['ui.bootstrap'])
+app = angular.module('app', ['ui.bootstrap', 'ngSanitize', 'ngCsv'])
 
 app.controller('SqlCtrl', ($scope, $http, $interval) ->
     $scope.res = null
@@ -26,4 +26,7 @@ app.controller('SqlCtrl', ($scope, $http, $interval) ->
     $scope.clearResult = () ->
         $scope.res = null
         $scope.error = null
+
+    $scope.csvResult = () ->
+        [$scope.res.columns].concat $scope.res.rows
 )

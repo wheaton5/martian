@@ -12,6 +12,8 @@ html(ng-app="app")
         link(rel="stylesheet" href="/css/main.css")
         script(src="/js/angular.min.js")
         script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="/js/angular-sanitize.min.js")
+        script(src="/js/ng-csv.min.js")
     body(ng-controller="SqlCtrl")
         header.navbar.navbar-fixed-top
             .navbar-header
@@ -37,6 +39,8 @@ html(ng-app="app")
                         button.btn.btn-default.filter_state(ng-click="getResult()") Enter
                     td
                         button.btn.btn-default.filter_state(ng-click="clearResult()") Clear
+                    td(ng-if="res")
+                        button.btn.btn-default.filter_state(ng-csv="csvResult()" filename="res.csv") Export
         span(style="margin-top: 50px" ng-if="error") {{error}}
         table.table(style="margin-top: 50px" ng-if="res")
             tr
