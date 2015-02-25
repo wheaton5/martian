@@ -1,0 +1,6 @@
+#!/bin/bash
+#
+# kepler startup script
+#
+kepler &
+disown
