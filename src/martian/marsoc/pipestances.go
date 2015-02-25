@@ -652,7 +652,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		os.Symlink(psPath, aggregatePsPath)
 	}
 
-	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
+	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath, tags)
 	if err != nil {
 		self.removePendingPipestance(fqname, false)
 		return err
@@ -663,7 +663,6 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	os.Remove(headPath)
 	os.Symlink(aggregatePsPath, headPath)
 
-	pipestance.Tag(tags)
 	pipestance.LoadMetadata()
 
 	core.LogInfo("pipeman", "Finished instantiating and pushing to runList: %s.", fqname)
