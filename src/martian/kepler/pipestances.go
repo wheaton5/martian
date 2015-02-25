@@ -12,10 +12,11 @@ import (
 )
 
 type PipestanceManager struct {
-	psPaths []string
-	cache   map[string]bool
-	rt      *core.Runtime
-	db      *DatabaseManager
+	psPaths       []string
+	exploredPaths map[string]bool
+	cache         map[string]bool
+	rt            *core.Runtime
+	db            *DatabaseManager
 }
 
 func read(path string) string {
@@ -33,16 +34,20 @@ func NewPipestanceManager(psPaths []string, db *DatabaseManager, rt *core.Runtim
 }
 
 func (self *PipestanceManager) loadCache() {
+	self.exploredPaths = map[string]bool{}
 	self.cache = map[string]bool{}
 
-	paths, err := self.db.GetPipestances()
+	pipestances, err := self.db.GetPipestances()
 	if err != nil {
-		core.LogError(err, "keplerd", "Failed to load pipestance cache: %s", err.Error())
+		core.LogError(err, "keplerd", "Failed to load pipestance caches: %s", err.Error())
 		os.Exit(1)
 	}
 
-	for _, path := range paths {
-		self.cache[path] = true
+	for _, ps := range pipestances {
+		path := ps["path"]
+		fqname := ps["fqname"]
+		self.exploredPaths[path] = true
+		self.cache[fqname] = true
 	}
 }
 
@@ -53,9 +58,9 @@ func (self *PipestanceManager) recursePath(root string) []string {
 		if info.IsDir() {
 			newPsPaths = append(newPsPaths, self.recursePath(path.Join(root, info.Name()))...)
 		} else if info.Name() == "_perf" {
-			if _, ok := self.cache[root]; !ok {
+			if _, ok := self.exploredPaths[root]; !ok {
 				newPsPaths = append(newPsPaths, root)
-				self.cache[root] = true
+				self.exploredPaths[root] = true
 			}
 		}
 	}
@@ -91,13 +96,18 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 		return &core.MartianError{fmt.Sprintf("Pipestance %s has empty _perf file", psPath)}
 	}
 
+	// Check cache
+	fqname := nodes[0].Fqname
+	if _, ok := self.cache[fqname]; ok {
+		return nil
+	}
+
 	// Wrap database insertions in transaction
 	tx := NewDatabaseTx()
 	tx.Begin()
 	defer tx.End()
 
 	// Insert pipestance with its metadata
-	fqname := nodes[0].Fqname
 	err = self.db.InsertPipestance(tx, psPath, fqname, martianVersion,
 		pipelinesVersion, call, args)
 	if err != nil {
@@ -141,6 +151,9 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 		}
 	}
 
+	// Insert pipestance into cache
+	self.cache[fqname] = true
+
 	return nil
 }
 
@@ -157,7 +170,7 @@ func (self *PipestanceManager) Start() {
 					if err := self.InsertPipestance(newPsPath); err != nil {
 						core.LogError(err, "keplerd", "Failed to add pipestance %s: %s",
 							newPsPath, err.Error())
-						delete(self.cache, newPsPath)
+						delete(self.exploredPaths, newPsPath)
 					}
 				}
 			}(psPath)

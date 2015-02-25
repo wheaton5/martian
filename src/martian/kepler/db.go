@@ -17,9 +17,11 @@ import (
 )
 
 type DatabaseManager struct {
-	name string
-	url  string
-	conn *sql.DB
+	name   string
+	url    string
+	conn   *sql.DB
+	roUrl  string
+	roConn *sql.DB
 }
 
 type DatabaseTx struct {
@@ -48,13 +50,25 @@ func findForkId(tx *DatabaseTx, forkFqname string, forkIndex int) (int64, error)
 	return id, nil
 }
 
+func openConn(name string, url string) (*sql.DB, error) {
+	conn, err := sql.Open(name, url)
+	if err != nil {
+		return nil, err
+	}
+	if err := conn.Ping(); err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
 func NewDatabaseManager(name string, url string) *DatabaseManager {
 	self := &DatabaseManager{}
 	self.name = name
 	self.url = url
+	self.roUrl = url
 
-	// Verify database driver to see whether Kepler supports it.
-	verifyDatabaseDriver(name)
+	// Driver-specific initialization
+	self.initDriver()
 
 	// Open connection to database
 	if err := self.open(); err != nil {
@@ -68,15 +82,16 @@ func NewDatabaseManager(name string, url string) *DatabaseManager {
 	return self
 }
 
-func verifyDatabaseDriver(name string) {
+func (self *DatabaseManager) initDriver() {
 	validNames := []string{"sqlite3"}
-	for _, validName := range validNames {
-		if name == validName {
-			return
-		}
+
+	switch self.name {
+	case "sqlite3":
+		self.roUrl = fmt.Sprintf("file:%s?mode=ro", self.roUrl)
+	default:
+		core.LogInfo("keplerd", "Invalid database driver: %s. Valid database drivers: %s", self.name, strings.Join(validNames, ", "))
+		os.Exit(1)
 	}
-	core.LogInfo("keplerd", "Invalid database driver: %s. Valid database drivers: %s", name, strings.Join(validNames, ", "))
-	os.Exit(1)
 }
 
 func NewDatabaseTx() *DatabaseTx {
@@ -94,36 +109,44 @@ func (self *DatabaseTx) End() {
 }
 
 func (self *DatabaseManager) open() error {
-	conn, err := sql.Open(self.name, self.url)
+	conn, err := openConn(self.name, self.url)
 	if err != nil {
 		return err
 	}
+	roConn, err := openConn(self.name, self.roUrl)
+	if err != nil {
+		return err
+	}
+
 	self.conn = conn
-	return self.conn.Ping()
+	self.roConn = roConn
+	return nil
 }
 
-func (self *DatabaseManager) Close() error {
-	return self.conn.Close()
+func (self *DatabaseManager) Close() {
+	self.conn.Close()
+	self.roConn.Close()
 }
 
-func (self *DatabaseManager) GetPipestances() ([]string, error) {
-	res, err := self.Query("select path from pipestances")
+func (self *DatabaseManager) GetPipestances() ([]map[string]string, error) {
+	res, err := self.Query("select fqname, path from pipestances")
 	if err != nil {
 		return nil, err
 	}
 
-	paths := []string{}
+	pipestances := []map[string]string{}
 	rows := res["rows"].([][]string)
 	for _, row := range rows {
-		if len(row) > 0 {
-			paths = append(paths, row[0])
-		}
+		pipestances = append(pipestances, map[string]string{
+			"fqname": row[0],
+			"path":   row[1],
+		})
 	}
-	return paths, nil
+	return pipestances, nil
 }
 
 func (self *DatabaseManager) Query(statement string) (map[string]interface{}, error) {
-	rows, err := self.conn.Query(statement)
+	rows, err := self.roConn.Query(statement)
 	if err != nil {
 		return nil, err
 	}
