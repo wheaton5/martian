@@ -209,7 +209,7 @@ func (self *DatabaseManager) createTables() {
 		"martian_version string",
 		"pipelines_version string",
 	})
-	self.createTable("arguments", []string{
+	self.createTable("tags", []string{
 		"id integer not null primary key",
 		"psid integer",
 		"key string",
@@ -248,7 +248,7 @@ func (self *DatabaseManager) createTables() {
 }
 
 func (self *DatabaseManager) InsertPipestance(tx *DatabaseTx, path string, fqname string, martianVersion string,
-	pipelinesVersion string, call string, args map[string]interface{}) error {
+	pipelinesVersion string, call string, args map[string]interface{}, tags []string) error {
 	psid, err := self.insert("pipestances", map[string]interface{}{
 		"fqname":            fqname,
 		"call":              call,
@@ -261,7 +261,19 @@ func (self *DatabaseManager) InsertPipestance(tx *DatabaseTx, path string, fqnam
 	}
 
 	for key, value := range args {
-		_, err := self.insert("arguments", map[string]interface{}{
+		_, err := self.insert("tags", map[string]interface{}{
+			"psid":  psid,
+			"key":   key,
+			"value": value,
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+	for _, tag := range tags {
+		key, value := core.ParseTag(tag)
+		_, err := self.insert("tags", map[string]interface{}{
 			"psid":  psid,
 			"key":   key,
 			"value": value,

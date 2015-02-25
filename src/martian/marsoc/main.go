@@ -109,7 +109,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 				for _, notice := range runQueue {
 					run := notice.run
 					fcids = append(fcids, run.Fcid)
-					pman.Invoke(run.Fcid, "BCL_PROCESSOR_PD", run.Fcid, argshim.buildCallSourceForRun(rt, run))
+					InvokePreprocess(run.Fcid, rt, argshim, pman, pool, mailer.InstanceName)
 				}
 
 				// If there are new runs completed, send email.
@@ -124,7 +124,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 
 				for _, notice := range analysisQueue {
 					fcid := notice.Fcid
-					InvokeAllSamples(fcid, rt, argshim, pman, lena)
+					InvokeAllSamples(fcid, rt, argshim, pman, lena, mailer.InstanceName)
 				}
 			}
 

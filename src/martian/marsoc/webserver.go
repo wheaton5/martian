@@ -99,15 +99,46 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 	return fastqPaths
 }
 
-func InvokePreprocess(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, pool *SequencerPool) string {
+func GetSampleTags(sample *Sample, fastq_paths map[string]string, instanceName string) []string {
+	tags := []string{core.MakeTag("instance", instanceName)}
+
+	// Flowcells
+	readLengths := map[int]bool{}
+	for _, sample_def := range sample.Sample_defs {
+		sd_fcid := sample_def.Sequencing_run.Name
+		tags = append(tags, core.MakeTag("flowcell", sd_fcid))
+		readLengths[sample_def.Read1_length] = true
+		readLengths[sample_def.Read2_length] = true
+	}
+
+	// Read lengths
+	for readLength, _ := range readLengths {
+		tags = append(tags, core.MakeTag("read_length", strconv.Itoa(readLength)))
+	}
+
+	// Number and size of all fastq files
+	fastq_paths_str := []string{}
+	for _, fastq_path := range fastq_paths {
+		fastq_paths_str = append(fastq_paths_str, fastq_path)
+	}
+	fastqFiles, fastqBytes := core.GetDirectorySize(fastq_paths_str)
+	fastqFilesTag := core.MakeTag("fastq_files", strconv.Itoa(int(fastqFiles)))
+	fastqBytesTag := core.MakeTag("fastq_bytes", strconv.FormatUint(fastqBytes, 10))
+	tags = append(tags, fastqFilesTag, fastqBytesTag)
+
+	return tags
+}
+
+func InvokePreprocess(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, pool *SequencerPool, instanceName string) string {
 	run := pool.find(fcid)
-	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
+	tags := []string{core.MakeTag("flowcell", fcid), core.MakeTag("instance", instanceName)}
+	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run), tags); err != nil {
 		return err.Error()
 	}
 	return ""
 }
 
-func InvokeSample(sample *Sample, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena) string {
+func InvokeSample(sample *Sample, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena, instanceName string) string {
 	// Invoke the pipestance.
 	fastqPaths := updateSampleState(sample, rt, lena, argshim, pman)
 	errors := []string{}
@@ -119,21 +150,22 @@ func InvokeSample(sample *Sample, rt *core.Runtime, argshim *ArgShim, pman *Pipe
 		}
 	}
 	if every {
-		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
+		tags := GetSampleTags(sample, fastqPaths, instanceName)
+		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc, tags); err != nil {
 			errors = append(errors, err.Error())
 		}
 	}
 	return strings.Join(errors, "\n")
 }
 
-func InvokeAllSamples(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena) string {
+func InvokeAllSamples(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena, instanceName string) string {
 	// Get all the samples for this fcid.
 	samples := lena.getSamplesForFlowcell(fcid)
 
 	// Invoke the appropriate pipeline on each sample.
 	errors := []string{}
 	for _, sample := range samples {
-		if error := InvokeSample(sample, rt, argshim, pman, lena); len(error) > 0 {
+		if error := InvokeSample(sample, rt, argshim, pman, lena, instanceName); len(error) > 0 {
 			errors = append(errors, error)
 		}
 	}
@@ -441,14 +473,14 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	app.Post("/api/invoke-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
 		if body.Pipeline == "BCL_PROCESSOR_PD" {
-			return InvokePreprocess(body.Fcid, rt, argshim, pman, pool)
+			return InvokePreprocess(body.Fcid, rt, argshim, pman, pool, instanceName)
 		}
 
 		sample := lena.getSampleWithId(body.Psid)
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Psid)
 		}
-		return InvokeSample(sample, rt, argshim, pman, lena)
+		return InvokeSample(sample, rt, argshim, pman, lena, instanceName)
 	})
 
 	//=========================================================================
@@ -504,7 +536,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Id)
 		}
-		return InvokeSample(sample, rt, argshim, pman, lena)
+		return InvokeSample(sample, rt, argshim, pman, lena, instanceName)
 	})
 
 	// API: Restart failed metasample analysis.
@@ -602,7 +634,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Invoke BCL_PROCESSOR_PD.
 	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		return InvokePreprocess(body.Fcid, rt, argshim, pman, pool)
+		return InvokePreprocess(body.Fcid, rt, argshim, pman, pool, instanceName)
 	})
 
 	// API: Archive BCL_PROCESSOR_PD.
@@ -622,7 +654,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 
 	// API: Invoke analysis.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		return InvokeAllSamples(body.Fcid, rt, argshim, pman, lena)
+		return InvokeAllSamples(body.Fcid, rt, argshim, pman, lena, instanceName)
 	})
 
 	// API: Restart failed stage.

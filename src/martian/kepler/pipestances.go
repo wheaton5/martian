@@ -69,22 +69,36 @@ func (self *PipestanceManager) recursePath(root string) []string {
 
 func (self *PipestanceManager) parseVersions(path string) (string, string) {
 	var v map[string]string
-	json.Unmarshal([]byte(read(path)), &v)
-	return v["martian"], v["pipelines"]
+	if err := json.Unmarshal([]byte(read(path)), &v); err == nil {
+		return v["martian"], v["pipelines"]
+	}
+	return "", ""
 }
 
 func (self *PipestanceManager) parseInvocation(path string) (string, map[string]interface{}) {
-	v, _ := self.rt.BuildCallJSON(read(path), path)
-	return v["call"].(string), v["args"].(map[string]interface{})
+	if v, err := self.rt.BuildCallJSON(read(path), path); err == nil {
+		return v["call"].(string), v["args"].(map[string]interface{})
+	}
+	return "", map[string]interface{}{}
+}
+
+func (self *PipestanceManager) parseTags(path string) []string {
+	var v []string
+	if err := json.Unmarshal([]byte(read(path)), &v); err == nil {
+		return v
+	}
+	return []string{}
 }
 
 func (self *PipestanceManager) InsertPipestance(psPath string) error {
 	perfPath := path.Join(psPath, "_perf")
 	versionsPath := path.Join(psPath, "_versions")
 	invocationPath := path.Join(psPath, "_invocation")
+	tagsPath := path.Join(psPath, "_tags")
 
 	martianVersion, pipelinesVersion := self.parseVersions(versionsPath)
 	call, args := self.parseInvocation(invocationPath)
+	tags := self.parseTags(tagsPath)
 
 	var nodes []*core.NodePerfInfo
 	err := json.Unmarshal([]byte(read(perfPath)), &nodes)
@@ -109,7 +123,7 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 
 	// Insert pipestance with its metadata
 	err = self.db.InsertPipestance(tx, psPath, fqname, martianVersion,
-		pipelinesVersion, call, args)
+		pipelinesVersion, call, args, tags)
 	if err != nil {
 		return err
 	}
