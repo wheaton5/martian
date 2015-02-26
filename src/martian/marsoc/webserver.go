@@ -431,6 +431,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			}(&wg, run)
 		}
 		metasamples := lena.getMetasamples()
+		wg.Add(len(metasamples))
 		for _, metasample := range metasamples {
 			go func(wg *sync.WaitGroup, metasample *Sample) {
 				defer wg.Done()
