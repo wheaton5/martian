@@ -258,8 +258,9 @@ Options:
 	//=========================================================================
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
-	pman := NewPipestanceManager(rt, martianVersion, mroVersion, pipestancesPaths,
-		scratchPaths, cachePath, failCoopPath, stepSecs, autoInvoke, mailer)
+	pman := NewPipestanceManager(rt, martianVersion, mroVersion, mroPath,
+		pipestancesPaths, scratchPaths, cachePath, failCoopPath, stepSecs,
+		autoInvoke, mailer)
 	pman.loadCache()
 	pman.inventoryPipestances()
 
@@ -327,8 +328,7 @@ Options:
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	runWebServer(uiport, instanceName, martianVersion, mroVersion, rt, pool, pman,
-		lena, argshim, sge, info)
+	runWebServer(uiport, instanceName, rt, pool, pman, lena, argshim, sge, info)
 
 	// Let daemons take over.
 	done := make(chan bool)

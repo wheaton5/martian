@@ -211,8 +211,7 @@ func callPreprocessAPI(body FcidForm, pipestanceFunc PipestanceFunc) string {
 	return ""
 }
 
-func runWebServer(uiport string, instanceName string, martianVersion string,
-	mroVersion string, rt *core.Runtime, pool *SequencerPool,
+func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *SequencerPool,
 	pman *PipestanceManager, lena *Lena, argshim *ArgShim, sge *SGE,
 	info map[string]string) {
 
@@ -240,8 +239,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
-				MarsocVersion:    martianVersion,
-				PipelinesVersion: mroVersion,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -252,8 +251,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
-				MarsocVersion:    martianVersion,
-				PipelinesVersion: mroVersion,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -360,8 +359,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
-				MarsocVersion:    martianVersion,
-				PipelinesVersion: mroVersion,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -371,8 +370,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
-				MarsocVersion:    martianVersion,
-				PipelinesVersion: mroVersion,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -433,21 +432,34 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 		}
 		metasamples := lena.getMetasamples()
 		for _, metasample := range metasamples {
-			fcid := metasample.Pscontainer
-			pipeline := argshim.getPipelineForSample(metasample)
-			psid := strconv.Itoa(metasample.Id)
+			go func(wg *sync.WaitGroup, metasample *Sample) {
+				defer wg.Done()
 
-			if state, ok := pman.GetPipestanceState(fcid, pipeline, psid); ok {
+				container := metasample.Pscontainer
+				pipeline := argshim.getPipelineForSample(metasample)
+				psid := strconv.Itoa(metasample.Id)
+
+				state, ok := pman.GetPipestanceState(container, pipeline, psid)
+				if !ok {
+					for _, sample_def := range metasample.Sample_defs {
+						fcid := sample_def.Sequencing_run.Name
+						if state, _ := pman.GetPipestanceState(fcid, "BCL_PROCESSOR_PD", fcid); state != "complete" {
+							return
+						}
+					}
+					state = "ready"
+				}
+
 				pipestanceMutex.Lock()
 				pipestances = append(pipestances,
 					map[string]interface{}{
-						"fcid":     fcid,
+						"fcid":     container,
 						"pipeline": pipeline,
 						"psid":     psid,
 						"state":    state,
 					})
 				pipestanceMutex.Unlock()
-			}
+			}(&wg, metasample)
 		}
 		wg.Wait()
 		return makeJSON(pipestances)
@@ -490,8 +502,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
-				MarsocVersion:    martianVersion,
-				PipelinesVersion: mroVersion,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -500,8 +512,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
-				MarsocVersion:    martianVersion,
-				PipelinesVersion: mroVersion,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -703,8 +715,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
-				MarsocVersion:    martianVersion,
-				PipelinesVersion: mroVersion,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -713,8 +725,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string,
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
-				MarsocVersion:    martianVersion,
-				PipelinesVersion: mroVersion,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})

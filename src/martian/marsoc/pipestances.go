@@ -53,6 +53,7 @@ type PipestanceManager struct {
 	rt             *core.Runtime
 	martianVersion string
 	mroVersion     string
+	mroPath        string
 	cachePath      string
 	autoInvoke     bool
 	stepms         int
@@ -109,13 +110,14 @@ func getFilenameWithSuffix(dir string, fname string) string {
 	return fmt.Sprintf("%s-%d", fname, suffix)
 }
 
-func NewPipestanceManager(rt *core.Runtime, martianVersion string,
-	mroVersion string, pipestancesPaths []string, scratchPaths []string, cachePath string,
+func NewPipestanceManager(rt *core.Runtime, martianVersion string, mroVersion string,
+	mroPath string, pipestancesPaths []string, scratchPaths []string, cachePath string,
 	failCoopPath string, stepms int, autoInvoke bool, mailer *Mailer) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.martianVersion = martianVersion
 	self.mroVersion = mroVersion
+	self.mroPath = mroPath
 	self.paths = pipestancesPaths
 	self.aggregatePath = pipestancesPaths[0]
 	self.writePath = pipestancesPaths[len(pipestancesPaths)-1]
@@ -137,7 +139,33 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string,
 	self.mailQueue = []*PipestanceNotification{}
 	self.analysisQueue = []*AnalysisNotification{}
 	self.mailer = mailer
+	self.refreshVersions()
 	return self
+}
+
+func (self *PipestanceManager) refreshVersions() {
+	go func() {
+		self.runListMutex.Lock()
+		self.martianVersion = core.GetVersion()
+		self.mroVersion = core.GetGitTag(self.mroPath)
+		self.runListMutex.Unlock()
+
+		time.Sleep(time.Minute * time.Duration(5))
+	}()
+}
+
+func (self *PipestanceManager) GetMartianVersion() string {
+	self.runListMutex.Lock()
+	martianVersion := self.martianVersion
+	self.runListMutex.Unlock()
+	return martianVersion
+}
+
+func (self *PipestanceManager) GetMroVersion() string {
+	self.runListMutex.Lock()
+	mroVersion := self.mroVersion
+	self.runListMutex.Unlock()
+	return mroVersion
 }
 
 func (self *PipestanceManager) CountRunningPipestances() int {
