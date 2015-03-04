@@ -639,7 +639,7 @@ func (self *PipestanceManager) getScratchPath() (string, error) {
 	return "", &core.MartianError{fmt.Sprintf("Pipestance scratch paths %s are full.", strings.Join(self.scratchPaths, ", "))}
 }
 
-func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string) error {
+func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string, tags []string) error {
 	fqname := makeFQName(pipeline, psid)
 
 	self.runListMutex.Lock()
@@ -680,7 +680,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		os.Symlink(psPath, aggregatePsPath)
 	}
 
-	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath)
+	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath, tags)
 	if err != nil {
 		self.removePendingPipestance(fqname, false)
 		return err

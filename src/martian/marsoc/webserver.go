@@ -6,10 +6,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"martian/core"
 	"net/http"
@@ -23,33 +20,6 @@ import (
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/gzip"
 )
-
-//=============================================================================
-// Web server helpers.
-//=============================================================================
-
-// Render a page from template.
-func render(dir string, tname string, data interface{}) string {
-	tmpl, err := template.New(tname).Delims("[[", "]]").ParseFiles(core.RelPath(path.Join("..", dir, tname)))
-	if err != nil {
-		return err.Error()
-	}
-	var doc bytes.Buffer
-	err = tmpl.Execute(&doc, data)
-	if err != nil {
-		return err.Error()
-	}
-	return doc.String()
-}
-
-// Render JSON from data.
-func makeJSON(data interface{}) string {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return err.Error()
-	}
-	return string(bytes)
-}
 
 //=============================================================================
 // Page and form structs.
@@ -129,15 +99,40 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 	return fastqPaths
 }
 
-func InvokePreprocess(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, pool *SequencerPool) string {
+func GetSampleTags(sample *Sample, fastq_paths map[string]string, instanceName string) []string {
+	tags := []string{core.MakeTag("instance", instanceName)}
+
+	// Flowcells
+	for _, sample_def := range sample.Sample_defs {
+		sd_fcid := sample_def.Sequencing_run.Name
+		tags = append(tags, core.MakeTag("flowcell", sd_fcid))
+		tags = append(tags, core.MakeTag("read1_length", strconv.Itoa(sample_def.Read1_length)))
+		tags = append(tags, core.MakeTag("read2_length", strconv.Itoa(sample_def.Read2_length)))
+	}
+
+	// Number and size of all fastq files
+	fastq_paths_str := []string{}
+	for _, fastq_path := range fastq_paths {
+		fastq_paths_str = append(fastq_paths_str, fastq_path)
+	}
+	fastqFiles, fastqBytes := core.GetDirectorySize(fastq_paths_str)
+	fastqFilesTag := core.MakeTag("fastq_files", strconv.Itoa(int(fastqFiles)))
+	fastqBytesTag := core.MakeTag("fastq_bytes", strconv.FormatUint(fastqBytes, 10))
+	tags = append(tags, fastqFilesTag, fastqBytesTag)
+
+	return tags
+}
+
+func InvokePreprocess(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, pool *SequencerPool, instanceName string) string {
 	run := pool.find(fcid)
-	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run)); err != nil {
+	tags := []string{core.MakeTag("flowcell", fcid), core.MakeTag("instance", instanceName)}
+	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run), tags); err != nil {
 		return err.Error()
 	}
 	return ""
 }
 
-func InvokeSample(sample *Sample, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena) string {
+func InvokeSample(sample *Sample, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena, instanceName string) string {
 	// Invoke the pipestance.
 	fastqPaths := updateSampleState(sample, rt, lena, argshim, pman)
 	errors := []string{}
@@ -149,21 +144,22 @@ func InvokeSample(sample *Sample, rt *core.Runtime, argshim *ArgShim, pman *Pipe
 		}
 	}
 	if every {
-		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc); err != nil {
+		tags := GetSampleTags(sample, fastqPaths, instanceName)
+		if err := pman.Invoke(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc, tags); err != nil {
 			errors = append(errors, err.Error())
 		}
 	}
 	return strings.Join(errors, "\n")
 }
 
-func InvokeAllSamples(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena) string {
+func InvokeAllSamples(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, lena *Lena, instanceName string) string {
 	// Get all the samples for this fcid.
 	samples := lena.getSamplesForFlowcell(fcid)
 
 	// Invoke the appropriate pipeline on each sample.
 	errors := []string{}
 	for _, sample := range samples {
-		if error := InvokeSample(sample, rt, argshim, pman, lena); len(error) > 0 {
+		if error := InvokeSample(sample, rt, argshim, pman, lena, instanceName); len(error) > 0 {
 			errors = append(errors, error)
 		}
 	}
@@ -235,7 +231,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	//=========================================================================
 	// Render: main UI.
 	app.Get("/", func() string {
-		return render("web/marsoc/templates", "marsoc.html",
+		return core.Render("web/marsoc/templates", "marsoc.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
@@ -247,7 +243,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 
 	// Render: admin mode main UI.
 	app.Get("/admin", func() string {
-		return render("web/marsoc/templates", "marsoc.html",
+		return core.Render("web/marsoc/templates", "marsoc.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -323,7 +319,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		wg.Wait()
 
 		// Send JSON for all runs in the sequencer pool.
-		return makeJSON(pool.runList)
+		return core.MakeJSON(pool.runList)
 	})
 
 	// API: Get samples for a given flowcell id.
@@ -339,7 +335,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			}(&wg, sample)
 		}
 		wg.Wait()
-		return makeJSON(samples)
+		return core.MakeJSON(samples)
 	})
 
 	// API: Build BCL_PROCESSOR_PD call source.
@@ -355,7 +351,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	// Pipestances UI.
 	//=========================================================================
 	app.Get("/pipestances", func() string {
-		return render("web/marsoc/templates", "pipestances.html",
+		return core.Render("web/marsoc/templates", "pipestances.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
@@ -366,7 +362,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	})
 
 	app.Get("/admin/pipestances", func() string {
-		return render("web/marsoc/templates", "pipestances.html",
+		return core.Render("web/marsoc/templates", "pipestances.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -463,7 +459,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			}(&wg, metasample)
 		}
 		wg.Wait()
-		return makeJSON(pipestances)
+		return core.MakeJSON(pipestances)
 	})
 
 	app.Post("/api/restart-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
@@ -484,14 +480,14 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 
 	app.Post("/api/invoke-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
 		if body.Pipeline == "BCL_PROCESSOR_PD" {
-			return InvokePreprocess(body.Fcid, rt, argshim, pman, pool)
+			return InvokePreprocess(body.Fcid, rt, argshim, pman, pool, instanceName)
 		}
 
 		sample := lena.getSampleWithId(body.Psid)
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Psid)
 		}
-		return InvokeSample(sample, rt, argshim, pman, lena)
+		return InvokeSample(sample, rt, argshim, pman, lena, instanceName)
 	})
 
 	//=========================================================================
@@ -499,7 +495,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	//=========================================================================
 	// Render: main metasample UI.
 	app.Get("/metasamples", func() string {
-		return render("web/marsoc/templates", "metasamples.html",
+		return core.Render("web/marsoc/templates", "metasamples.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
@@ -509,7 +505,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			})
 	})
 	app.Get("/admin/metasamples", func() string {
-		return render("web/marsoc/templates", "metasamples.html",
+		return core.Render("web/marsoc/templates", "metasamples.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -528,14 +524,14 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 				metasample.Psstate = state
 			}
 		}
-		return makeJSON(lena.getMetasamples())
+		return core.MakeJSON(lena.getMetasamples())
 	})
 
 	// API: Build analysis call source for a metasample with given id.
 	app.Post("/api/get-metasample-callsrc", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, params martini.Params) string {
 		if sample := lena.getSampleWithId(body.Id); sample != nil {
 			updateSampleState(sample, rt, lena, argshim, pman)
-			return makeJSON(sample)
+			return core.MakeJSON(sample)
 		}
 		return fmt.Sprintf("Could not find metasample with id %s.", body.Id)
 	})
@@ -547,7 +543,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Id)
 		}
-		return InvokeSample(sample, rt, argshim, pman, lena)
+		return InvokeSample(sample, rt, argshim, pman, lena, instanceName)
 	})
 
 	// API: Restart failed metasample analysis.
@@ -575,7 +571,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	//=========================================================================
 	// Render: pipestance graph UI.
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("web/martian/templates", "graph.html", &GraphPage{
+		return core.Render("web/martian/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
 			Container:    p["container"],
 			Pname:        p["pname"],
@@ -587,7 +583,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 
 	// Render: admin mode pipestance graph UI.
 	app.Get("/admin/pipestance/:container/:pname/:psid", func(p martini.Params) string {
-		return render("web/martian/templates", "graph.html", &GraphPage{
+		return core.Render("web/martian/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
 			Container:    p["container"],
 			Pname:        p["pname"],
@@ -615,7 +611,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
 		state["nodes"] = ser
 		state["info"] = psinfo
-		js := makeJSON(state)
+		js := core.MakeJSON(state)
 		return js
 	})
 
@@ -627,7 +623,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		perf := map[string]interface{}{}
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "perf")
 		perf["nodes"] = ser
-		js := makeJSON(perf)
+		js := core.MakeJSON(perf)
 		return js
 	})
 
@@ -645,7 +641,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 
 	// API: Invoke BCL_PROCESSOR_PD.
 	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		return InvokePreprocess(body.Fcid, rt, argshim, pman, pool)
+		return InvokePreprocess(body.Fcid, rt, argshim, pman, pool, instanceName)
 	})
 
 	// API: Archive BCL_PROCESSOR_PD.
@@ -665,7 +661,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 
 	// API: Invoke analysis.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		return InvokeAllSamples(body.Fcid, rt, argshim, pman, lena)
+		return InvokeAllSamples(body.Fcid, rt, argshim, pman, lena, instanceName)
 	})
 
 	// API: Restart failed stage.
@@ -702,7 +698,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	})
 
 	app.Get("/api/get-auto-invoke-status", func(p martini.Params) string {
-		return makeJSON(map[string]interface{}{
+		return core.MakeJSON(map[string]interface{}{
 			"state": pman.autoInvoke,
 		})
 	})
@@ -712,7 +708,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 	//=========================================================================
 	// Render: main qstat UI.
 	app.Get("/razor", func() string {
-		return render("web/marsoc/templates", "sge.html",
+		return core.Render("web/marsoc/templates", "sge.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            false,
@@ -722,7 +718,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			})
 	})
 	app.Get("/admin/razor", func() string {
-		return render("web/marsoc/templates", "sge.html",
+		return core.Render("web/marsoc/templates", "sge.html",
 			&MainPage{
 				InstanceName:     instanceName,
 				Admin:            true,
@@ -746,7 +742,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		if sample == nil {
 			return fmt.Sprintf("Sample %s not found in Lena.", sid)
 		}
-		return makeJSON(map[string]interface{}{
+		return core.MakeJSON(map[string]interface{}{
 			"ready_to_invoke": sample.Ready_to_invoke,
 			"sample_bag":      lena.getSampleBagWithId(sid),
 			"fastq_paths":     updateSampleState(sample, rt, lena, argshim, pman),

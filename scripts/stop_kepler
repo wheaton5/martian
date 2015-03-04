@@ -1,0 +1,6 @@
+#!/bin/bash
+#
+# kepler stop script
+#
+pkill -U $USER -f "^kepler"
+gzip $KEPLER_LOG_PATH/*.log

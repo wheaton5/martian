@@ -127,8 +127,12 @@ img.logo {
     margin-top: 100px;
 }
 
-#ps_filter_state {
+.filter_state {
     margin-top: 25px;
+}
+
+#sql {
+    margin-top: 100px;
 }
 
 #qstat {

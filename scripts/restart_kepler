@@ -1,0 +1,6 @@
+#!/bin/bash
+#
+# kepler restart script
+#
+stop_kepler
+start_kepler

@@ -7,7 +7,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/gzip"
@@ -19,15 +18,6 @@ import (
 	"path/filepath"
 	"regexp"
 )
-
-// Render JSON from data.
-func makeJSON(data interface{}) string {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return err.Error()
-	}
-	return string(bytes)
-}
 
 type LoadForm struct {
 	Fname string
@@ -73,7 +63,7 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 		for _, filePath := range filePaths {
 			fnames = append(fnames, filepath.Base(filePath))
 		}
-		return makeJSON(fnames)
+		return core.MakeJSON(fnames)
 	})
 
 	// Load the contents of the specified MRO file plus the contents
@@ -91,13 +81,13 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 			// Load contents of included file.
 			includeFname := submatches[1]
 			includeBytes, _ := ioutil.ReadFile(path.Join(mroPath, includeFname))
-			return makeJSON(map[string]string{
+			return core.MakeJSON(map[string]string{
 				"contents":        contents,
 				"includeFname":    includeFname,
 				"includeContents": string(includeBytes),
 			})
 		}
-		return makeJSON(map[string]interface{}{"contents": contents})
+		return core.MakeJSON(map[string]interface{}{"contents": contents})
 	})
 
 	// Save file.
@@ -112,7 +102,7 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 		if err != nil {
 			return err.Error()
 		}
-		return makeJSON(global)
+		return core.MakeJSON(global)
 	})
 
 	//=========================================================================

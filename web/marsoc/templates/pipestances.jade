@@ -67,7 +67,7 @@ html(ng-app="app")
                                 label Sample ID
                                 input.form-control(type="text" ng-model="psid" typeahead="psid for psid in psids | filter:$viewValue | limitTo: 8")
                         td
-                            div.dropdown#ps_filter_state
+                            div.dropdown.filter_state
                                 button.btn.btn-default.dropdown-toggle
                                     span(ng-if="state") {{ capitalize(state) }}
                                     span(ng-if="!state") Any
