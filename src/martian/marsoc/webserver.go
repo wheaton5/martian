@@ -103,17 +103,11 @@ func GetSampleTags(sample *Sample, fastq_paths map[string]string, instanceName s
 	tags := []string{core.MakeTag("instance", instanceName)}
 
 	// Flowcells
-	readLengths := map[int]bool{}
 	for _, sample_def := range sample.Sample_defs {
 		sd_fcid := sample_def.Sequencing_run.Name
 		tags = append(tags, core.MakeTag("flowcell", sd_fcid))
-		readLengths[sample_def.Read1_length] = true
-		readLengths[sample_def.Read2_length] = true
-	}
-
-	// Read lengths
-	for readLength, _ := range readLengths {
-		tags = append(tags, core.MakeTag("read_length", strconv.Itoa(readLength)))
+		tags = append(tags, core.MakeTag("read1_length", strconv.Itoa(sample_def.Read1_length)))
+		tags = append(tags, core.MakeTag("read2_length", strconv.Itoa(sample_def.Read2_length)))
 	}
 
 	// Number and size of all fastq files
