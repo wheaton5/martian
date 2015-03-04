@@ -123,9 +123,22 @@ func GetSampleTags(sample *Sample, fastq_paths map[string]string, instanceName s
 	return tags
 }
 
+func GetPreprocessTags(run *Run, fcid string, instanceName string) []string {
+	tags := []string{core.MakeTag("instance", instanceName), core.MakeTag("flowcell", fcid)}
+
+	// Number and size of all bcl files
+	bclPath := path.Join(run.Path, "Data/Intensities")
+	bclFiles, bclBytes := core.GetDirectorySize([]string{bclPath})
+	bclFilesTag := core.MakeTag("bcl_files", strconv.Itoa(int(bclFiles)))
+	bclBytesTag := core.MakeTag("bcl_bytes", strconv.FormatUint(bclBytes, 10))
+	tags = append(tags, bclFilesTag, bclBytesTag)
+
+	return tags
+}
+
 func InvokePreprocess(fcid string, rt *core.Runtime, argshim *ArgShim, pman *PipestanceManager, pool *SequencerPool, instanceName string) string {
 	run := pool.find(fcid)
-	tags := []string{core.MakeTag("flowcell", fcid), core.MakeTag("instance", instanceName)}
+	tags := GetPreprocessTags(run, fcid, instanceName)
 	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, argshim.buildCallSourceForRun(rt, run), tags); err != nil {
 		return err.Error()
 	}

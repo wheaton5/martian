@@ -8,6 +8,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"martian/core"
 	"os"
@@ -203,11 +204,13 @@ func (self *DatabaseManager) createTables() {
 	})
 	self.createTable("pipestances", []string{
 		"id integer not null primary key",
+		"stats_id integer",
 		"fqname string",
 		"call string",
 		"path string",
 		"martian_version string",
 		"pipelines_version string",
+		"foreign key(stats_id) references stats(id)",
 	})
 	self.createTable("tags", []string{
 		"id integer not null primary key",
@@ -248,8 +251,16 @@ func (self *DatabaseManager) createTables() {
 }
 
 func (self *DatabaseManager) InsertPipestance(tx *DatabaseTx, path string, fqname string, martianVersion string,
-	pipelinesVersion string, call string, args map[string]interface{}, tags []string) error {
+	pipelinesVersion string, stats *core.PerfInfo, call string, args map[string]interface{},
+	tags []string) error {
+
+	statsId, err := self.insertStats(stats)
+	if err != nil {
+		return err
+	}
+
 	psid, err := self.insert("pipestances", map[string]interface{}{
+		"stats_id":          statsId,
 		"fqname":            fqname,
 		"call":              call,
 		"path":              path,
@@ -404,8 +415,32 @@ func (self *DatabaseManager) insert(tableName string, row map[string]interface{}
 	keys := []string{}
 	values := []string{}
 	for key, value := range row {
+		var toJson bool
+		var newValue string
+
+		// Convert value to JSON if it is a map or list
+		// Otherwise, use its default string representation
+		switch value.(type) {
+		case map[string]interface{}:
+			toJson = true
+		case []interface{}:
+			toJson = true
+		default:
+			toJson = false
+		}
+
+		if toJson {
+			bytes, err := json.Marshal(value)
+			if err != nil {
+				return 0, err
+			}
+			newValue = string(bytes)
+		} else {
+			newValue = fmt.Sprintf("%v", value)
+		}
+
 		keys = append(keys, key)
-		values = append(values, fmt.Sprintf("'%v'", value))
+		values = append(values, fmt.Sprintf("'%s'", newValue))
 	}
 	cmd := fmt.Sprintf("insert into %s(%s) values(%s)", tableName, strings.Join(keys, ", "), strings.Join(values, ", "))
 	res, err := self.conn.Exec(cmd)

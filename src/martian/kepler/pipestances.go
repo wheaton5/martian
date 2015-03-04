@@ -105,11 +105,11 @@ func (self *PipestanceManager) parseVersions(path string) (string, string) {
 	return "", ""
 }
 
-func (self *PipestanceManager) parseInvocation(path string) (string, map[string]interface{}) {
+func (self *PipestanceManager) parseInvocationArgs(path string) map[string]interface{} {
 	if v, err := self.rt.BuildCallJSON(read(path), path); err == nil {
-		return v["call"].(string), v["args"].(map[string]interface{})
+		return v["args"].(map[string]interface{})
 	}
-	return "", map[string]interface{}{}
+	return map[string]interface{}{}
 }
 
 func (self *PipestanceManager) parseTags(path string) []string {
@@ -127,7 +127,7 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 	tagsPath := makeTagsPath(psPath)
 
 	martianVersion, pipelinesVersion := self.parseVersions(versionsPath)
-	call, args := self.parseInvocation(invocationPath)
+	args := self.parseInvocationArgs(invocationPath)
 	tags := self.parseTags(tagsPath)
 
 	var nodes []*core.NodePerfInfo
@@ -141,7 +141,9 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 	}
 
 	// Check cache
-	fqname := nodes[0].Fqname
+	topNode := nodes[0]
+	fqname := topNode.Fqname
+	call := topNode.Name
 	if _, ok := self.cache[fqname]; ok {
 		return nil
 	}
@@ -151,9 +153,16 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 	tx.Begin()
 	defer tx.End()
 
+	// Aggregate pipestance stats
+	forkStats := []*core.PerfInfo{}
+	for _, fork := range topNode.Forks {
+		forkStats = append(forkStats, fork.ForkStats)
+	}
+	pipestanceStats := core.ComputeStats(forkStats, nil)
+
 	// Insert pipestance with its metadata
 	err = self.db.InsertPipestance(tx, psPath, fqname, martianVersion,
-		pipelinesVersion, call, args, tags)
+		pipelinesVersion, pipestanceStats, call, args, tags)
 	if err != nil {
 		return err
 	}
