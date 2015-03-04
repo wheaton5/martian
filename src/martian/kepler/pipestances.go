@@ -19,6 +19,22 @@ type PipestanceManager struct {
 	db            *DatabaseManager
 }
 
+func makeInvocationPath(root string) string {
+	return path.Join(root, "_invocation")
+}
+
+func makePerfPath(root string) string {
+	return path.Join(root, "_perf")
+}
+
+func makeVersionsPath(root string) string {
+	return path.Join(root, "_versions")
+}
+
+func makeTagsPath(root string) string {
+	return path.Join(root, "_tags")
+}
+
 func read(path string) string {
 	bytes, _ := ioutil.ReadFile(path)
 	return string(bytes)
@@ -53,15 +69,29 @@ func (self *PipestanceManager) loadCache() {
 
 func (self *PipestanceManager) recursePath(root string) []string {
 	newPsPaths := []string{}
+	if _, ok := self.exploredPaths[root]; ok {
+		// This directory has already been explored
+		return newPsPaths
+	}
+
+	invocationPath := makeInvocationPath(root)
+	perfPath := makePerfPath(root)
+	if _, err := os.Stat(invocationPath); err == nil {
+		// This directory is a pipestance
+		if _, err := os.Stat(perfPath); err == nil {
+			core.LogInfo("keplerd", "Found pipestance %s", root)
+			newPsPaths = append(newPsPaths, root)
+			self.exploredPaths[root] = true
+		}
+		return newPsPaths
+	}
+
+	// Otherwise recurse until we find a pipestance directory
 	infos, _ := ioutil.ReadDir(root)
 	for _, info := range infos {
 		if info.IsDir() {
-			newPsPaths = append(newPsPaths, self.recursePath(path.Join(root, info.Name()))...)
-		} else if info.Name() == "_perf" {
-			if _, ok := self.exploredPaths[root]; !ok {
-				newPsPaths = append(newPsPaths, root)
-				self.exploredPaths[root] = true
-			}
+			newPsPaths = append(newPsPaths, self.recursePath(
+				path.Join(root, info.Name()))...)
 		}
 	}
 	return newPsPaths
@@ -91,10 +121,10 @@ func (self *PipestanceManager) parseTags(path string) []string {
 }
 
 func (self *PipestanceManager) InsertPipestance(psPath string) error {
-	perfPath := path.Join(psPath, "_perf")
-	versionsPath := path.Join(psPath, "_versions")
-	invocationPath := path.Join(psPath, "_invocation")
-	tagsPath := path.Join(psPath, "_tags")
+	perfPath := makePerfPath(psPath)
+	invocationPath := makeInvocationPath(psPath)
+	versionsPath := makeVersionsPath(psPath)
+	tagsPath := makeTagsPath(psPath)
 
 	martianVersion, pipelinesVersion := self.parseVersions(versionsPath)
 	call, args := self.parseInvocation(invocationPath)
@@ -171,6 +201,17 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 	return nil
 }
 
+func (self *PipestanceManager) InsertPipestances(newPsPaths []string) {
+	for _, newPsPath := range newPsPaths {
+		core.LogInfo("keplerd", "Adding pipestance %s", newPsPath)
+		if err := self.InsertPipestance(newPsPath); err != nil {
+			core.LogError(err, "keplerd", "Failed to add pipestance %s: %s",
+				newPsPath, err.Error())
+			delete(self.exploredPaths, newPsPath)
+		}
+	}
+}
+
 func (self *PipestanceManager) Start() {
 	go func() {
 		var wg sync.WaitGroup
@@ -179,14 +220,7 @@ func (self *PipestanceManager) Start() {
 			go func(psPath string) {
 				defer wg.Done()
 				newPsPaths := self.recursePath(psPath)
-				for _, newPsPath := range newPsPaths {
-					core.LogInfo("keplerd", "Adding pipestance %s", newPsPath)
-					if err := self.InsertPipestance(newPsPath); err != nil {
-						core.LogError(err, "keplerd", "Failed to add pipestance %s: %s",
-							newPsPath, err.Error())
-						delete(self.exploredPaths, newPsPath)
-					}
-				}
+				self.InsertPipestances(newPsPaths)
 			}(psPath)
 		}
 		wg.Wait()
