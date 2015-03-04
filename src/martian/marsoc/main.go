@@ -10,6 +10,7 @@ import (
 	"martian/core"
 	"os"
 	"os/user"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -28,15 +29,16 @@ func sendNotificationMail(users []string, mailer *Mailer, notices []*PipestanceN
 		psids = append(psids, notice.Psid)
 		var url string
 		if notice.State == "complete" {
-			url = fmt.Sprintf("lena/seq_results/sample%strim10/", notice.Psid)
+			url = fmt.Sprintf("lena.fuzzplex.com/seq_results/sample%strim10/", notice.Psid)
 		} else {
-			url = fmt.Sprintf("%s/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
+			url = fmt.Sprintf("%s.fuzzplex.com/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
 		}
 		result := fmt.Sprintf("%s of %s/%s is %s (http://%s)", notice.Pname, notice.Container, notice.Psid, strings.ToUpper(notice.State), url)
 		results = append(results, result)
 		vdrsize += notice.Vdrsize
 		if notice.State == "failed" {
 			worstState = notice.State
+			results = append(results, "    "+notice.Summary)
 		}
 	}
 
@@ -122,7 +124,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 
 				for _, notice := range analysisQueue {
 					fcid := notice.Fcid
-					InvokeAnalysis(fcid, rt, lena, argshim, pman)
+					InvokeAllSamples(fcid, rt, argshim, pman, lena)
 				}
 			}
 
@@ -134,8 +136,6 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 
 func main() {
 	core.SetupSignalHandlers()
-	core.LogInfo("*", "MARSOC")
-	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	//=========================================================================
 	// Commandline argument and environment variables.
@@ -154,8 +154,7 @@ Options:
     --version       Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
-	core.LogInfo("*", "MARSOC")
-	core.LogInfo("version", martianVersion)
+	core.Println("MARSOC - %s\n", martianVersion)
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	if martianFlags := os.Getenv("MROFLAGS"); len(martianFlags) > 0 {
@@ -170,15 +169,19 @@ Options:
 		{"MARSOC_SEQUENCERS", "miseq001;hiseq001"},
 		{"MARSOC_SEQUENCERS_PATH", "path/to/sequencers"},
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
+		{"MARSOC_LOG_PATH", "path/to/marsoc/logs"},
 		{"MARSOC_ARGSHIM_PATH", "path/to/argshim"},
 		{"MARSOC_MROPATH", "path/to/mros"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
 		{"MARSOC_SCRATCH_PATH", "path/to/scratch/pipestances"},
+		{"MARSOC_FAIL_COOP", "path/to/fail/coop"},
 		{"MARSOC_EMAIL_HOST", "smtp.server.local"},
 		{"MARSOC_EMAIL_SENDER", "email@address.com"},
 		{"MARSOC_EMAIL_RECIPIENT", "email@address.com"},
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
+
+	core.LogTee(path.Join(env["MARSOC_LOG_PATH"], time.Now().Format("20060102150405")+".log"))
 
 	// Do not log the value of these environment variables.
 	envPrivate := core.EnvRequire([][]string{
@@ -196,6 +199,7 @@ Options:
 	argshimPath := env["MARSOC_ARGSHIM_PATH"]
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQUENCERS_PATH"]
+	failCoopPath := env["MARSOC_FAIL_COOP"]
 	pipestancesPaths := strings.Split(env["MARSOC_PIPESTANCES_PATH"], ":")
 	scratchPaths := strings.Split(env["MARSOC_SCRATCH_PATH"], ":")
 	seqcerNames := strings.Split(env["MARSOC_SEQUENCERS"], ";")
@@ -205,20 +209,20 @@ Options:
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	stepSecs := 5
-	mroVersion, _ := core.GetGitTag(mroPath)
-	mroBranch, _ := core.GetGitBranch(mroPath)
+	mroVersion := core.GetGitTag(mroPath)
+	mroBranch := core.GetGitBranch(mroPath)
 
 	//=========================================================================
 	// Setup Martian Runtime with pipelines path.
 	//=========================================================================
 	jobMode := "sge"
 	vdrMode := "rolling"
+	profileMode := "cpu"
 	reqMemPerCore := 8
-	profile := true
 	stackVars := false
 	checkSrcPath := true
-	rt := core.NewRuntimeWithCores(jobMode, vdrMode, mroPath, martianVersion, mroVersion,
-		-1, -1, reqMemPerCore, profile, stackVars, debug, false)
+	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, mroPath, martianVersion, mroVersion,
+		-1, -1, reqMemPerCore, stackVars, debug, false)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -243,8 +247,9 @@ Options:
 	//=========================================================================
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
-	pman := NewPipestanceManager(rt, martianVersion, mroVersion, pipestancesPaths,
-		scratchPaths, cachePath, stepSecs, autoInvoke, mailer)
+	pman := NewPipestanceManager(rt, martianVersion, mroVersion, mroPath,
+		pipestancesPaths, scratchPaths, cachePath, failCoopPath, stepSecs,
+		autoInvoke, mailer)
 	pman.loadCache()
 	pman.inventoryPipestances()
 
@@ -253,6 +258,11 @@ Options:
 	//=========================================================================
 	lena := NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
 	lena.loadDatabase()
+
+	//=========================================================================
+	// Setup SGE qstat'er.
+	//=========================================================================
+	sge := NewSGE()
 
 	//=========================================================================
 	// Setup argshim.
@@ -265,6 +275,7 @@ Options:
 	pool.goInventoryLoop()
 	pman.goRunListLoop()
 	lena.goDownloadLoop()
+	sge.goQStatLoop()
 	emailNotifierLoop(pman, lena, mailer)
 	processRunLoop(pool, pman, lena, argshim, rt, mailer)
 
@@ -297,7 +308,7 @@ Options:
 		"invokesrc":  "",
 		"MROPATH":    mroPath,
 		"MRONODUMP":  "false",
-		"MROPROFILE": fmt.Sprintf("%v", profile),
+		"MROPROFILE": profileMode,
 		"MROPORT":    uiport,
 		"mroversion": mroVersion,
 		"mrobranch":  mroBranch,
@@ -306,8 +317,7 @@ Options:
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	runWebServer(uiport, instanceName, martianVersion, mroVersion, rt, pool, pman,
-		lena, argshim, info)
+	runWebServer(uiport, instanceName, rt, pool, pman, lena, argshim, sge, info)
 
 	// Let daemons take over.
 	done := make(chan bool)

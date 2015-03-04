@@ -40,11 +40,10 @@ html(ng-app="app" ng-controller="MartianRunCtrl" ng-cloak)
                     th PID
             tbody
                 tr(ng-repeat="p in pipestances")
-                    td.col-date(style="padding-left: 20px")
+                    td.col-date(style="padding-left: 20px") 
                         img(ng-src="{{config.usermap[p.username].avatar}}" style="height: 20px; margin-right: 15px")
                         span {{config.usermap[p.username].name}}
-                    td
-                        {{p.start}}
+                    td {{p.start}}
                     td
                         span.minibox(ng-class="p.state") {{p.state}}
                     td
@@ -53,8 +52,6 @@ html(ng-app="app" ng-controller="MartianRunCtrl" ng-cloak)
                         a(href="{{config.mrobranch_url}}{{p.mrobranch}}") {{p.mrobranch}}
                     td
                         a(href="{{config.mrobug_url}}{{p.mrobug_id}}" ng-if="p.mrobug_id.length > 0") {{p.mrobug_id}}
-                    td
-                        {{p.port}}
-                    td
-                        {{p.pid}}
+                    td {{p.port}}
+                    td {{p.pid}}
     script(src="/mrv.js")

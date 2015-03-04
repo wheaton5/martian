@@ -1,0 +1,92 @@
+//- 
+    Copyright (c) 2014 10X Genomics, Inc. All rights reserved.
+    
+    Main UI for martian seqruns.
+
+doctype html
+html(ng-app="app")
+    head
+        title [[.InstanceName]] / Metasamples
+        link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/marsoc.css")
+        link(rel="stylesheet" href="/css/main.css")
+        script(src="/js/angular.min.js")
+        script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="/js/lodash.min.js")
+        script(src="/js/moment.min.js")
+    body(ng-controller="QWebCtrl")
+        header.navbar.navbar-fixed-top
+            .navbar-header
+                .navbar-brand
+                    .logo_container
+                        img.logo(src="/images/10X_Logo_Reversed.png")
+                    .navbar-upper(ng-class="{admin: admin}") Razor Cluster Status
+                        span(ng-if="admin")
+                            | &nbsp;(
+                            a.admin-exit(href="/") exit admin mode
+                            | )
+                    .navbar-lower
+                        a(ng-if="admin" href="/admin") HOME
+                        a(ng-if="!admin" href="/") HOME
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(ng-if="admin" href="/admin/metasamples") METASAMPLES
+                        a(ng-if="!admin" href="/metasamples") METASAMPLES
+                        | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
+                        a(ng-if="admin" href="/admin/pipestances") PIPESTANCES
+                        a(ng-if="!admin" href="/pipestances") PIPESTANCES
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="/razor") RAZOR
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://compute2.fuzzplex.com:9090") MRV
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://lena.fuzzplex.com") LENA
+        #qstat
+            #qstat_summary
+                table
+                    tr
+                        td 
+                            span.hero {{qstat.running_count}}
+                            br 
+                            | Running Jobs
+                        td 
+                            span.hero {{qstat.pending_count}}
+                            br
+                            | Pending Jobs
+                        td 
+                            span.hero {{qstat.slots}} / 328
+                            br
+                            | Active Cores
+                        td 
+                            span.hero {{qstat.error_count}}
+                            br
+                            | Errored Jobs
+            #run-table-wrapper
+                table.table
+                    thead
+                        tr
+                            th Slot
+                            th Owner
+                            th State
+                            th 
+                            th Name
+                            th Job #
+                            th Priority
+                            th Slots
+                            th Queue
+                            th Submit
+
+                    tbody
+                        tr(ng-repeat="job in qstat.jobs")
+                            td {{$index+1}}
+                            td {{job.JB_owner=='mario'?'marsoc':job.JB_owner}}
+                            td 
+                                .minibox(ng-class="job.State") {{job.State}} 
+                            td {{job.StateCode}}
+                            td {{job.JB_name}}
+                            td {{job.JB_job_number}}
+                            td {{job.JAT_prio}}
+                            td {{job.Slots}}
+                            td {{job.Queue_name}}
+                            td {{job.JB_submission_time}}
+
+    script(src="/sge.js")
