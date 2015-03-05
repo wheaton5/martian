@@ -145,12 +145,14 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string, mroVersion st
 
 func (self *PipestanceManager) refreshVersions() {
 	go func() {
-		self.runListMutex.Lock()
-		self.martianVersion = core.GetVersion()
-		self.mroVersion = core.GetGitTag(self.mroPath)
-		self.runListMutex.Unlock()
+		for {
+			self.runListMutex.Lock()
+			self.martianVersion = core.GetVersion()
+			self.mroVersion = core.GetGitTag(self.mroPath)
+			self.runListMutex.Unlock()
 
-		time.Sleep(time.Minute * time.Duration(5))
+			time.Sleep(time.Minute * time.Duration(5))
+		}
 	}()
 }
 

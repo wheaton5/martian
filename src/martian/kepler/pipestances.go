@@ -223,16 +223,18 @@ func (self *PipestanceManager) InsertPipestances(newPsPaths []string) {
 
 func (self *PipestanceManager) Start() {
 	go func() {
-		var wg sync.WaitGroup
-		for _, psPath := range self.psPaths {
-			wg.Add(1)
-			go func(psPath string) {
-				defer wg.Done()
-				newPsPaths := self.recursePath(psPath)
-				self.InsertPipestances(newPsPaths)
-			}(psPath)
+		for {
+			var wg sync.WaitGroup
+			for _, psPath := range self.psPaths {
+				wg.Add(1)
+				go func(psPath string) {
+					defer wg.Done()
+					newPsPaths := self.recursePath(psPath)
+					self.InsertPipestances(newPsPaths)
+				}(psPath)
+			}
+			wg.Wait()
+			time.Sleep(time.Minute * time.Duration(5))
 		}
-		wg.Wait()
-		time.Sleep(time.Minute * time.Duration(5))
 	}()
 }
