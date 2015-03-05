@@ -52,6 +52,10 @@ sake-martian: mrc mre mrf mrg mrp mrs sake-strip sake-martian-strip
 
 sake-test-martian: test
 
+sake-martian-cs: sake-martian sake-martian-cs-strip
+
+sake-test-martian-cs: test
+
 sake-marsoc: marsoc mrc mrp sake-strip
 
 sake-test-marsoc: test
@@ -74,3 +78,9 @@ sake-martian-strip:
 	# Strip marsoc.
 	rm -rf web/marsoc
 	rm -rf web/kepler
+
+sake-martian-cs-strip:
+	# Use customer job templates.
+	mv jobmanagers/cs/*.template jobmanagers
+	rm -rf jobmanagers/cs
+	rm -rf jobmanagers/pd
