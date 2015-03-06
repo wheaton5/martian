@@ -23,6 +23,10 @@ func makeInvocationPath(root string) string {
 	return path.Join(root, "_invocation")
 }
 
+func makeFinalStatePath(root string) string {
+	return path.Join(root, "_finalstate")
+}
+
 func makePerfPath(root string) string {
 	return path.Join(root, "_perf")
 }
@@ -105,11 +109,27 @@ func (self *PipestanceManager) parseVersions(path string) (string, string) {
 	return "", ""
 }
 
-func (self *PipestanceManager) parseInvocationArgs(path string) map[string]interface{} {
-	if v, err := self.rt.BuildCallJSON(read(path), path); err == nil {
-		return v["args"].(map[string]interface{})
+func (self *PipestanceManager) parseArgs(path string) map[string]interface{} {
+	args := map[string]interface{}{}
+
+	var v []*core.NodeInfo
+	err := json.Unmarshal([]byte(read(path)), &v)
+	if err != nil || len(v) == 0 {
+		return args
 	}
-	return map[string]interface{}{}
+
+	topNode := v[0]
+	for _, fork := range topNode.Forks {
+		for _, binding := range fork.Bindings.Argument {
+			if !binding.Sweep {
+				args[binding.Id] = binding.Value
+			}
+		}
+	}
+	for _, binding := range topNode.SweepBindings {
+		args[binding.Id] = binding.Value
+	}
+	return args
 }
 
 func (self *PipestanceManager) parseTags(path string) []string {
@@ -122,12 +142,12 @@ func (self *PipestanceManager) parseTags(path string) []string {
 
 func (self *PipestanceManager) InsertPipestance(psPath string) error {
 	perfPath := makePerfPath(psPath)
-	invocationPath := makeInvocationPath(psPath)
 	versionsPath := makeVersionsPath(psPath)
 	tagsPath := makeTagsPath(psPath)
+	finalStatePath := makeFinalStatePath(psPath)
 
 	martianVersion, pipelinesVersion := self.parseVersions(versionsPath)
-	args := self.parseInvocationArgs(invocationPath)
+	args := self.parseArgs(finalStatePath)
 	tags := self.parseTags(tagsPath)
 
 	var nodes []*core.NodePerfInfo
