@@ -884,6 +884,11 @@ func (self *PipestanceManager) GetPipestanceSerialization(container string, pipe
 	return pipestance.Serialize(name), true
 }
 
+func (self *PipestanceManager) GetPipestanceMetadata(container string, pipeline string, psid string, metadataPath string) (string, error) {
+	psPath := self.makePipestancePath(container, pipeline, psid)
+	return self.rt.GetMetadata(psPath, metadataPath)
+}
+
 func (self *PipestanceManager) GetPipestance(container string, pipeline string, psid string, readOnly bool) (*core.Pipestance, bool) {
 	fqname := makeFQName(pipeline, psid)
 

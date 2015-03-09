@@ -46,7 +46,7 @@ Options:
 	}
 	mroVersion := core.GetGitTag(mroPath)
 
-	rt := core.NewRuntime("local", "disable", "disable", mroPath, martianVersion, mroVersion, false, false)
+	rt := core.NewRuntime("local", "disable", "disable", mroPath, martianVersion, mroVersion)
 	db := NewDatabaseManager("sqlite3", dbPath)
 	pman := NewPipestanceManager(pipestancesPaths, db, rt)
 
