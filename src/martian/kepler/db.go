@@ -130,7 +130,7 @@ func (self *DatabaseManager) Close() {
 }
 
 func (self *DatabaseManager) GetPipestances() ([]map[string]string, error) {
-	res, err := self.Query("select fqname, path from pipestances")
+	res, err := self.Query("select fqname, path, pipelines_version from pipestances")
 	if err != nil {
 		return nil, err
 	}
@@ -139,8 +139,9 @@ func (self *DatabaseManager) GetPipestances() ([]map[string]string, error) {
 	rows := res["rows"].([][]string)
 	for _, row := range rows {
 		pipestances = append(pipestances, map[string]string{
-			"fqname": row[0],
-			"path":   row[1],
+			"fqname":  row[0],
+			"path":    row[1],
+			"version": row[2],
 		})
 	}
 	return pipestances, nil

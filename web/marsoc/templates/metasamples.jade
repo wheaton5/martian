@@ -46,7 +46,8 @@ html(ng-app="app")
                         | &nbsp;&nbsp;&nbsp;&nbsp;
                         a(href="http://lena.fuzzplex.com") LENA
                         span.navbar-right
-                            | [[.PipestanceCount]] Pipestances In-Flight
+                            a(ng-if="admin" href="/admin/pipestances/running") [[.PipestanceCount]] Pipestances In-Flight
+                            a(ng-if="!admin" href="/pipestances/running") [[.PipestanceCount]] Pipestances In-Flight
                             | &nbsp;&middot;&nbsp;&nbsp;
                             button.btn.btn-default.aibutton.btn-checkbox(ng-if="admin" ng-model="autoinvoke.state" ng-click="setAutoInvoke()" ng-class="getAutoInvokeClass()") AI is {{autoinvoke.state?"ON":"OFF"}}
                             span(ng-if="!admin") AI is {{autoinvoke.state?"ON":"OFF"}}      

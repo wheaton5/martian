@@ -30,6 +30,7 @@ type MainPage struct {
 	MarsocVersion    string
 	PipelinesVersion string
 	PipestanceCount  int
+	State            string
 }
 type GraphPage struct {
 	InstanceName string
@@ -373,6 +374,18 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			})
 	})
 
+	app.Get("/pipestances/:state", func(p martini.Params) string {
+		return core.Render("web/marsoc/templates", "pipestances.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            false,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
+				PipestanceCount:  pman.CountRunningPipestances(),
+				State:            p["state"],
+			})
+	})
+
 	app.Get("/admin/pipestances", func() string {
 		return core.Render("web/marsoc/templates", "pipestances.html",
 			&MainPage{
@@ -381,6 +394,18 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 				MarsocVersion:    pman.GetMartianVersion(),
 				PipelinesVersion: pman.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+
+	app.Get("/admin/pipestances/:state", func(p martini.Params) string {
+		return core.Render("web/marsoc/templates", "pipestances.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            true,
+				MarsocVersion:    pman.GetMartianVersion(),
+				PipelinesVersion: pman.GetMroVersion(),
+				PipestanceCount:  pman.CountRunningPipestances(),
+				State:            p["state"],
 			})
 	})
 
