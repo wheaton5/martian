@@ -24,6 +24,7 @@ callApi = ($scope, $http, $p, $url) ->
 
 app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
     $scope.admin = admin
+    $scope.state = state
     $scope.urlprefix = if admin then '/admin' else ''
     $scope.autoinvoke = { button: true, state: false }
 
@@ -31,7 +32,6 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
     $scope.fcid = null
     $scope.pipeline = null
     $scope.psid = null
-    $scope.state = null
 
     $scope.refreshPipestances = () ->
         $http.get('/api/get-pipestances').success((data) ->

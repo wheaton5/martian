@@ -31,6 +31,7 @@
 
   app.controller('PipestancesCtrl', function($scope, $http, $interval) {
     $scope.admin = admin;
+    $scope.state = state;
     $scope.urlprefix = admin ? '/admin' : '';
     $scope.autoinvoke = {
       button: true,
@@ -40,7 +41,6 @@
     $scope.fcid = null;
     $scope.pipeline = null;
     $scope.psid = null;
-    $scope.state = null;
     $scope.refreshPipestances = function() {
       $http.get('/api/get-pipestances').success(function(data) {
         var fcids, i, len, p, pipelines, psids, ref;
