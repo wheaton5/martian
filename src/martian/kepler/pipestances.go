@@ -7,7 +7,6 @@ import (
 	"martian/core"
 	"os"
 	"path"
-	"sync"
 	"time"
 )
 
@@ -150,18 +149,12 @@ func (self *PipestanceManager) parseTags(psPath string) []string {
 
 func (self *PipestanceManager) parsePerf(psPath string, fqname string) ([]*core.NodePerfInfo, error) {
 	perfPath := makePerfPath(psPath)
-	invocationPath := makeInvocationPath(psPath)
 
 	if _, err := os.Stat(perfPath); err != nil {
 		// If _perf file does not exist, generate it.
-		data, err := ioutil.ReadFile(invocationPath)
-		if err != nil {
-			return nil, err
-		}
-		invocationSrc := string(data)
 		_, psid := core.ParseFQName(fqname)
 
-		pipestance, err := self.rt.ReattachToPipestance(psid, psPath, invocationSrc, false, true)
+		pipestance, err := self.rt.ReattachToPipestanceWithMroSrc(psid, psPath, "", false, true)
 		if err != nil {
 			return nil, err
 		}
@@ -284,16 +277,10 @@ func (self *PipestanceManager) InsertPipestances(newPsPaths []string) {
 func (self *PipestanceManager) Start() {
 	go func() {
 		for {
-			var wg sync.WaitGroup
 			for _, psPath := range self.psPaths {
-				wg.Add(1)
-				go func(psPath string) {
-					defer wg.Done()
-					newPsPaths := self.recursePath(psPath)
-					self.InsertPipestances(newPsPaths)
-				}(psPath)
+				newPsPaths := self.recursePath(psPath)
+				self.InsertPipestances(newPsPaths)
 			}
-			wg.Wait()
 			time.Sleep(time.Minute * time.Duration(5))
 		}
 	}()
