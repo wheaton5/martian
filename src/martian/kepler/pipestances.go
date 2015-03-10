@@ -79,10 +79,10 @@ func (self *PipestanceManager) recursePath(root string) []string {
 	}
 
 	invocationPath := makeInvocationPath(root)
-	perfPath := makePerfPath(root)
+	finalStatePath := makeFinalStatePath(root)
 	if _, err := os.Stat(invocationPath); err == nil {
 		// This directory is a pipestance
-		if _, err := os.Stat(perfPath); err == nil {
+		if _, err := os.Stat(finalStatePath); err == nil {
 			core.LogInfo("keplerd", "Found pipestance %s", root)
 			newPsPaths = append(newPsPaths, root)
 			self.exploredPaths[root] = true
@@ -101,21 +101,27 @@ func (self *PipestanceManager) recursePath(root string) []string {
 	return newPsPaths
 }
 
-func (self *PipestanceManager) parseVersions(path string) (string, string) {
+func (self *PipestanceManager) parseVersions(psPath string) (string, string) {
+	versionsPath := makeVersionsPath(psPath)
+
 	var v map[string]string
-	if err := json.Unmarshal([]byte(read(path)), &v); err == nil {
+	if err := json.Unmarshal([]byte(read(versionsPath)), &v); err == nil {
 		return v["martian"], v["pipelines"]
 	}
 	return "", ""
 }
 
-func (self *PipestanceManager) parseArgs(path string) map[string]interface{} {
+func (self *PipestanceManager) parseFinalState(psPath string) (string, string, map[string]interface{}, error) {
+	finalStatePath := makeFinalStatePath(psPath)
 	args := map[string]interface{}{}
 
 	var v []*core.NodeInfo
-	err := json.Unmarshal([]byte(read(path)), &v)
-	if err != nil || len(v) == 0 {
-		return args
+	err := json.Unmarshal([]byte(read(finalStatePath)), &v)
+	if err != nil {
+		return "", "", args, err
+	}
+	if len(v) == 0 {
+		return "", "", args, &core.MartianError{fmt.Sprintf("Pipestance %s has empty _finalstate file", psPath)}
 	}
 
 	topNode := v[0]
@@ -129,29 +135,70 @@ func (self *PipestanceManager) parseArgs(path string) map[string]interface{} {
 	for _, binding := range topNode.SweepBindings {
 		args[binding.Id] = binding.Value
 	}
-	return args
+	return topNode.Name, topNode.Fqname, args, nil
 }
 
-func (self *PipestanceManager) parseTags(path string) []string {
+func (self *PipestanceManager) parseTags(psPath string) []string {
+	tagsPath := makeTagsPath(psPath)
+
 	var v []string
-	if err := json.Unmarshal([]byte(read(path)), &v); err == nil {
+	if err := json.Unmarshal([]byte(read(tagsPath)), &v); err == nil {
 		return v
 	}
 	return []string{}
 }
 
-func (self *PipestanceManager) InsertPipestance(psPath string) error {
+func (self *PipestanceManager) parsePerf(psPath string, fqname string) ([]*core.NodePerfInfo, error) {
 	perfPath := makePerfPath(psPath)
-	versionsPath := makeVersionsPath(psPath)
-	tagsPath := makeTagsPath(psPath)
-	finalStatePath := makeFinalStatePath(psPath)
+	invocationPath := makeInvocationPath(psPath)
 
-	martianVersion, pipelinesVersion := self.parseVersions(versionsPath)
-	args := self.parseArgs(finalStatePath)
-	tags := self.parseTags(tagsPath)
+	if _, err := os.Stat(perfPath); err != nil {
+		// If _perf file does not exist, generate it.
+		data, err := ioutil.ReadFile(invocationPath)
+		if err != nil {
+			return nil, err
+		}
+		invocationSrc := string(data)
+		_, psid := core.ParseFQName(fqname)
+
+		pipestance, err := self.rt.ReattachToPipestance(psid, psPath, invocationSrc, false, true)
+		if err != nil {
+			return nil, err
+		}
+
+		pipestance.LoadMetadata()
+
+		// Sanity check that pipestance is complete.
+		state := pipestance.GetState()
+		if state != "complete" {
+			return nil, &core.MartianError{fmt.Sprintf("Pipestance %s is not complete", psPath)}
+		}
+		pipestance.Immortalize()
+	}
 
 	var nodes []*core.NodePerfInfo
 	err := json.Unmarshal([]byte(read(perfPath)), &nodes)
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
+func (self *PipestanceManager) InsertPipestance(psPath string) error {
+	martianVersion, pipelinesVersion := self.parseVersions(psPath)
+	tags := self.parseTags(psPath)
+
+	call, fqname, args, err := self.parseFinalState(psPath)
+	if err != nil {
+		return err
+	}
+
+	// Check cache
+	if _, ok := self.cache[fqname]; ok {
+		return nil
+	}
+
+	nodes, err := self.parsePerf(psPath, fqname)
 	if err != nil {
 		return err
 	}
@@ -160,20 +207,13 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 		return &core.MartianError{fmt.Sprintf("Pipestance %s has empty _perf file", psPath)}
 	}
 
-	// Check cache
-	topNode := nodes[0]
-	fqname := topNode.Fqname
-	call := topNode.Name
-	if _, ok := self.cache[fqname]; ok {
-		return nil
-	}
-
 	// Wrap database insertions in transaction
 	tx := NewDatabaseTx()
 	tx.Begin()
 	defer tx.End()
 
 	// Aggregate pipestance stats
+	topNode := nodes[0]
 	forkStats := []*core.PerfInfo{}
 	for _, fork := range topNode.Forks {
 		forkStats = append(forkStats, fork.ForkStats)

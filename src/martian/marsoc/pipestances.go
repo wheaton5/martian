@@ -28,11 +28,6 @@ import (
 
 var minBytesAvailable uint64 = 1024 * 1024 * 1024 * 1024 * 1.5 // 1.5 terabytes
 
-func makeFQName(pipeline string, psid string) string {
-	// This construction must remain identical to Pipestance::GetFQName.
-	return fmt.Sprintf("ID.%s.%s", psid, pipeline)
-}
-
 type PipestanceFunc func(string, string, string) error
 type PipestanceInventoryFunc func(string, string, string, string, string, *sync.WaitGroup)
 
@@ -286,7 +281,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 				return
 			}
 
-			fqname := makeFQName(pipeline, psid)
+			fqname := core.MakeFQName(pipeline, psid)
 
 			// Cache the fqname to container mapping so we know what container
 			// an analysis pipestance is in for notification emails.
@@ -374,18 +369,13 @@ func (self *PipestanceManager) goRunListLoop() {
 	}()
 }
 
-func parseFQName(fqname string) (string, string) {
-	parts := strings.Split(fqname, ".")
-	return parts[2], parts[1]
-}
-
 func (self *PipestanceManager) makePipestancePath(container string, pipeline string, psid string) string {
 	return path.Join(self.aggregatePath, container, pipeline, psid, "HEAD")
 }
 
 func (self *PipestanceManager) copyPipestance(fqname string) {
 	container := self.containerTable[fqname]
-	pname, psid := parseFQName(fqname)
+	pname, psid := core.ParseFQName(fqname)
 
 	// Calculate permanent storage version path
 	headPath := self.makePipestancePath(container, pname, psid)
@@ -500,7 +490,7 @@ func (self *PipestanceManager) processRunList() {
 				self.runListMutex.Unlock()
 
 				// Email notification.
-				pname, psid := parseFQName(fqname)
+				pname, psid := core.ParseFQName(fqname)
 				if pname == "BCL_PROCESSOR_PD" {
 					// For BCL_PROCESSOR_PD, just email the admins.
 					self.mailer.Sendmail(
@@ -534,7 +524,7 @@ func (self *PipestanceManager) processRunList() {
 				self.runListMutex.Unlock()
 
 				// Email notification.
-				pname, psid := parseFQName(fqname)
+				pname, psid := core.ParseFQName(fqname)
 				invocation := pipestance.GetInvocation()
 				stage, summary, errlog, kind, errpaths := pipestance.GetFatalError()
 
@@ -642,7 +632,7 @@ func (self *PipestanceManager) getScratchPath() (string, error) {
 }
 
 func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string, tags []string) error {
-	fqname := makeFQName(pipeline, psid)
+	fqname := core.MakeFQName(pipeline, psid)
 
 	self.runListMutex.Lock()
 	// Check if pipestance has already been invoked
@@ -708,7 +698,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 
 func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline string, psid string) error {
 	self.runListMutex.Lock()
-	delete(self.completed, makeFQName(pipeline, psid))
+	delete(self.completed, core.MakeFQName(pipeline, psid))
 	self.writeCache()
 	self.runListMutex.Unlock()
 	headPath := self.makePipestancePath(container, pipeline, psid)
@@ -716,7 +706,7 @@ func (self *PipestanceManager) ArchivePipestanceHead(container string, pipeline 
 }
 
 func (self *PipestanceManager) KillPipestance(container string, pipeline string, psid string) error {
-	fqname := makeFQName(pipeline, psid)
+	fqname := core.MakeFQName(pipeline, psid)
 
 	self.runListMutex.Lock()
 	pipestance, ok := self.runTable[fqname]
@@ -754,7 +744,7 @@ func (self *PipestanceManager) KillPipestance(container string, pipeline string,
 }
 
 func (self *PipestanceManager) WipePipestance(container string, pipeline string, psid string) error {
-	fqname := makeFQName(pipeline, psid)
+	fqname := core.MakeFQName(pipeline, psid)
 
 	self.runListMutex.Lock()
 	if state, _ := self.getPipestanceState(container, pipeline, psid); state != "failed" {
@@ -794,7 +784,7 @@ func (self *PipestanceManager) WipePipestance(container string, pipeline string,
 }
 
 func (self *PipestanceManager) UnfailPipestance(container string, pipeline string, psid string) error {
-	fqname := makeFQName(pipeline, psid)
+	fqname := core.MakeFQName(pipeline, psid)
 
 	self.runListMutex.Lock()
 	state, _ := self.getPipestanceState(container, pipeline, psid)
@@ -835,7 +825,7 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 }
 
 func (self *PipestanceManager) getPipestanceState(container string, pipeline string, psid string) (string, bool) {
-	fqname := makeFQName(pipeline, psid)
+	fqname := core.MakeFQName(pipeline, psid)
 	if _, ok := self.copyTable[fqname]; ok {
 		return "copying", true
 	}
@@ -885,7 +875,7 @@ func (self *PipestanceManager) GetPipestanceSerialization(container string, pipe
 }
 
 func (self *PipestanceManager) GetPipestance(container string, pipeline string, psid string, readOnly bool) (*core.Pipestance, bool) {
-	fqname := makeFQName(pipeline, psid)
+	fqname := core.MakeFQName(pipeline, psid)
 
 	// Check if requested pipestance actually exists.
 	if _, ok := self.GetPipestanceState(container, pipeline, psid); !ok {
