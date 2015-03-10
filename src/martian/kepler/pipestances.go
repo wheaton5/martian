@@ -13,7 +13,7 @@ import (
 type PipestanceManager struct {
 	psPaths       []string
 	exploredPaths map[string]bool
-	cache         map[string]bool
+	cache         map[string]string
 	rt            *core.Runtime
 	db            *DatabaseManager
 }
@@ -54,7 +54,7 @@ func NewPipestanceManager(psPaths []string, db *DatabaseManager, rt *core.Runtim
 
 func (self *PipestanceManager) loadCache() {
 	self.exploredPaths = map[string]bool{}
-	self.cache = map[string]bool{}
+	self.cache = map[string]string{}
 
 	pipestances, err := self.db.GetPipestances()
 	if err != nil {
@@ -65,8 +65,9 @@ func (self *PipestanceManager) loadCache() {
 	for _, ps := range pipestances {
 		path := ps["path"]
 		fqname := ps["fqname"]
+		version := ps["version"]
 		self.exploredPaths[path] = true
-		self.cache[fqname] = true
+		self.cache[fqname] = version
 	}
 }
 
@@ -187,8 +188,8 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 	}
 
 	// Check cache
-	if _, ok := self.cache[fqname]; ok {
-		return nil
+	if version, ok := self.cache[fqname]; ok && version == pipelinesVersion {
+		return &core.MartianError{fmt.Sprintf("Pipestance %s has duplicate fqname %s and duplicate version %s", psPath, fqname, version)}
 	}
 
 	nodes, err := self.parsePerf(psPath, fqname)
@@ -258,7 +259,7 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 	}
 
 	// Insert pipestance into cache
-	self.cache[fqname] = true
+	self.cache[fqname] = pipelinesVersion
 
 	return nil
 }
