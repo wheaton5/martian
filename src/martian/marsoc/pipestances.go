@@ -903,7 +903,8 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 }
 
 func (self *PipestanceManager) ReattachToPipestance(psid string, psPath string, readOnly bool) (*core.Pipestance, error) {
-	return self.rt.ReattachToPipestance(psid, psPath, "", false, readOnly)
+	permanentPsPath, _ := os.Readlink(psPath)
+	return self.rt.ReattachToPipestance(psid, permanentPsPath, "", false, readOnly)
 }
 
 func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline string, psid string) (string, error) {
