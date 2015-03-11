@@ -907,15 +907,26 @@ func (self *PipestanceManager) ReattachToPipestance(psid string, psPath string, 
 	return self.rt.ReattachToPipestance(psid, permanentPsPath, "", false, readOnly)
 }
 
-func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline string, psid string) (string, error) {
+func (self *PipestanceManager) getPipestanceMetadata(container string, pipeline string, psid string, fname string) (string, error) {
 	psPath := self.makePipestancePath(container, pipeline, psid)
-	fname := "_invocation"
 
 	data, err := ioutil.ReadFile(path.Join(psPath, fname))
 	if err != nil {
 		return "", err
 	}
 	return string(data), nil
+}
+
+func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pipeline string, psid string) (string, error) {
+	return self.getPipestanceMetadata(container, pipeline, psid, "_invocation")
+}
+
+func (self *PipestanceManager) GetPipestanceTimestamp(container string, pipeline string, psid string) (string, error) {
+	data, err := self.getPipestanceMetadata(container, pipeline, psid, "_timestamp")
+	if err != nil {
+		return "", err
+	}
+	return core.ParseTimestamp(data), nil
 }
 
 func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline string, psid string, forkIndex int) map[string]interface{} {
