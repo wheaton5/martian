@@ -224,7 +224,10 @@ func (self *PipestanceManager) writePerf(psPath string) error {
 		if state != "complete" {
 			return &core.MartianError{fmt.Sprintf("Pipestance %s is not complete", psPath)}
 		}
+
+		core.EnterCriticalSection()
 		pipestance.Immortalize()
+		core.ExitCriticalSection()
 	}
 	return nil
 }
