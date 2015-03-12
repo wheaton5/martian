@@ -7,15 +7,19 @@ import (
 	"martian/core"
 	"os"
 	"path"
+	"sync"
 	"time"
 )
 
 type PipestanceManager struct {
-	psPaths       []string
-	exploredPaths map[string]bool
-	cache         map[string][]string
-	rt            *core.Runtime
-	db            *DatabaseManager
+	psPaths         []string
+	exploredPaths   map[string]bool
+	cache           map[string][]string
+	rt              *core.Runtime
+	db              *DatabaseManager
+	mutex           *sync.Mutex
+	perfChan        chan string
+	numPerfHandlers int
 }
 
 func makeInvocationPath(root string) string {
@@ -48,6 +52,9 @@ func NewPipestanceManager(psPaths []string, db *DatabaseManager, rt *core.Runtim
 	self.psPaths = psPaths
 	self.rt = rt
 	self.db = db
+	self.mutex = &sync.Mutex{}
+	self.perfChan = make(chan string)
+	self.numPerfHandlers = 8
 	self.loadCache()
 	return self
 }
@@ -66,26 +73,62 @@ func (self *PipestanceManager) loadCache() {
 		path := ps["path"]
 		fqname := ps["fqname"]
 		version := ps["version"]
-		self.exploredPaths[path] = true
+		self.addPath(path)
 		self.insertCache(fqname, version)
 	}
 }
 
+func (self *PipestanceManager) pushQueue(psPath string) {
+	go func() {
+		self.perfChan <- psPath
+	}()
+}
+
+func (self *PipestanceManager) popQueue() string {
+	return <-self.perfChan
+}
+
+func (self *PipestanceManager) deletePath(psPath string) {
+	self.mutex.Lock()
+	delete(self.exploredPaths, psPath)
+	self.mutex.Unlock()
+}
+
+func (self *PipestanceManager) addPath(psPath string) {
+	self.mutex.Lock()
+	self.exploredPaths[psPath] = true
+	self.mutex.Unlock()
+}
+
+func (self *PipestanceManager) getPath(psPath string) (bool, bool) {
+	self.mutex.Lock()
+	value, ok := self.exploredPaths[psPath]
+	self.mutex.Unlock()
+	return value, ok
+}
+
 func (self *PipestanceManager) recursePath(root string) []string {
 	newPsPaths := []string{}
-	if _, ok := self.exploredPaths[root]; ok {
+	if _, ok := self.getPath(root); ok {
 		// This directory has already been explored
 		return newPsPaths
 	}
 
 	invocationPath := makeInvocationPath(root)
 	finalStatePath := makeFinalStatePath(root)
+	perfPath := makePerfPath(root)
 	if _, err := os.Stat(invocationPath); err == nil {
 		// This directory is a pipestance
 		if _, err := os.Stat(finalStatePath); err == nil {
 			core.LogInfo("keplerd", "Found pipestance %s", root)
-			newPsPaths = append(newPsPaths, root)
-			self.exploredPaths[root] = true
+			if _, err := os.Stat(perfPath); err == nil {
+				// Insert pipestance into database
+				newPsPaths = append(newPsPaths, root)
+			} else {
+				// Generate pipestance performance info
+				self.pushQueue(root)
+			}
+			self.addPath(root)
 		}
 		return newPsPaths
 	}
@@ -151,13 +194,27 @@ func (self *PipestanceManager) parseTags(psPath string) []string {
 func (self *PipestanceManager) parsePerf(psPath string, fqname string) ([]*core.NodePerfInfo, error) {
 	perfPath := makePerfPath(psPath)
 
+	var nodes []*core.NodePerfInfo
+	err := json.Unmarshal([]byte(read(perfPath)), &nodes)
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
+func (self *PipestanceManager) writePerf(psPath string) error {
+	perfPath := makePerfPath(psPath)
 	if _, err := os.Stat(perfPath); err != nil {
-		// If _perf file does not exist, generate it.
+		_, fqname, _, err := self.parseFinalState(psPath)
+		if err != nil {
+			return err
+		}
+
 		_, psid := core.ParseFQName(fqname)
 
 		pipestance, err := self.rt.ReattachToPipestanceWithMroSrc(psid, psPath, "", false, true)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		pipestance.LoadMetadata()
@@ -165,17 +222,14 @@ func (self *PipestanceManager) parsePerf(psPath string, fqname string) ([]*core.
 		// Sanity check that pipestance is complete.
 		state := pipestance.GetState()
 		if state != "complete" {
-			return nil, &core.MartianError{fmt.Sprintf("Pipestance %s is not complete", psPath)}
+			return &core.MartianError{fmt.Sprintf("Pipestance %s is not complete", psPath)}
 		}
-		pipestance.Immortalize()
-	}
 
-	var nodes []*core.NodePerfInfo
-	err := json.Unmarshal([]byte(read(perfPath)), &nodes)
-	if err != nil {
-		return nil, err
+		core.EnterCriticalSection()
+		pipestance.Immortalize()
+		core.ExitCriticalSection()
 	}
-	return nodes, nil
+	return nil
 }
 
 func (self *PipestanceManager) insertCache(fqname string, pipelinesVersion string) {
@@ -291,19 +345,41 @@ func (self *PipestanceManager) InsertPipestances(newPsPaths []string) {
 		if err := self.InsertPipestance(newPsPath); err != nil {
 			core.LogError(err, "keplerd", "Failed to add pipestance %s: %s",
 				newPsPath, err.Error())
-			delete(self.exploredPaths, newPsPath)
+			self.deletePath(newPsPath)
 		}
 	}
 }
 
-func (self *PipestanceManager) Start() {
+func (self *PipestanceManager) startPerfHandlers() {
+	for i := 0; i < self.numPerfHandlers; i++ {
+		go func() {
+			for {
+				psPath := self.popQueue()
+				core.LogInfo("keplerd", "Writing _perf for pipestance %s", psPath)
+				if err := self.writePerf(psPath); err != nil {
+					core.LogError(err, "keplerd", "Failed to write _perf for pipestance %s: %s",
+						psPath, err.Error())
+				}
+				self.deletePath(psPath)
+			}
+		}()
+	}
+}
+
+func (self *PipestanceManager) startInsertHandler() {
 	go func() {
 		for {
+			newPsPaths := []string{}
 			for _, psPath := range self.psPaths {
-				newPsPaths := self.recursePath(psPath)
-				self.InsertPipestances(newPsPaths)
+				newPsPaths = append(newPsPaths, self.recursePath(psPath)...)
 			}
+			self.InsertPipestances(newPsPaths)
 			time.Sleep(time.Minute * time.Duration(5))
 		}
 	}()
+}
+
+func (self *PipestanceManager) Start() {
+	self.startPerfHandlers()
+	self.startInsertHandler()
 }
