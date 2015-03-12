@@ -876,7 +876,8 @@ func (self *PipestanceManager) GetPipestanceSerialization(container string, pipe
 
 func (self *PipestanceManager) GetPipestanceMetadata(container string, pipeline string, psid string, metadataPath string) (string, error) {
 	psPath := self.makePipestancePath(container, pipeline, psid)
-	return self.rt.GetMetadata(psPath, metadataPath)
+	permanentPsPath, _ := os.Readlink(psPath)
+	return self.rt.GetMetadata(permanentPsPath, metadataPath)
 }
 
 func (self *PipestanceManager) GetPipestance(container string, pipeline string, psid string, readOnly bool) (*core.Pipestance, bool) {
