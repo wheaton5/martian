@@ -644,6 +644,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		psinfo["state"] = psstate
 		psinfo["pname"] = pname
 		psinfo["psid"] = psid
+		psinfo["start"], _ = pman.GetPipestanceTimestamp(container, pname, psid)
 		psinfo["invokesrc"], _ = pman.GetPipestanceInvokeSrc(container, pname, psid)
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
 		state["nodes"] = ser

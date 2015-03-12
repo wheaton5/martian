@@ -148,10 +148,13 @@ Usage:
     marsoc -h | --help | --version
 
 Options:
-    --autoinvoke    Turns on automatic pipestance invocation.
-    --debug         Enable debug printing for argshim.
-    -h --help       Show this message.
-    --version       Show version.`
+    --vdrmode=<name>   Enables Volatile Data Removal.
+                           Valid options are rolling, post and disable.
+                           Defaults to rolling.
+    --autoinvoke       Turns on automatic pipestance invocation.
+    --debug            Enable debug printing for argshim.
+    -h --help          Show this message.
+    --version          Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
 	core.Println("MARSOC - %s\n", martianVersion)
@@ -191,6 +194,11 @@ Options:
 	// Parse options.
 	autoInvoke := opts["--autoinvoke"].(bool)
 	debug := opts["--debug"].(bool)
+	vdrMode := "rolling"
+	if value := opts["--vdrmode"]; value != nil {
+		vdrMode = value.(string)
+	}
+	core.VerifyVDRMode(vdrMode)
 
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
@@ -216,7 +224,6 @@ Options:
 	// Setup Martian Runtime with pipelines path.
 	//=========================================================================
 	jobMode := "sge"
-	vdrMode := "rolling"
 	profileMode := "cpu"
 	reqMemPerCore := 8
 	stackVars := false
