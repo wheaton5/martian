@@ -515,6 +515,9 @@ func (self *PipestanceManager) processRunList() {
 				// cache as failed, and flush the cache.
 				core.LogInfo("pipeman", "Failed and removing from runList: %s.", fqname)
 
+				// Remove job monitors.
+				pipestance.RemoveJobMonitors()
+
 				// Unlock.
 				pipestance.Unlock()
 
