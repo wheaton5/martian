@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"martian/core"
+	"net"
 	"net/http"
 	"os"
 	"sort"
@@ -61,7 +62,10 @@ func (self *Directory) register(info map[string]string) string {
 	for {
 		port = strconv.Itoa(i)
 		if _, ok := self.pstances[port]; !ok {
-			break
+			if l, err := net.Listen("tcp", ":"+port); err == nil {
+				l.Close()
+				break
+			}
 		}
 		i += 1
 	}
@@ -199,7 +203,7 @@ Options:
 	}
 
 	// Load the configuration file.
-	var config interface{}
+	var config map[string]interface{}
 	if configfile := opts["--config"]; configfile != nil {
 		if bytes, err := ioutil.ReadFile(configfile.(string)); err == nil {
 			if err := json.Unmarshal(bytes, &config); err != nil {

@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/go-martini/martini"
-	"github.com/martini-contrib/gzip"
 )
 
 type IndexPage struct{}
@@ -63,7 +62,6 @@ func runWebServer(uiport string, dir *Directory) {
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
 	app := &martini.ClassicMartini{m, r}
-	app.Use(gzip.All())
 
 	//=========================================================================
 	// API endpoints.
