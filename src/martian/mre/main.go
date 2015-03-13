@@ -64,7 +64,7 @@ Options:
 	//=========================================================================
 	// Configure Martian runtime.
 	//=========================================================================
-	rt := core.NewRuntime("local", "disable", "disable", mroPath, martianVersion, mroVersion, false, false)
+	rt := core.NewRuntime("local", "disable", "disable", mroPath, martianVersion, mroVersion)
 
 	//=========================================================================
 	// Start web server.

@@ -7,7 +7,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"martian/core"
 	"net/http"
 	"os"
@@ -671,11 +670,15 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		if strings.Index(body.Path, "..") > -1 {
 			return "'..' not allowed in path."
 		}
-		data, err := ioutil.ReadFile(path.Join(body.Path, "_"+body.Name))
+
+		container := p["container"]
+		pname := p["pname"]
+		psid := p["psid"]
+		data, err := pman.GetPipestanceMetadata(container, pname, psid, path.Join(body.Path, "_"+body.Name))
 		if err != nil {
 			return err.Error()
 		}
-		return string(data)
+		return data
 	})
 
 	// API: Invoke BCL_PROCESSOR_PD.

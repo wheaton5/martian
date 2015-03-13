@@ -227,9 +227,10 @@ Options:
 	profileMode := "cpu"
 	reqMemPerCore := 8
 	stackVars := false
+	tar := true
 	checkSrcPath := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, mroPath, martianVersion, mroVersion,
-		-1, -1, reqMemPerCore, stackVars, debug, false)
+		-1, -1, reqMemPerCore, stackVars, tar, debug, false)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
