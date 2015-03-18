@@ -225,13 +225,12 @@ Options:
 	//=========================================================================
 	jobMode := "sge"
 	profileMode := "cpu"
-	reqMemPerCore := 8
 	stackVars := false
 	tar := true
 	checkSrcPath := true
 	skipPreflight := false
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, mroPath, martianVersion, mroVersion,
-		-1, -1, reqMemPerCore, stackVars, tar, skipPreflight, debug, false)
+		-1, -1, -1, stackVars, tar, skipPreflight, debug, false)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
