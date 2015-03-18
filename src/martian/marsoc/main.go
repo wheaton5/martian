@@ -229,8 +229,9 @@ Options:
 	tar := true
 	checkSrcPath := true
 	skipPreflight := false
+	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, mroPath, martianVersion, mroVersion,
-		-1, -1, -1, stackVars, tar, skipPreflight, debug, false)
+		-1, -1, -1, stackVars, tar, skipPreflight, enableMonitor, debug, false)
 	if _, err := rt.CompileAll(checkSrcPath); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
