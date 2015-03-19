@@ -143,7 +143,7 @@ func (self *PipestanceManager) refreshVersions() {
 		for {
 			self.runListMutex.Lock()
 			self.martianVersion = core.GetVersion()
-			self.mroVersion = core.GetGitTag(self.mroPath)
+			self.mroVersion = core.GetMroVersion(self.mroPath)
 			self.runListMutex.Unlock()
 
 			time.Sleep(time.Minute * time.Duration(5))

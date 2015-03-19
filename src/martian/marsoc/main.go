@@ -217,7 +217,7 @@ Options:
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	stepSecs := 5
-	mroVersion := core.GetGitTag(mroPath)
+	mroVersion := core.GetMroVersion(mroPath)
 	mroBranch := core.GetGitBranch(mroPath)
 
 	//=========================================================================

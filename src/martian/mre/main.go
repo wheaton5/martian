@@ -58,7 +58,7 @@ Options:
 	core.PrintInfo("environ", "MROPATH=%s", mroPath)
 
 	// Compute version.
-	mroVersion := core.GetGitTag(mroPath)
+	mroVersion := core.GetMroVersion(mroPath)
 	core.PrintInfo("version", "MRO Version=%s", mroVersion)
 
 	//=========================================================================
