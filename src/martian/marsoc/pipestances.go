@@ -675,7 +675,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		os.Symlink(psPath, aggregatePsPath)
 	}
 
-	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, psPath, tags)
+	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, aggregatePsPath, tags)
 	if err != nil {
 		self.removePendingPipestance(fqname, false)
 		return err
