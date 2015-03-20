@@ -940,10 +940,11 @@ func (self *PipestanceManager) GetPipestanceTimestamp(container string, pipeline
 
 func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline string, psid string, forkIndex int) map[string]interface{} {
 	psPath := self.makePipestancePath(container, pipeline, psid)
-	fpath := path.Join(psPath, pipeline, fmt.Sprintf("fork%d", forkIndex), "_outs")
-	if data, err := ioutil.ReadFile(fpath); err == nil {
+	permanentPsPath, _ := os.Readlink(psPath)
+	metadataPath := path.Join(permanentPsPath, pipeline, fmt.Sprintf("fork%d", forkIndex), "_outs")
+	if data, err := self.GetPipestanceMetadata(container, pipeline, psid, metadataPath); err == nil {
 		var v map[string]interface{}
-		if err := json.Unmarshal(data, &v); err == nil {
+		if err := json.Unmarshal([]byte(data), &v); err == nil {
 			return v
 		}
 	}
