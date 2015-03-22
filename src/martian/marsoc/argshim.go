@@ -41,7 +41,7 @@ func NewArgShim(argshimPath string, debug bool) *ArgShim {
 	return self
 }
 
-func (self *ArgShim) invoke(function string, arguments []interface{}) interface{} {
+func (self *ArgShim) invoke(function string, arguments []interface{}) (interface{}, error) {
 	input := map[string]interface{}{
 		"function":  function,
 		"arguments": arguments,
@@ -55,41 +55,57 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) interface{
 	self.writer.Write([]byte(string(bytes) + "\n"))
 	self.writer.Flush()
 
-	line, _, _ := self.reader.ReadLine()
+	line, _, err := self.reader.ReadLine()
+	self.mutex.Unlock()
+	if err != nil {
+		core.LogError(err, "argshim", "Failed to read argshim output")
+		return nil, err
+	}
 	if self.debug {
 		fmt.Printf("%s\n\n", string(line))
 	}
-	self.mutex.Unlock()
 
 	var v interface{}
-	json.Unmarshal(line, &v)
-	return v
+	if err := json.Unmarshal(line, &v); err != nil {
+		core.LogError(err, "argshim", "Failed to convert argshim output to JSON: %s", line)
+		return nil, err
+	}
+	return v, nil
 }
 
 func (self *ArgShim) getPipelineForSample(sample *Sample) string {
-	if pipeline, ok := self.samplePipelinesMap[sample.Id]; ok {
+	self.mutex.Lock()
+	pipeline, ok := self.samplePipelinesMap[sample.Id]
+	self.mutex.Unlock()
+	if ok {
 		return pipeline
 	}
-	v := self.invoke("getPipelineForSample", []interface{}{sample})
-	if tv, ok := v.(string); ok {
-		self.samplePipelinesMap[sample.Id] = tv
-		return tv
+
+	if v, err := self.invoke("getPipelineForSample", []interface{}{sample}); err == nil {
+		if tv, ok := v.(string); ok {
+			self.mutex.Lock()
+			self.samplePipelinesMap[sample.Id] = tv
+			self.mutex.Unlock()
+			return tv
+		}
 	}
 	return ""
 }
 
 func (self *ArgShim) buildArgsForRun(run *Run) map[string]interface{} {
-	v := self.invoke("buildArgsForRun", []interface{}{run})
-	if tv, ok := v.(map[string]interface{}); ok {
-		return tv
+	if v, err := self.invoke("buildArgsForRun", []interface{}{run}); err == nil {
+		if tv, ok := v.(map[string]interface{}); ok {
+			return tv
+		}
 	}
 	return map[string]interface{}{}
 }
 
 func (self *ArgShim) buildArgsForSample(sbag interface{}, fastqPaths map[string]string) map[string]interface{} {
-	v := self.invoke("buildArgsForSample", []interface{}{sbag, fastqPaths})
-	if tv, ok := v.(map[string]interface{}); ok {
-		return tv
+	if v, err := self.invoke("buildArgsForSample", []interface{}{sbag, fastqPaths}); err == nil {
+		if tv, ok := v.(map[string]interface{}); ok {
+			return tv
+		}
 	}
 	return map[string]interface{}{}
 }
