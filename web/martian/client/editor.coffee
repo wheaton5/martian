@@ -109,7 +109,8 @@ app.controller('MartianEdCtrl', ($scope, $http) ->
         $http.post('/load', { fname: fname }).success((data) ->
             # Populate editors with file contents.
             initSession($scope.mainEditor, fname, data.contents)
-            initSession($scope.includeEditor, data.includeFname, data.includeContents)
+            if data.includeFile
+                initSession($scope.includeEditor, data.includeFile.name, data.includeFile.contents)
 
             # Clear compiler messages.
             $scope.compilerMessages = ''

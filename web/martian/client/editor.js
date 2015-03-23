@@ -145,7 +145,9 @@
         fname: fname
       }).success(function(data) {
         initSession($scope.mainEditor, fname, data.contents);
-        initSession($scope.includeEditor, data.includeFname, data.includeContents);
+        if (data.includeFile) {
+          initSession($scope.includeEditor, data.includeFile.name, data.includeFile.contents);
+        }
         $scope.compilerMessages = '';
         return $scope.pipelineDecList = [];
       });

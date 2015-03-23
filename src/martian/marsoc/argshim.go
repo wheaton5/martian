@@ -119,8 +119,12 @@ func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interf
 	if !ok {
 		return ""
 	}
+	sweepargs := []string{}
+	if sweeplist, ok := shimout["sweepargs"].([]interface{}); ok {
+		sweepargs = core.ArrayToString(sweeplist)
+	}
 	incpath := fmt.Sprintf("%s.mro", strings.ToLower(pipeline))
-	src, _ := rt.BuildCallSource([]string{incpath}, pipeline, args)
+	src, _ := rt.BuildCallSource([]string{incpath}, pipeline, args, sweepargs)
 	return src
 }
 
