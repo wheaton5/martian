@@ -151,6 +151,7 @@ Options:
     --vdrmode=<name>   Enables Volatile Data Removal.
                            Valid options are rolling, post and disable.
                            Defaults to rolling.
+    --skip-preflight   Skips preflight stages.
     --autoinvoke       Turns on automatic pipestance invocation.
     --debug            Enable debug printing for argshim.
     -h --help          Show this message.
@@ -192,6 +193,7 @@ Options:
 	}, false)
 
 	// Parse options.
+	skipPreflight := opts["--skip-preflight"].(bool)
 	autoInvoke := opts["--autoinvoke"].(bool)
 	debug := opts["--debug"].(bool)
 	vdrMode := "rolling"
@@ -228,7 +230,6 @@ Options:
 	stackVars := false
 	tar := true
 	checkSrcPath := true
-	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, mroPath, martianVersion, mroVersion,
 		-1, -1, -1, stackVars, tar, skipPreflight, enableMonitor, debug, false)

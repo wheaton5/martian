@@ -24,15 +24,15 @@ func main() {
 	doc := `Martian MRO Editor.
 
 Usage:
-    mre [--port=<num>]
+    mre [--uiport=<num>]
     mre -h | --help | --version
 
 Options:
-    --port=<num>  Serve UI at http://localhost:<num>
-                    Overrides $MROPORT_EDITOR environment variable.
-                    Defaults to 3601 if not otherwise specified.
-    -h --help     Show this message.
-    --version     Show version.`
+    --uiport=<num>  Serve UI at http://localhost:<num>
+                      Overrides $MROPORT_EDITOR environment variable.
+                      Defaults to 3601 if not otherwise specified.
+    -h --help       Show this message.
+    --version       Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
 	core.Println("Martian MRO Editor - %s", martianVersion)
@@ -44,7 +44,7 @@ Options:
 		core.PrintInfo("environ", "MROPORT_EDITOR=%s", value)
 		uiport = value
 	}
-	if value := opts["--port"]; value != nil {
+	if value := opts["--uiport"]; value != nil {
 		uiport = value.(string)
 	}
 	core.PrintInfo("options", "--uiport=%s", uiport)

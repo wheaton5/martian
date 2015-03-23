@@ -90,6 +90,11 @@ func copyFile(oldPath string, newPath string) error {
 	return err
 }
 
+func deleteJobs(fqname string) ([]byte, error) {
+	cmd := exec.Command("qdel", fmt.Sprintf("%s*", fqname))
+	return cmd.CombinedOutput()
+}
+
 func getFilenameWithSuffix(dir string, fname string) string {
 	suffix := 0
 	infos, _ := ioutil.ReadDir(dir)
@@ -534,6 +539,9 @@ func (self *PipestanceManager) processRunList() {
 				// Write pipestance to fail coop.
 				self.writePipestanceToFailCoop(fqname, stage, summary, errlog, kind, errpaths, invocation)
 
+				// Delete jobs for failed stage.
+				deleteJobs(stage)
+
 				if pname == "BCL_PROCESSOR_PD" {
 					// For BCL_PROCESSOR_PD, just email the admins.
 					self.mailer.Sendmail(
@@ -721,9 +729,8 @@ func (self *PipestanceManager) KillPipestance(container string, pipeline string,
 	self.pendingTable[fqname] = true
 	self.runListMutex.Unlock()
 
-	cmd := exec.Command("qdel", fmt.Sprintf("%s*", fqname))
-	if output, err := cmd.CombinedOutput(); err != nil {
-		core.LogError(err, "pipeman", "qdel for pipestance '%s' failed: %s", fqname, output)
+	if output, err := deleteJobs(fqname); err != nil {
+		core.LogError(err, "pipeman", "qdel for pipestance '%s' failed: %s", fqname, string(output))
 		// If qdel failed because jobs didn't exist, we ignore the error since local stages
 		// could be running.
 		user, _ := user.Current()
@@ -812,6 +819,12 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 		self.removePendingPipestance(fqname, true)
 		return &core.PipestanceNotExistsError{psid}
 	}
+
+	nodes := pipestance.GetFailedNodes()
+	for _, node := range nodes {
+		deleteJobs(node.GetFQName())
+	}
+
 	if err := pipestance.Reset(); err != nil {
 		self.removePendingPipestance(fqname, true)
 		return err

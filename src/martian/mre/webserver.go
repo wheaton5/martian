@@ -76,18 +76,18 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 
 		// Parse the first @include line.
 		submatches := re.FindStringSubmatch(contents)
-		if len(submatches) > 1 {
 
+		var includeFile interface{}
+		if len(submatches) > 1 {
 			// Load contents of included file.
 			includeFname := submatches[1]
 			includeBytes, _ := ioutil.ReadFile(path.Join(mroPath, includeFname))
-			return core.MakeJSON(map[string]string{
-				"contents":        contents,
-				"includeFname":    includeFname,
-				"includeContents": string(includeBytes),
-			})
+			includeFile = map[string]string{
+				"name":     includeFname,
+				"contents": string(includeBytes),
+			}
 		}
-		return core.MakeJSON(map[string]interface{}{"contents": contents})
+		return core.MakeJSON(map[string]interface{}{"contents": contents, "includeFile": includeFile})
 	})
 
 	// Save file.
