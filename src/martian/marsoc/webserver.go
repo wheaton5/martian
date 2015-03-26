@@ -39,6 +39,7 @@ type GraphPage struct {
 	Psid         string
 	Admin        bool
 	AdminStyle   bool
+	Release      bool
 }
 
 // Forms
@@ -615,6 +616,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			Psid:         p["psid"],
 			Admin:        false,
 			AdminStyle:   false,
+			Release:      core.IsRelease(),
 		})
 	})
 
@@ -627,6 +629,7 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 			Psid:         p["psid"],
 			Admin:        true,
 			AdminStyle:   true,
+			Release:      core.IsRelease(),
 		})
 	})
 

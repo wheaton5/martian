@@ -7,6 +7,7 @@
 GOBINS=marsoc marstat mrc mre mrf mrg mrp mrs mrv kepler
 GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
+RELEASE=false
 
 export GOPATH=$(shell pwd)
 
@@ -14,18 +15,18 @@ export GOPATH=$(shell pwd)
 
 # Default rule to make it easier to git pull deploy for now.
 # Remove this when we switch to package deployment.
-marsoc-deploy: marsoc 
+marsoc-deploy: marsoc
 
 #
 # Targets for development builds.
-# 
+#
 all: grammar $(GOBINS) web test
 
 grammar:
 	go tool yacc -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
 
 $(GOBINS):
-	go install -ldflags "-X martian/core.__VERSION__ '$(VERSION)'" martian/$@
+	go install -ldflags "-X martian/core.__VERSION__ '$(VERSION)' -X martian/core.__RELEASE__ '$(RELEASE)'" martian/$@
 
 web:
 	cd web/martian; npm install; gulp; cd $(GOPATH)
@@ -43,7 +44,7 @@ clean:
 
 #
 # Targets for Sake builds.
-# 
+#
 ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
@@ -52,6 +53,7 @@ sake-martian: mrc mre mrf mrg mrp mrs sake-strip sake-martian-strip
 
 sake-test-martian: test
 
+sake-martian-cs: RELEASE=true
 sake-martian-cs: sake-martian sake-martian-cs-strip
 
 sake-test-martian-cs: test
@@ -67,7 +69,7 @@ sake-strip:
 	rm -f web/*/client/*.coffee
 	rm -f web/*/templates/*.jade
 
-	# Remove build intermediates and dev-only files. 
+	# Remove build intermediates and dev-only files.
 	rm -rf pkg
 	rm -rf src
 	rm -rf scripts
