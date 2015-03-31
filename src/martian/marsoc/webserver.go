@@ -649,6 +649,9 @@ func runWebServer(uiport string, instanceName string, rt *core.Runtime, pool *Se
 		psinfo["psid"] = psid
 		psinfo["start"], _ = pman.GetPipestanceTimestamp(container, pname, psid)
 		psinfo["invokesrc"], _ = pman.GetPipestanceInvokeSrc(container, pname, psid)
+		martianVersion, mroVersion, _ := pman.GetPipestanceVersions(container, pname, psid)
+		psinfo["version"] = martianVersion
+		psinfo["mroversion"] = mroVersion
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
 		state["nodes"] = ser
 		state["info"] = psinfo

@@ -951,6 +951,14 @@ func (self *PipestanceManager) GetPipestanceTimestamp(container string, pipeline
 	return core.ParseTimestamp(data), nil
 }
 
+func (self *PipestanceManager) GetPipestanceVersions(container string, pipeline string, psid string) (string, string, error) {
+	data, err := self.getPipestanceMetadata(container, pipeline, psid, "_versions")
+	if err != nil {
+		return "", "", err
+	}
+	return core.ParseVersions(data)
+}
+
 func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline string, psid string, forkIndex int) map[string]interface{} {
 	psPath := self.makePipestancePath(container, pipeline, psid)
 	permanentPsPath, _ := os.Readlink(psPath)

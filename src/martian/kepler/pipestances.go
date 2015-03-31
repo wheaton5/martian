@@ -144,14 +144,10 @@ func (self *PipestanceManager) recursePath(root string) []string {
 	return newPsPaths
 }
 
-func (self *PipestanceManager) parseVersions(psPath string) (string, string) {
+func (self *PipestanceManager) parseVersions(psPath string) (string, string, error) {
 	versionsPath := makeVersionsPath(psPath)
-
-	var v map[string]string
-	if err := json.Unmarshal([]byte(read(versionsPath)), &v); err == nil {
-		return v["martian"], v["pipelines"]
-	}
-	return "", ""
+	data := read(versionsPath)
+	return core.ParseVersions(data)
 }
 
 func (self *PipestanceManager) parseFinalState(psPath string) (string, string, map[string]interface{}, error) {
@@ -254,7 +250,7 @@ func (self *PipestanceManager) searchCache(fqname string, pipelinesVersion strin
 }
 
 func (self *PipestanceManager) InsertPipestance(psPath string) error {
-	martianVersion, pipelinesVersion := self.parseVersions(psPath)
+	martianVersion, pipelinesVersion, _ := self.parseVersions(psPath)
 	tags := self.parseTags(psPath)
 
 	call, fqname, args, err := self.parseFinalState(psPath)
