@@ -172,12 +172,12 @@ func main() {
 	// Parse commandline.
 	doc := `Martian Pipeline Viewer.
 
-Usage: 
+Usage:
     mrv [options]
     mrv -h | --help | --version
 
 Options:
-    --port=<num>     Serve UI at http://localhost:<num>
+    --port=<num>     Serve UI at http://<hostname>:<num>
     --dport=<num>    Starting port number available to mrp's.
     --config=<file>  JSON file with user names and avatar URLs.
     -h --help        Show this message.

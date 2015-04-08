@@ -82,7 +82,5 @@ sake-martian-strip:
 	rm -rf web/kepler
 
 sake-martian-cs-strip:
-	# Use customer job templates.
-	mv jobmanagers/cs/*.template jobmanagers
-	rm -rf jobmanagers/cs
-	rm -rf jobmanagers/pd
+	# Remove pd job templates.
+	rm -f jobmanagers/*.template

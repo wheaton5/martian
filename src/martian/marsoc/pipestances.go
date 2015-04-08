@@ -478,7 +478,6 @@ func (self *PipestanceManager) processRunList() {
 				core.LogInfo("pipeman", "Complete and removing from runList: %s.", fqname)
 
 				// VDR Kill
-				core.LogInfo("pipeman", "Starting VDR kill for %s.", fqname)
 				killReport := pipestance.VDRKill()
 				core.LogInfo("pipeman", "VDR killed %d files, %s from %s.", killReport.Count, humanize.Bytes(killReport.Size), fqname)
 

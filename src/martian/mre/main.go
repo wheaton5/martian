@@ -28,7 +28,7 @@ Usage:
     mre -h | --help | --version
 
 Options:
-    --uiport=<num>  Serve UI at http://localhost:<num>
+    --uiport=<num>  Serve UI at http://<hostname>:<num>
                       Overrides $MROPORT_EDITOR environment variable.
                       Defaults to 3601 if not otherwise specified.
     -h --help       Show this message.

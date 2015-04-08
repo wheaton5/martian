@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"martian/core"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -108,6 +109,10 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 	//=========================================================================
 	// Start webserver.
 	//=========================================================================
-	core.LogInfo("webserv", "Serving UI at http://localhost:%s", uiport)
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+	core.LogInfo("webserv", "Serving UI at http://%s:%s", hostname, uiport)
 	http.ListenAndServe(":"+uiport, app)
 }
