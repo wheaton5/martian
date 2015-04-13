@@ -344,7 +344,7 @@ func (self *SequencerPool) add(name string) {
 	} else if strings.HasPrefix(name, "hiseq") {
 		self.seqcers = append(self.seqcers, NewHiSeqSequencer(self, name))
 		core.LogInfo("seqpool", "Add HiSeq %s.", name)
-	} else if strings.HasPrefix(name, "nextseq") {
+	} else if strings.HasPrefix(name, "nxseq") {
 		self.seqcers = append(self.seqcers, NewNextSeqSequencer(self, name))
 		core.LogInfo("seqpool", "Add NextSeq %s.", name)
 	}
