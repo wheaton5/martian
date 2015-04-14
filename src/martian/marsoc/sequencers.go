@@ -98,15 +98,15 @@ func NewSequencer(pool *SequencerPool, name string, folderPattern string) *Seque
 }
 
 func NewMiSeqSequencer(pool *SequencerPool, name string) *Sequencer {
-	return NewSequencer(pool, name, "^(\\d{6})_(\\w+)_(\\d+)_[0]{9}-([A-Z0-9]{5})$")
+	return NewSequencer(pool, name, "^(\\d{6})_([\\w-]+)_(\\d+)_[0]{9}-([A-Z0-9]{5})$")
 }
 
 func NewHiSeqSequencer(pool *SequencerPool, name string) *Sequencer {
-	return NewSequencer(pool, name, "^(\\d{6})_(\\w+)_(\\d+)_[AB]*([A-Z0-9]{9})$")
+	return NewSequencer(pool, name, "^(\\d{6})_([\\w-]+)_(\\d+)_[AB]*([A-Z0-9]{9})$")
 }
 
 func NewNextSeqSequencer(pool *SequencerPool, name string) *Sequencer {
-	return NewSequencer(pool, name, "^(\\d{6})_(\\w+)_(\\d+)_[AB]*([A-Z0-9]{9})$")
+	return NewSequencer(pool, name, "^(\\d{6})_([\\w-]+)_(\\d+)_[AB]*([A-Z0-9]{9})$")
 }
 
 // Parse the folder name into info fields and get various file mod times.
