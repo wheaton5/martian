@@ -38,7 +38,7 @@ func sendNotificationMail(users []string, mailer *Mailer, notices []*PipestanceN
 		vdrsize += notice.Vdrsize
 		if notice.State == "failed" {
 			worstState = notice.State
-			results = append(results, "    "+notice.Summary)
+			results = append(results, fmt.Sprintf("    %s: %s", notice.Stage, notice.Summary))
 		}
 	}
 
@@ -143,7 +143,7 @@ func main() {
 	// Parse commandline.
 	doc := `MARSOC: Martian SeqOps Command
 
-Usage: 
+Usage:
     marsoc [options]
     marsoc -h | --help | --version
 
@@ -227,7 +227,7 @@ Options:
 	//=========================================================================
 	jobMode := "sge"
 	profileMode := "cpu"
-	stackVars := false
+	stackVars := true
 	tar := true
 	checkSrcPath := true
 	enableMonitor := true
