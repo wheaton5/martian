@@ -110,7 +110,7 @@ func (self *ArgShim) buildArgsForSample(sbag interface{}, fastqPaths map[string]
 	return map[string]interface{}{}
 }
 
-func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interface{}) string {
+func (self *ArgShim) buildCallSource(shimout map[string]interface{}) string {
 	pipeline, ok := shimout["call"].(string)
 	if !ok {
 		return ""
@@ -124,14 +124,14 @@ func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interf
 		sweepargs = core.ArrayToString(sweeplist)
 	}
 	incpath := fmt.Sprintf("%s.mro", strings.ToLower(pipeline))
-	src, _ := rt.BuildCallSource([]string{incpath}, pipeline, args, sweepargs)
+	src, _ := core.BuildCallSource([]string{incpath}, pipeline, args, sweepargs)
 	return src
 }
 
-func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
-	return self.buildCallSource(rt, self.buildArgsForRun(run))
+func (self *ArgShim) buildCallSourceForRun(run *Run) string {
+	return self.buildCallSource(self.buildArgsForRun(run))
 }
 
-func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string) string {
-	return self.buildCallSource(rt, self.buildArgsForSample(sbag, fastqPaths))
+func (self *ArgShim) buildCallSourceForSample(sbag interface{}, fastqPaths map[string]string) string {
+	return self.buildCallSource(self.buildArgsForSample(sbag, fastqPaths))
 }

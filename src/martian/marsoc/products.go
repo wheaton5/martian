@@ -12,6 +12,7 @@ import (
 	"martian/core"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 )
@@ -33,10 +34,15 @@ type Product struct {
 }
 
 type ProductJson struct {
-	Name        string            `json:"name"`
-	ArgshimPath string            `json:"argshim_path"`
-	MroPath     string            `json:"mro_path"`
-	Envs        map[string]string `json:"envs"`
+	Name        string                     `json:"name"`
+	ArgshimPath string                     `json:"argshim_path"`
+	MroPath     string                     `json:"mro_path"`
+	Envs        map[string]*ProductJsonEnv `json:"envs"`
+}
+
+type ProductJsonEnv struct {
+	Value string `json:"value"`
+	Type  string `json:"type"`
 }
 
 func NewProductManager(productsPath string, defaultProduct string, debug bool, lena *Lena) *ProductManager {
@@ -75,14 +81,14 @@ func (self *ProductManager) getPipelineForSample(sample *Sample) string {
 	return ""
 }
 
-func (self *ProductManager) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
+func (self *ProductManager) buildCallSourceForRun(run *Run) string {
 	product := self.products[self.defaultProduct]
-	return product.argshim.buildCallSourceForRun(rt, run)
+	return product.argshim.buildCallSourceForRun(run)
 }
 
-func (self *ProductManager) buildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string, sample *Sample) string {
+func (self *ProductManager) buildCallSourceForSample(sbag interface{}, fastqPaths map[string]string, sample *Sample) string {
 	if product, ok := self.products[sample.Product]; ok {
-		return product.argshim.buildCallSourceForSample(rt, sbag, fastqPaths)
+		return product.argshim.buildCallSourceForSample(sbag, fastqPaths)
 	}
 	return ""
 }
@@ -186,7 +192,46 @@ func verifyProduct(productPath string) (string, string, string, map[string]strin
 	}
 
 	name := productJson.Name
-	envs := productJson.Envs
+
+	envs := map[string]string{}
+	for key, envJson := range productJson.Envs {
+		value := envJson.Value
+		switch envJson.Type {
+		case "path":
+			value = parsePathEnv(value, productPath)
+		case "path_prepend":
+			value = parsePathEnv(value, productPath)
+			if prefix := os.Getenv(key); len(prefix) > 0 {
+				// Prepend value to current environment variable
+				value = value + ":" + prefix
+			}
+		case "string":
+			break
+		default:
+			core.PrintInfo("product", "Unsupported env variable type %s.", envJson.Type)
+			os.Exit(1)
+		}
+		if _, ok := envs[key]; ok {
+			core.PrintInfo("product", "Duplicate env variable %s found.", key)
+			os.Exit(1)
+		}
+		envs[key] = value
+	}
 
 	return name, argshimPath, mroPath, envs
+}
+
+// Helper functions
+func parsePathEnv(env string, cwd string) string {
+	l := []string{}
+
+	values := strings.Split(env, ":")
+	for _, value := range values {
+		if !strings.HasPrefix(value, "/") {
+			// Assume path is relative if it does not begin with a slash
+			value = path.Join(cwd, value)
+		}
+		l = append(l, value)
+	}
+	return strings.Join(l, ":")
 }
