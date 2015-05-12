@@ -99,7 +99,7 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 
 	// Compile file.
 	app.Post("/build", binding.Bind(LoadForm{}), func(body LoadForm, p martini.Params) string {
-		_, _, global, err := rt.Compile(path.Join(mroPath, body.Fname), false)
+		_, _, global, err := rt.Compile(path.Join(mroPath, body.Fname), mroPath, false)
 		if err != nil {
 			return err.Error()
 		}

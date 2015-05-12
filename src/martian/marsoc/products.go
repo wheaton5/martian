@@ -59,6 +59,14 @@ func NewProduct(productPath string, debug bool) *Product {
 	return self
 }
 
+func (self *ProductManager) getProducts() []*Product {
+	products := []*Product{}
+	for _, product := range self.products {
+		products = append(products, product)
+	}
+	return products
+}
+
 // Argshim functions
 func (self *ProductManager) getPipelineForSample(sample *Sample) string {
 	if product, ok := self.products[sample.Product]; ok {
@@ -68,10 +76,8 @@ func (self *ProductManager) getPipelineForSample(sample *Sample) string {
 }
 
 func (self *ProductManager) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
-	if product, ok := self.products[self.defaultProduct]; ok {
-		return product.argshim.buildCallSourceForRun(rt, run)
-	}
-	return ""
+	product := self.products[self.defaultProduct]
+	return product.argshim.buildCallSourceForRun(rt, run)
 }
 
 func (self *ProductManager) buildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string, sample *Sample) string {
@@ -86,13 +92,21 @@ func (self *ProductManager) getPipestanceEnvironment(psid string) (string, strin
 	if sample := self.lena.getSampleWithId(psid); sample != nil {
 		if product, ok := self.products[sample.Product]; ok {
 			self.mutex.Lock()
-			mroPath, mroVersion, envs := product.mroPath, product.mroVersion, product.envs
-			self.mutex.Unlock()
+			defer self.mutex.Unlock()
 
-			return mroPath, mroVersion, envs, nil
+			return product.mroPath, product.mroVersion, product.envs, nil
 		}
 	}
 	return "", "", nil, &core.MartianError{fmt.Sprintf("ProductManagerError: Failed to get environment for pipestance '%s'.", psid)}
+}
+
+func (self *ProductManager) getDefaultPipestanceEnvironment() (string, string, map[string]string, error) {
+	product := self.products[self.defaultProduct]
+
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
+	return product.mroPath, product.mroVersion, product.envs, nil
 }
 
 // Version functions

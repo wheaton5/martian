@@ -134,6 +134,15 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, pr
 	}()
 }
 
+func compileAll(products *ProductManager, rt *core.Runtime, checkSrcPath bool) {
+	for _, product := range products.getProducts() {
+		if _, err := rt.CompileAll(product.mroPath, checkSrcPath); err != nil {
+			core.Println(err.Error())
+			os.Exit(1)
+		}
+	}
+}
+
 func main() {
 	core.SetupSignalHandlers()
 
@@ -231,10 +240,6 @@ Options:
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		-1, -1, -1, stackVars, tar, skipPreflight, enableMonitor, debug, false)
-	if _, err := rt.CompileAll(checkSrcPath); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
 
 	//=========================================================================
 	// Setup Mailer.
@@ -266,6 +271,7 @@ Options:
 	// Setup product manager.
 	//=========================================================================
 	products := NewProductManager(productsPath, defaultProduct, debug, lena)
+	compileAll(products, rt, checkSrcPath)
 
 	//=========================================================================
 	// Setup PipestanceManager and load pipestance cache.
