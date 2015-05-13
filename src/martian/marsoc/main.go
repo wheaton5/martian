@@ -98,7 +98,7 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 	}()
 }
 
-func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, products *ProductManager, rt *core.Runtime, mailer *Mailer) {
+func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, packages *PackageManager, rt *core.Runtime, mailer *Mailer) {
 	go func() {
 		for {
 			runQueue := pool.CopyAndClearRunQueue()
@@ -109,7 +109,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, pr
 				for _, notice := range runQueue {
 					run := notice.run
 					fcids = append(fcids, run.Fcid)
-					InvokePreprocess(run.Fcid, rt, products, pman, pool, mailer.InstanceName)
+					InvokePreprocess(run.Fcid, rt, packages, pman, pool, mailer.InstanceName)
 				}
 
 				// If there are new runs completed, send email.
@@ -124,7 +124,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, pr
 
 				for _, notice := range analysisQueue {
 					fcid := notice.Fcid
-					InvokeAllSamples(fcid, rt, products, pman, lena, mailer.InstanceName)
+					InvokeAllSamples(fcid, rt, packages, pman, lena, mailer.InstanceName)
 				}
 			}
 
@@ -134,9 +134,9 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, pr
 	}()
 }
 
-func compileAll(products *ProductManager, rt *core.Runtime, checkSrcPath bool) {
-	for _, product := range products.getProducts() {
-		if _, err := rt.CompileAll(product.mroPath, checkSrcPath); err != nil {
+func compileAll(packages *PackageManager, rt *core.Runtime, checkSrcPath bool) {
+	for _, p := range packages.getPackages() {
+		if _, err := rt.CompileAll(p.mroPath, checkSrcPath); err != nil {
 			core.Println(err.Error())
 			os.Exit(1)
 		}
@@ -162,7 +162,7 @@ Options:
                            Defaults to rolling.
     --skip-preflight   Skips preflight stages.
     --autoinvoke       Turns on automatic pipestance invocation.
-    --debug            Enable debug printing for product argshims.
+    --debug            Enable debug printing for package argshims.
     -h --help          Show this message.
     --version          Show version.`
 	martianVersion := core.GetVersion()
@@ -183,8 +183,8 @@ Options:
 		{"MARSOC_SEQUENCERS_PATH", "path/to/sequencers"},
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
 		{"MARSOC_LOG_PATH", "path/to/marsoc/logs"},
-		{"MARSOC_PRODUCTS_PATH", "path/to/products"},
-		{"MARSOC_DEFAULT_PRODUCT", "product"},
+		{"MARSOC_PACKAGES_PATH", "path/to/packages"},
+		{"MARSOC_DEFAULT_PACKAGE", "package"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
 		{"MARSOC_SCRATCH_PATH", "path/to/scratch/pipestances"},
 		{"MARSOC_FAIL_COOP", "path/to/fail/coop"},
@@ -214,8 +214,8 @@ Options:
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
-	productsPath := env["MARSOC_PRODUCTS_PATH"]
-	defaultProduct := env["MARSOC_DEFAULT_PRODUCT"]
+	packagesPath := env["MARSOC_PACKAGES_PATH"]
+	defaultPackage := env["MARSOC_DEFAULT_PACKAGE"]
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQUENCERS_PATH"]
 	failCoopPath := env["MARSOC_FAIL_COOP"]
@@ -268,16 +268,16 @@ Options:
 	sge := NewSGE()
 
 	//=========================================================================
-	// Setup product manager.
+	// Setup package manager.
 	//=========================================================================
-	products := NewProductManager(productsPath, defaultProduct, debug, lena)
-	compileAll(products, rt, checkSrcPath)
+	packages := NewPackageManager(packagesPath, defaultPackage, debug, lena)
+	compileAll(packages, rt, checkSrcPath)
 
 	//=========================================================================
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
 	pman := NewPipestanceManager(rt, pipestancesPaths, scratchPaths, cachePath,
-		failCoopPath, stepSecs, autoInvoke, mailer, products)
+		failCoopPath, stepSecs, autoInvoke, mailer, packages)
 	pman.loadCache()
 	pman.inventoryPipestances()
 
@@ -289,7 +289,7 @@ Options:
 	lena.goDownloadLoop()
 	sge.goQStatLoop()
 	emailNotifierLoop(pman, lena, mailer)
-	processRunLoop(pool, pman, lena, products, rt, mailer)
+	processRunLoop(pool, pman, lena, packages, rt, mailer)
 
 	//=========================================================================
 	// Collect pipestance static info.
@@ -325,7 +325,7 @@ Options:
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	runWebServer(uiport, instanceName, martianVersion, rt, pool, pman, lena, products, sge, info)
+	runWebServer(uiport, instanceName, martianVersion, rt, pool, pman, lena, packages, sge, info)
 
 	// Let daemons take over.
 	done := make(chan bool)

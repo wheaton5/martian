@@ -71,8 +71,8 @@ type PipestanceForm struct {
 // Psstate  Current state of the sample's pipestance, if any
 // Callsrc  MRO invoke source to analyze this sample, per argshim
 func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
-	products *ProductManager, pman *PipestanceManager) map[string]string {
-	pname := products.getPipelineForSample(sample)
+	packages *PackageManager, pman *PipestanceManager) map[string]string {
+	pname := packages.getPipelineForSample(sample)
 	sample.Pname = pname
 	sample.Psstate, _ = pman.GetPipestanceState(sample.Pscontainer, pname, strconv.Itoa(sample.Id))
 	sample.Ready_to_invoke = true
@@ -96,7 +96,7 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 			sample.Ready_to_invoke = false
 		}
 	}
-	sample.Callsrc = products.buildCallSourceForSample(lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample)
+	sample.Callsrc = packages.buildCallSourceForSample(lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample)
 	return fastqPaths
 }
 
@@ -137,18 +137,18 @@ func GetPreprocessTags(run *Run, fcid string, instanceName string) []string {
 	return tags
 }
 
-func InvokePreprocess(fcid string, rt *core.Runtime, products *ProductManager, pman *PipestanceManager, pool *SequencerPool, instanceName string) string {
+func InvokePreprocess(fcid string, rt *core.Runtime, packages *PackageManager, pman *PipestanceManager, pool *SequencerPool, instanceName string) string {
 	run := pool.find(fcid)
 	tags := GetPreprocessTags(run, fcid, instanceName)
-	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, products.buildCallSourceForRun(run), tags); err != nil {
+	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, packages.buildCallSourceForRun(run), tags); err != nil {
 		return err.Error()
 	}
 	return ""
 }
 
-func InvokeSample(sample *Sample, rt *core.Runtime, products *ProductManager, pman *PipestanceManager, lena *Lena, instanceName string) string {
+func InvokeSample(sample *Sample, rt *core.Runtime, packages *PackageManager, pman *PipestanceManager, lena *Lena, instanceName string) string {
 	// Invoke the pipestance.
-	fastqPaths := updateSampleState(sample, rt, lena, products, pman)
+	fastqPaths := updateSampleState(sample, rt, lena, packages, pman)
 	errors := []string{}
 	every := true
 	for _, fastqPath := range fastqPaths {
@@ -166,14 +166,14 @@ func InvokeSample(sample *Sample, rt *core.Runtime, products *ProductManager, pm
 	return strings.Join(errors, "\n")
 }
 
-func InvokeAllSamples(fcid string, rt *core.Runtime, products *ProductManager, pman *PipestanceManager, lena *Lena, instanceName string) string {
+func InvokeAllSamples(fcid string, rt *core.Runtime, packages *PackageManager, pman *PipestanceManager, lena *Lena, instanceName string) string {
 	// Get all the samples for this fcid.
 	samples := lena.getSamplesForFlowcell(fcid)
 
 	// Invoke the appropriate pipeline on each sample.
 	errors := []string{}
 	for _, sample := range samples {
-		if error := InvokeSample(sample, rt, products, pman, lena, instanceName); len(error) > 0 {
+		if error := InvokeSample(sample, rt, packages, pman, lena, instanceName); len(error) > 0 {
 			errors = append(errors, error)
 		}
 	}
@@ -222,7 +222,7 @@ func callPreprocessAPI(body FcidForm, pipestanceFunc PipestanceFunc) string {
 }
 
 func runWebServer(uiport string, instanceName string, martianVersion string, rt *core.Runtime,
-	pool *SequencerPool, pman *PipestanceManager, lena *Lena, products *ProductManager,
+	pool *SequencerPool, pman *PipestanceManager, lena *Lena, packages *PackageManager,
 	sge *SGE, info map[string]string) {
 
 	//=========================================================================
@@ -250,7 +250,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            false,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -262,7 +262,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            true,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -299,7 +299,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				states := []string{}
 				run.Analysis = "running"
 				for _, sample := range samples {
-					state, ok := pman.GetPipestanceState(run.Fcid, products.getPipelineForSample(sample), strconv.Itoa(sample.Id))
+					state, ok := pman.GetPipestanceState(run.Fcid, packages.getPipelineForSample(sample), strconv.Itoa(sample.Id))
 					if ok {
 						states = append(states, state)
 					} else {
@@ -344,7 +344,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		wg.Add(len(samples))
 		for _, sample := range samples {
 			go func(wg *sync.WaitGroup, sample *Sample) {
-				updateSampleState(sample, rt, lena, products, pman)
+				updateSampleState(sample, rt, lena, packages, pman)
 				wg.Done()
 			}(&wg, sample)
 		}
@@ -355,7 +355,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	// API: Build BCL_PROCESSOR_PD call source.
 	app.Post("/api/get-callsrc", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
 		if run, ok := pool.runTable[body.Fcid]; ok {
-			return products.buildCallSourceForRun(run)
+			return packages.buildCallSourceForRun(run)
 		}
 		return fmt.Sprintf("Could not find run with fcid %s.", body.Fcid)
 	})
@@ -370,7 +370,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            false,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -381,7 +381,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            false,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 				State:            p["state"],
 			})
@@ -393,7 +393,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            true,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -404,7 +404,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            true,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 				State:            p["state"],
 			})
@@ -440,7 +440,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				if state == "complete" {
 					samples := lena.getSamplesForFlowcell(run.Fcid)
 					for _, sample := range samples {
-						pipeline := products.getPipelineForSample(sample)
+						pipeline := packages.getPipelineForSample(sample)
 						psid := strconv.Itoa(sample.Id)
 
 						state, ok := pman.GetPipestanceState(run.Fcid, pipeline, psid)
@@ -471,7 +471,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				defer wg.Done()
 
 				container := metasample.Pscontainer
-				pipeline := products.getPipelineForSample(metasample)
+				pipeline := packages.getPipelineForSample(metasample)
 				psid := strconv.Itoa(metasample.Id)
 
 				state, ok := pman.GetPipestanceState(container, pipeline, psid)
@@ -518,14 +518,14 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 
 	app.Post("/api/invoke-sample", binding.Bind(PipestanceForm{}), func(body PipestanceForm, p martini.Params) string {
 		if body.Pipeline == "BCL_PROCESSOR_PD" {
-			return InvokePreprocess(body.Fcid, rt, products, pman, pool, instanceName)
+			return InvokePreprocess(body.Fcid, rt, packages, pman, pool, instanceName)
 		}
 
 		sample := lena.getSampleWithId(body.Psid)
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Psid)
 		}
-		return InvokeSample(sample, rt, products, pman, lena, instanceName)
+		return InvokeSample(sample, rt, packages, pman, lena, instanceName)
 	})
 
 	//=========================================================================
@@ -538,7 +538,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            false,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -548,7 +548,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            true,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -557,7 +557,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	app.Get("/api/get-metasamples", func() string {
 		metasamples := lena.getMetasamples()
 		for _, metasample := range metasamples {
-			state, ok := pman.GetPipestanceState(metasample.Pscontainer, products.getPipelineForSample(metasample), strconv.Itoa(metasample.Id))
+			state, ok := pman.GetPipestanceState(metasample.Pscontainer, packages.getPipelineForSample(metasample), strconv.Itoa(metasample.Id))
 			if ok {
 				metasample.Psstate = state
 			}
@@ -568,7 +568,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	// API: Build analysis call source for a metasample with given id.
 	app.Post("/api/get-metasample-callsrc", binding.Bind(MetasampleIdForm{}), func(body MetasampleIdForm, params martini.Params) string {
 		if sample := lena.getSampleWithId(body.Id); sample != nil {
-			updateSampleState(sample, rt, lena, products, pman)
+			updateSampleState(sample, rt, lena, packages, pman)
 			return core.MakeJSON(sample)
 		}
 		return fmt.Sprintf("Could not find metasample with id %s.", body.Id)
@@ -581,7 +581,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Id)
 		}
-		return InvokeSample(sample, rt, products, pman, lena, instanceName)
+		return InvokeSample(sample, rt, packages, pman, lena, instanceName)
 	})
 
 	// API: Restart failed metasample analysis.
@@ -692,7 +692,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 
 	// API: Invoke BCL_PROCESSOR_PD.
 	app.Post("/api/invoke-preprocess", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		return InvokePreprocess(body.Fcid, rt, products, pman, pool, instanceName)
+		return InvokePreprocess(body.Fcid, rt, packages, pman, pool, instanceName)
 	})
 
 	// API: Archive BCL_PROCESSOR_PD.
@@ -712,7 +712,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 
 	// API: Invoke analysis.
 	app.Post("/api/invoke-analysis", binding.Bind(FcidForm{}), func(body FcidForm, p martini.Params) string {
-		return InvokeAllSamples(body.Fcid, rt, products, pman, lena, instanceName)
+		return InvokeAllSamples(body.Fcid, rt, packages, pman, lena, instanceName)
 	})
 
 	// API: Restart failed stage.
@@ -764,7 +764,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            false,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -774,7 +774,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				InstanceName:     instanceName,
 				Admin:            true,
 				MarsocVersion:    martianVersion,
-				PipelinesVersion: products.GetMroVersion(),
+				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
@@ -796,7 +796,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		return core.MakeJSON(map[string]interface{}{
 			"ready_to_invoke": sample.Ready_to_invoke,
 			"sample_bag":      lena.getSampleBagWithId(sid),
-			"fastq_paths":     updateSampleState(sample, rt, lena, products, pman),
+			"fastq_paths":     updateSampleState(sample, rt, lena, packages, pman),
 		})
 	})
 

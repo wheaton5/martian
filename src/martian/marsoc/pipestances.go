@@ -67,7 +67,7 @@ type PipestanceManager struct {
 	mailQueue      []*PipestanceNotification
 	analysisQueue  []*AnalysisNotification
 	mailer         *Mailer
-	products       *ProductManager
+	packages       *PackageManager
 }
 
 func writeJson(fpath string, object interface{}) {
@@ -110,7 +110,7 @@ func getFilenameWithSuffix(dir string, fname string) string {
 
 func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPaths []string,
 	cachePath string, failCoopPath string, stepms int, autoInvoke bool, mailer *Mailer,
-	products *ProductManager) *PipestanceManager {
+	packages *PackageManager) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.paths = pipestancesPaths
@@ -133,7 +133,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPa
 	self.mailQueue = []*PipestanceNotification{}
 	self.analysisQueue = []*AnalysisNotification{}
 	self.mailer = mailer
-	self.products = products
+	self.packages = packages
 	return self
 }
 
@@ -953,7 +953,7 @@ func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline stri
 func (self *PipestanceManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, map[string]string, error) {
 	if pipeline == "BCL_PROCESSOR_PD" {
 		// Use default environment for BCL_PROCESSOR_PD
-		return self.products.getDefaultPipestanceEnvironment()
+		return self.packages.getDefaultPipestanceEnvironment()
 	}
-	return self.products.getPipestanceEnvironment(psid)
+	return self.packages.getPipestanceEnvironment(psid)
 }
