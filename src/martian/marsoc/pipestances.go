@@ -56,6 +56,7 @@ type PipestanceManager struct {
 	scratchIndex   int
 	scratchPaths   []string
 	paths          []string
+	pipelines      []string
 	completed      map[string]bool
 	failed         map[string]bool
 	runList        []*core.Pipestance
@@ -122,6 +123,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPa
 	self.failCoopPath = failCoopPath
 	self.stepms = stepms
 	self.autoInvoke = autoInvoke
+	self.pipelines = rt.MroCache.GetPipelines()
 	self.completed = map[string]bool{}
 	self.failed = map[string]bool{}
 	self.runList = []*core.Pipestance{}
@@ -201,9 +203,7 @@ func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []strin
 		containerInfos, _ := ioutil.ReadDir(pipestancesPath)
 		for _, containerInfo := range containerInfos {
 			container := containerInfo.Name()
-			pipelineInfos, _ := ioutil.ReadDir(path.Join(pipestancesPath, container))
-			for _, pipelineInfo := range pipelineInfos {
-				pipeline := pipelineInfo.Name()
+			for _, pipeline := range self.pipelines {
 				psidInfos, _ := ioutil.ReadDir(path.Join(pipestancesPath, container, pipeline))
 				for _, psidInfo := range psidInfos {
 					psid := psidInfo.Name()

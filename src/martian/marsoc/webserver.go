@@ -96,7 +96,7 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 			sample.Ready_to_invoke = false
 		}
 	}
-	sample.Callsrc = packages.buildCallSourceForSample(lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample)
+	sample.Callsrc = packages.buildCallSourceForSample(rt, lena.getSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample)
 	return fastqPaths
 }
 
@@ -140,7 +140,7 @@ func GetPreprocessTags(run *Run, fcid string, instanceName string) []string {
 func InvokePreprocess(fcid string, rt *core.Runtime, packages *PackageManager, pman *PipestanceManager, pool *SequencerPool, instanceName string) string {
 	run := pool.find(fcid)
 	tags := GetPreprocessTags(run, fcid, instanceName)
-	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, packages.buildCallSourceForRun(run), tags); err != nil {
+	if err := pman.Invoke(fcid, "BCL_PROCESSOR_PD", fcid, packages.buildCallSourceForRun(rt, run), tags); err != nil {
 		return err.Error()
 	}
 	return ""
@@ -355,7 +355,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	// API: Build BCL_PROCESSOR_PD call source.
 	app.Post("/api/get-callsrc", binding.Bind(FcidForm{}), func(body FcidForm, params martini.Params) string {
 		if run, ok := pool.runTable[body.Fcid]; ok {
-			return packages.buildCallSourceForRun(run)
+			return packages.buildCallSourceForRun(rt, run)
 		}
 		return fmt.Sprintf("Could not find run with fcid %s.", body.Fcid)
 	})

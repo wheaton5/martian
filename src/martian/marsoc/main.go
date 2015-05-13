@@ -134,12 +134,13 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, pa
 	}()
 }
 
-func compileAll(packages *PackageManager, rt *core.Runtime, checkSrcPath bool) {
+func verifyMros(packages *PackageManager, rt *core.Runtime, checkSrcPath bool) {
 	for _, p := range packages.getPackages() {
 		if _, err := rt.CompileAll(p.mroPath, checkSrcPath); err != nil {
 			core.Println(err.Error())
 			os.Exit(1)
 		}
+		rt.MroCache.CacheMros(p.mroPath)
 	}
 }
 
@@ -271,7 +272,7 @@ Options:
 	// Setup package manager.
 	//=========================================================================
 	packages := NewPackageManager(packagesPath, defaultPackage, debug, lena)
-	compileAll(packages, rt, checkSrcPath)
+	verifyMros(packages, rt, checkSrcPath)
 
 	//=========================================================================
 	// Setup PipestanceManager and load pipestance cache.

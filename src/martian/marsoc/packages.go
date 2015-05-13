@@ -81,14 +81,14 @@ func (self *PackageManager) getPipelineForSample(sample *Sample) string {
 	return ""
 }
 
-func (self *PackageManager) buildCallSourceForRun(run *Run) string {
+func (self *PackageManager) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
 	p := self.packages[self.defaultPackage]
-	return p.argshim.buildCallSourceForRun(run)
+	return p.argshim.buildCallSourceForRun(rt, run, p.mroPath)
 }
 
-func (self *PackageManager) buildCallSourceForSample(sbag interface{}, fastqPaths map[string]string, sample *Sample) string {
+func (self *PackageManager) buildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string, sample *Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
-		return p.argshim.buildCallSourceForSample(sbag, fastqPaths)
+		return p.argshim.buildCallSourceForSample(rt, sbag, fastqPaths, p.mroPath)
 	}
 	return ""
 }
