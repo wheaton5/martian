@@ -61,7 +61,7 @@ func NewProduct(productPath string, debug bool) *Product {
 	self := &Product{}
 	self.name, self.argshimPath, self.mroPath, self.envs = verifyProduct(productPath)
 	self.mroVersion = core.GetMroVersion(self.mroPath)
-	self.argshim = NewArgShim(self.argshimPath, debug)
+	self.argshim = NewArgShim(self.argshimPath, self.envs, debug)
 	return self
 }
 

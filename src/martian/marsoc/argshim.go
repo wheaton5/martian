@@ -24,7 +24,7 @@ type ArgShim struct {
 	mutex              *sync.Mutex
 }
 
-func NewArgShim(argshimPath string, debug bool) *ArgShim {
+func NewArgShim(argshimPath string, envs map[string]string, debug bool) *ArgShim {
 	self := &ArgShim{}
 	self.cmdPath = argshimPath
 	self.debug = debug
@@ -32,6 +32,7 @@ func NewArgShim(argshimPath string, debug bool) *ArgShim {
 	self.samplePipelinesMap = map[int]string{}
 
 	cmd := exec.Command(self.cmdPath)
+	cmd.Env = core.MergeEnv(envs)
 	stdin, _ := cmd.StdinPipe()
 	self.writer = bufio.NewWriterSize(stdin, 1000000)
 	stdout, _ := cmd.StdoutPipe()
@@ -58,7 +59,7 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 	line, _, err := self.reader.ReadLine()
 	self.mutex.Unlock()
 	if err != nil {
-		core.LogError(err, "argshim", "Failed to read argshim output")
+		core.LogInfo("argshim", "Failed to read argshim %s output", self.cmdPath)
 		return nil, err
 	}
 	if self.debug {
@@ -67,7 +68,7 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 
 	var v interface{}
 	if err := json.Unmarshal(line, &v); err != nil {
-		core.LogError(err, "argshim", "Failed to convert argshim output to JSON: %s", line)
+		core.LogError(err, "argshim", "Failed to convert argshim %s output to JSON: %s", self.cmdPath, line)
 		return nil, err
 	}
 	return v, nil
