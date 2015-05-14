@@ -47,9 +47,6 @@ type AnalysisNotification struct {
 
 type PipestanceManager struct {
 	rt             *core.Runtime
-	martianVersion string
-	mroVersion     string
-	mroPath        string
 	cachePath      string
 	autoInvoke     bool
 	stepms         int
@@ -71,6 +68,7 @@ type PipestanceManager struct {
 	mailQueue      []*PipestanceNotification
 	analysisQueue  []*AnalysisNotification
 	mailer         *Mailer
+	packages       *PackageManager
 }
 
 func writeJson(fpath string, object interface{}) {
@@ -111,14 +109,11 @@ func getFilenameWithSuffix(dir string, fname string) string {
 	return fmt.Sprintf("%s-%d", fname, suffix)
 }
 
-func NewPipestanceManager(rt *core.Runtime, martianVersion string, mroVersion string,
-	mroPath string, pipestancesPaths []string, scratchPaths []string, cachePath string,
-	failCoopPath string, stepms int, autoInvoke bool, mailer *Mailer) *PipestanceManager {
+func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPaths []string,
+	cachePath string, failCoopPath string, stepms int, autoInvoke bool, mailer *Mailer,
+	packages *PackageManager) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
-	self.martianVersion = martianVersion
-	self.mroVersion = mroVersion
-	self.mroPath = mroPath
 	self.paths = pipestancesPaths
 	self.aggregatePath = pipestancesPaths[0]
 	self.writePath = pipestancesPaths[len(pipestancesPaths)-1]
@@ -128,7 +123,7 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string, mroVersion st
 	self.failCoopPath = failCoopPath
 	self.stepms = stepms
 	self.autoInvoke = autoInvoke
-	self.pipelines = rt.PipelineNames
+	self.pipelines = rt.MroCache.GetPipelines()
 	self.completed = map[string]bool{}
 	self.failed = map[string]bool{}
 	self.runList = []*core.Pipestance{}
@@ -140,35 +135,8 @@ func NewPipestanceManager(rt *core.Runtime, martianVersion string, mroVersion st
 	self.mailQueue = []*PipestanceNotification{}
 	self.analysisQueue = []*AnalysisNotification{}
 	self.mailer = mailer
-	self.refreshVersions()
+	self.packages = packages
 	return self
-}
-
-func (self *PipestanceManager) refreshVersions() {
-	go func() {
-		for {
-			self.runListMutex.Lock()
-			self.martianVersion = core.GetVersion()
-			self.mroVersion = core.GetMroVersion(self.mroPath)
-			self.runListMutex.Unlock()
-
-			time.Sleep(time.Minute * time.Duration(5))
-		}
-	}()
-}
-
-func (self *PipestanceManager) GetMartianVersion() string {
-	self.runListMutex.Lock()
-	martianVersion := self.martianVersion
-	self.runListMutex.Unlock()
-	return martianVersion
-}
-
-func (self *PipestanceManager) GetMroVersion() string {
-	self.runListMutex.Lock()
-	mroVersion := self.mroVersion
-	self.runListMutex.Unlock()
-	return mroVersion
 }
 
 func (self *PipestanceManager) CountRunningPipestances() int {
@@ -317,7 +285,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 			}
 
 			readOnly := false
-			pipestance, err := self.ReattachToPipestance(psid, psPath, readOnly)
+			pipestance, err := self.ReattachToPipestance(container, pipeline, psid, psPath, readOnly)
 			if err != nil {
 				// If we could not reattach, it's because _invocation was
 				// missing, or will no longer parse due to changes in MRO
@@ -657,12 +625,17 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		self.runListMutex.Unlock()
 		return err
 	}
+	mroPath, mroVersion, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid)
+	if err != nil {
+		self.runListMutex.Unlock()
+		return err
+	}
 	self.pendingTable[fqname] = true
 	self.runListMutex.Unlock()
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
 	psDir := path.Join(self.writePath, container, pipeline, psid)
-	mroVersion := getFilenameWithSuffix(psDir, self.mroVersion)
+	mroVersion = getFilenameWithSuffix(psDir, mroVersion)
 	psPath := path.Join(psDir, mroVersion)
 
 	scratchPsPath := path.Join(scratchPath, fmt.Sprintf("%s.%s.%s.%s", container, pipeline, psid, mroVersion))
@@ -684,7 +657,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		os.Symlink(psPath, aggregatePsPath)
 	}
 
-	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, aggregatePsPath, tags)
+	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, aggregatePsPath, mroPath, mroVersion, envs, tags)
 	if err != nil {
 		self.removePendingPipestance(fqname, false)
 		return err
@@ -915,7 +888,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 
 	// Reattach to the pipestance.
 	psPath := self.makePipestancePath(container, pipeline, psid)
-	pipestance, err := self.ReattachToPipestance(psid, psPath, readOnly)
+	pipestance, err := self.ReattachToPipestance(container, pipeline, psid, psPath, readOnly)
 	if err != nil {
 		return nil, false
 	}
@@ -925,9 +898,13 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	return pipestance, true
 }
 
-func (self *PipestanceManager) ReattachToPipestance(psid string, psPath string, readOnly bool) (*core.Pipestance, error) {
+func (self *PipestanceManager) ReattachToPipestance(container string, pipeline string, psid string, psPath string, readOnly bool) (*core.Pipestance, error) {
+	mroPath, mroVersion, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid)
+	if err != nil {
+		return nil, err
+	}
 	permanentPsPath, _ := os.Readlink(psPath)
-	return self.rt.ReattachToPipestance(psid, permanentPsPath, "", false, readOnly)
+	return self.rt.ReattachToPipestance(psid, permanentPsPath, "", mroPath, mroVersion, envs, false, readOnly)
 }
 
 func (self *PipestanceManager) getPipestanceMetadata(container string, pipeline string, psid string, fname string) (string, error) {
@@ -971,4 +948,12 @@ func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline stri
 		}
 	}
 	return map[string]interface{}{}
+}
+
+func (self *PipestanceManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, map[string]string, error) {
+	if pipeline == "BCL_PROCESSOR_PD" {
+		// Use default environment for BCL_PROCESSOR_PD
+		return self.packages.getDefaultPipestanceEnvironment()
+	}
+	return self.packages.getPipestanceEnvironment(psid)
 }

@@ -46,9 +46,9 @@ Options:
 	}
 	mroVersion := core.GetMroVersion(mroPath)
 
-	rt := core.NewRuntime("local", "disable", "disable", mroPath, martianVersion, mroVersion)
+	rt := core.NewRuntime("local", "disable", "disable", martianVersion)
 	db := NewDatabaseManager("sqlite3", dbPath)
-	pman := NewPipestanceManager(pipestancesPaths, db, rt)
+	pman := NewPipestanceManager(pipestancesPaths, mroPath, mroVersion, db, rt)
 
 	// Run web server.
 	go runWebServer(uiport, martianVersion, db)

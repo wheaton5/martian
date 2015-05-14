@@ -98,7 +98,7 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 	}()
 }
 
-func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, argshim *ArgShim, rt *core.Runtime, mailer *Mailer) {
+func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, packages *PackageManager, rt *core.Runtime, mailer *Mailer) {
 	go func() {
 		for {
 			runQueue := pool.CopyAndClearRunQueue()
@@ -109,7 +109,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 				for _, notice := range runQueue {
 					run := notice.run
 					fcids = append(fcids, run.Fcid)
-					InvokePreprocess(run.Fcid, rt, argshim, pman, pool, mailer.InstanceName)
+					InvokePreprocess(run.Fcid, rt, packages, pman, pool, mailer.InstanceName)
 				}
 
 				// If there are new runs completed, send email.
@@ -124,7 +124,7 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 
 				for _, notice := range analysisQueue {
 					fcid := notice.Fcid
-					InvokeAllSamples(fcid, rt, argshim, pman, lena, mailer.InstanceName)
+					InvokeAllSamples(fcid, rt, packages, pman, lena, mailer.InstanceName)
 				}
 			}
 
@@ -132,6 +132,16 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, ar
 			time.Sleep(time.Minute * time.Duration(30))
 		}
 	}()
+}
+
+func verifyMros(packages *PackageManager, rt *core.Runtime, checkSrcPath bool) {
+	for _, p := range packages.getPackages() {
+		if _, err := rt.CompileAll(p.mroPath, checkSrcPath); err != nil {
+			core.Println(err.Error())
+			os.Exit(1)
+		}
+		rt.MroCache.CacheMros(p.mroPath)
+	}
 }
 
 func main() {
@@ -153,7 +163,7 @@ Options:
                            Defaults to rolling.
     --skip-preflight   Skips preflight stages.
     --autoinvoke       Turns on automatic pipestance invocation.
-    --debug            Enable debug printing for argshim.
+    --debug            Enable debug printing for package argshims.
     -h --help          Show this message.
     --version          Show version.`
 	martianVersion := core.GetVersion()
@@ -174,8 +184,8 @@ Options:
 		{"MARSOC_SEQUENCERS_PATH", "path/to/sequencers"},
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
 		{"MARSOC_LOG_PATH", "path/to/marsoc/logs"},
-		{"MARSOC_ARGSHIM_PATH", "path/to/argshim"},
-		{"MARSOC_MROPATH", "path/to/mros"},
+		{"MARSOC_PACKAGES_PATH", "path/to/packages"},
+		{"MARSOC_DEFAULT_PACKAGE", "package"},
 		{"MARSOC_PIPESTANCES_PATH", "path/to/pipestances"},
 		{"MARSOC_SCRATCH_PATH", "path/to/scratch/pipestances"},
 		{"MARSOC_FAIL_COOP", "path/to/fail/coop"},
@@ -205,8 +215,8 @@ Options:
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
-	mroPath := env["MARSOC_MROPATH"]
-	argshimPath := env["MARSOC_ARGSHIM_PATH"]
+	packagesPath := env["MARSOC_PACKAGES_PATH"]
+	defaultPackage := env["MARSOC_DEFAULT_PACKAGE"]
 	cachePath := env["MARSOC_CACHE_PATH"]
 	seqrunsPath := env["MARSOC_SEQUENCERS_PATH"]
 	failCoopPath := env["MARSOC_FAIL_COOP"]
@@ -219,8 +229,6 @@ Options:
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	stepSecs := 5
-	mroVersion := core.GetMroVersion(mroPath)
-	mroBranch := core.GetGitBranch(mroPath)
 
 	//=========================================================================
 	// Setup Martian Runtime with pipelines path.
@@ -231,13 +239,8 @@ Options:
 	tar := true
 	checkSrcPath := true
 	enableMonitor := true
-	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, mroPath, martianVersion, mroVersion,
+	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		-1, -1, -1, stackVars, tar, skipPreflight, enableMonitor, debug, false)
-	if _, err := rt.CompileAll(checkSrcPath); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	core.LogInfo("version", "MRO_STAGES = %s", mroVersion)
 
 	//=========================================================================
 	// Setup Mailer.
@@ -255,15 +258,6 @@ Options:
 	pool.loadCache()
 
 	//=========================================================================
-	// Setup PipestanceManager and load pipestance cache.
-	//=========================================================================
-	pman := NewPipestanceManager(rt, martianVersion, mroVersion, mroPath,
-		pipestancesPaths, scratchPaths, cachePath, failCoopPath, stepSecs,
-		autoInvoke, mailer)
-	pman.loadCache()
-	pman.inventoryPipestances()
-
-	//=========================================================================
 	// Setup Lena and load cache.
 	//=========================================================================
 	lena := NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
@@ -275,9 +269,18 @@ Options:
 	sge := NewSGE()
 
 	//=========================================================================
-	// Setup argshim.
+	// Setup package manager.
 	//=========================================================================
-	argshim := NewArgShim(argshimPath, debug)
+	packages := NewPackageManager(packagesPath, defaultPackage, debug, lena)
+	verifyMros(packages, rt, checkSrcPath)
+
+	//=========================================================================
+	// Setup PipestanceManager and load pipestance cache.
+	//=========================================================================
+	pman := NewPipestanceManager(rt, pipestancesPaths, scratchPaths, cachePath,
+		failCoopPath, stepSecs, autoInvoke, mailer, packages)
+	pman.loadCache()
+	pman.inventoryPipestances()
 
 	//=========================================================================
 	// Start all daemon loops.
@@ -287,7 +290,7 @@ Options:
 	lena.goDownloadLoop()
 	sge.goQStatLoop()
 	emailNotifierLoop(pman, lena, mailer)
-	processRunLoop(pool, pman, lena, argshim, rt, mailer)
+	processRunLoop(pool, pman, lena, packages, rt, mailer)
 
 	//=========================================================================
 	// Collect pipestance static info.
@@ -316,18 +319,14 @@ Options:
 		"maxmemgb":   strconv.Itoa(rt.JobManager.GetMaxMemGB()),
 		"invokepath": "",
 		"invokesrc":  "",
-		"MROPATH":    mroPath,
-		"MRONODUMP":  "false",
-		"MROPROFILE": profileMode,
-		"MROPORT":    uiport,
-		"mroversion": mroVersion,
-		"mrobranch":  mroBranch,
+		"mroprofile": profileMode,
+		"mroport":    uiport,
 	}
 
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	runWebServer(uiport, instanceName, rt, pool, pman, lena, argshim, sge, info)
+	runWebServer(uiport, instanceName, martianVersion, rt, pool, pman, lena, packages, sge, info)
 
 	// Let daemons take over.
 	done := make(chan bool)
