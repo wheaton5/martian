@@ -138,7 +138,10 @@ func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, erro
 		touchTime := getFileModTime(path.Join(run.Path, "InterOp", "ExtractionMetricsOut.bin"))
 
 		if startTime.IsZero() {
-			startTime, _ = time.Parse("2006-01-02", run.Fdate)
+			startTime = getFileModTime(path.Join(run.Path, "Recipe"))
+			if startTime.IsZero() {
+				startTime, _ = time.Parse("2006-01-02", run.Fdate)
+			}
 		}
 
 		run.State = "failed"

@@ -17,8 +17,16 @@ predictedSeconds = (run) ->
         sum + read.NumCycles
     , 0)
     if run.seqcerName.indexOf("hiseq") == 0
+        #   per cycle          first six of each read+clustergen+refractory
         d = 379 * (total-12) + 21513
+    else if run.seqcerName.indexOf("4kseq") == 0
+        #   per cycle          first six of each read+clustergen+refractory
+        d = 879 * (total-12) + 22072
+    else if run.seqcerName.indexOf("nxseq") == 0
+        #   r1/i1/i2    r2                    refrac  last cycle   
+        d = 256 * 113 + 303 * (total - 121) + 16509 + (5302 + (total * 8.4))
     else
+        #   reads         overhead
         d = 268 * total + 7080
     return moment.duration(d, 'seconds')
     
@@ -38,7 +46,7 @@ app.filter('momentFormat',  () -> (time, fmt) -> moment(time).format(fmt)
     dact = actualSeconds(run)
     if not dact? then return '<1' 
     dpred = predictedSeconds(run)
-    pctg = Math.floor(dact / dpred * 100.0)
+    pctg = Math.round(dact / dpred * 100.0)
     "#{dact.hours() + 24 * dact.days()}h #{dact.minutes()}m (#{pctg}%)" 
 ).filter('runPrediction', () -> (run) ->
     dact = actualSeconds(run)
