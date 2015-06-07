@@ -19,15 +19,18 @@ predictedSeconds = (run) ->
     if run.seqcerName.indexOf("hiseq") == 0
         #   per cycle          first six of each read+clustergen+refractory
         d = 379 * (total-12) + 21513
+        # High Output mode
+        if run.runinfoxml.Run.FlowcellLayout.LaneCount == 8
+            d = d * 6
     else if run.seqcerName.indexOf("4kseq") == 0
         #   per cycle          first six of each read+clustergen+refractory
         d = 879 * (total-12) + 22072
     else if run.seqcerName.indexOf("nxseq") == 0
-        #   r1/i1/i2    r2                    refrac  last cycle   
-        d = 256 * 113 + 303 * (total - 121) + 16509 + (5302 + (total * 8.4))
+        #   r1/i1/i2    r2                    refrac  heur   last cycle   
+        d = 256 * 113 + 303 * (total - 121) + 16509 - 2400 + (5302 + (total * 8.4))
     else
-        #   reads         overhead
-        d = 268 * total + 7080
+        #   reads         overhead heur
+        d = 268 * total + 7080 - 3600
     return moment.duration(d, 'seconds')
     
 app = angular.module('app', ['ui.bootstrap'])

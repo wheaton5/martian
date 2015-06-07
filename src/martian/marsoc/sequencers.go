@@ -74,13 +74,14 @@ type XMLReads struct {
 }
 
 type XMLRun struct {
-	XMLName    xml.Name `xml:"Run"`
-	Id         string   `xml:"Id,attr"`
-	Number     int      `xml:"Number,attr"`
-	Flowcell   string
-	Instrument string
-	Date       string
-	Reads      XMLReads `xml:"Reads"`
+	XMLName        xml.Name `xml:"Run"`
+	Id             string   `xml:"Id,attr"`
+	Number         int      `xml:"Number,attr"`
+	Flowcell       string
+	Instrument     string
+	Date           string
+	Reads          XMLReads          `xml:"Reads"`
+	FlowcellLayout XMLFlowcellLayout `xml:"FlowcellLayout"`
 }
 
 type XMLRunInfo struct {

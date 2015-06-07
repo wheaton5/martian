@@ -19,12 +19,15 @@
     }, 0);
     if (run.seqcerName.indexOf("hiseq") === 0) {
       d = 379 * (total - 12) + 21513;
+      if (run.runinfoxml.Run.FlowcellLayout.LaneCount === 8) {
+        d = d * 6;
+      }
     } else if (run.seqcerName.indexOf("4kseq") === 0) {
       d = 879 * (total - 12) + 22072;
     } else if (run.seqcerName.indexOf("nxseq") === 0) {
-      d = 256 * 113 + 303 * (total - 121) + 16509 + (5302 + (total * 8.4));
+      d = 256 * 113 + 303 * (total - 121) + 16509 - 2400 + (5302 + (total * 8.4));
     } else {
-      d = 268 * total + 7080;
+      d = 268 * total + 7080 - 3600;
     }
     return moment.duration(d, 'seconds');
   };
