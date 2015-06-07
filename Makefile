@@ -4,7 +4,7 @@
 # Build a Go package with git version embedding.
 #
 
-GOBINS=marsoc marstat mrc mre mrf mrg mrp mrs mrv kepler
+GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler
 GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
