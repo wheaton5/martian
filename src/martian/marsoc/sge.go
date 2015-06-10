@@ -88,7 +88,7 @@ func (self *SGE) goQStatLoop() {
 			}
 
 			// Wait for a bit.
-			time.Sleep(time.Second * time.Duration(5))
+			time.Sleep(time.Second * time.Duration(15))
 		}
 	}()
 }

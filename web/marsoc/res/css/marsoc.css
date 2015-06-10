@@ -139,28 +139,55 @@ img.logo {
     margin-top: 100px;
 }
 
+#qstat .right {
+    text-align: right;
+}
+
 #qstat td {
     font-family: "Menlo";
     font-size: 12px;
 }
 
 #qstat_summary {
-    height: 110px;
+    /*height: 110px;*/
     border-bottom: 1px solid #ddd;
     border-top: 1px solid #ddd;
 }
 
-#qstat_summary table {
+#qstat_summary table.hero {
     width: 100%;
     height: 110px;
+    border-bottom: 1px solid #ddd;
 }
 
-#qstat_summary table td {
+#qstat_summary table.hero td {
     font-family: "Avenir Roman";
     text-align: center;
     vertical-align: middle;
     width: 25%;
     font-size: 14px;
+}
+
+#qstat_summary table.lwrapper {
+    margin: 20px auto 15px auto;
+}
+
+#qstat_summary table.lwrapper td {
+    vertical-align: top;
+    padding: 0 15px;
+}
+
+#qstat_summary table.lboard {
+    display: inline-block;
+}
+
+#qstat_summary table.lboard td {
+    /*font-family: "Avenir Roman";*/
+}
+
+#qstat_summary table.lboard td.right {
+    padding-left: 10px;
+    /*font-family: "Avenir Roman";*/
 }
 
 #qstat .table thead tr th {
