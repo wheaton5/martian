@@ -45,38 +45,38 @@ html(ng-app="app")
                 table
                     tr
                         td 
-                            span.hero {{qstat.running_count}}
+                            span.hero {{running_count}}
                             br 
                             | Running Jobs
                         td 
-                            span.hero {{qstat.pending_count}}
+                            span.hero {{pending_count}}
                             br
                             | Pending Jobs
                         td 
-                            span.hero {{qstat.slots}} / 440
+                            span.hero {{slots_used}} / {{slots_total}}
                             br
                             | Active Cores
                         td 
-                            span.hero {{qstat.error_count}}
+                            span.hero {{error_count}}
                             br
                             | Errored Jobs
             #run-table-wrapper
                 table.table
                     thead
                         tr
-                            th Slot
+                            th Job
                             th Owner
                             th State
                             th 
                             th Name
                             th Job #
                             th Priority
-                            th Slots
+                            th(style="text-align:right") Slots
                             th Queue
-                            th Submit
+                            th Start/Submit
 
                     tbody
-                        tr(ng-repeat="job in qstat.jobs")
+                        tr(ng-repeat="job in jobs")
                             td {{$index+1}}
                             td {{job.JB_owner=='mario'?'marsoc':job.JB_owner}}
                             td 
@@ -85,8 +85,8 @@ html(ng-app="app")
                             td {{job.JB_name}}
                             td {{job.JB_job_number}}
                             td {{job.JAT_prio}}
-                            td {{job.Slots}}
+                            td(style="text-align:right") {{job.Slots}}
                             td {{job.Queue_name}}
-                            td {{job.JB_submission_time}}
+                            td {{job.JAT_start_time}}{{job.JB_submission_time}}
 
     script(src="/sge.js")

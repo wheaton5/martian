@@ -16,15 +16,16 @@ import (
 
 // Structs to parse XML output of qstat.
 type Job_list struct {
-	State          string `xml:"state,attr"`
-	JB_job_number  string `xml:"JB_job_number"`
-	JAT_prio       string `xml:"JAT_prio"`
-	JB_name        string `xml:"JB_name"`
-	JB_owner       string `xml:"JB_owner"`
-	StateCode      string `xml:"state"`
-	JAT_start_time string `xml:"JAT_start_time"`
-	Queue_name     string `xml:"queue_name"`
-	Slots          int    `xml:"slots"`
+	State              string `xml:"state,attr"`
+	JB_job_number      string `xml:"JB_job_number"`
+	JAT_prio           string `xml:"JAT_prio"`
+	JB_name            string `xml:"JB_name"`
+	JB_owner           string `xml:"JB_owner"`
+	StateCode          string `xml:"state"`
+	JAT_start_time     string `xml:"JAT_start_time"`
+	JB_submission_time string `xml:"JB_submission_time"`
+	Queue_name         string `xml:"queue_name"`
+	Slots              int    `xml:"slots"`
 }
 
 type Queue_list struct {
@@ -81,15 +82,13 @@ func (self *SGE) goQStatLoop() {
 					self.SGEMutex.Unlock()
 				} else {
 					self.SGEMutex.Lock()
-					self.QStatData = map[string]interface{}{
-						"data": v,
-					}
+					self.QStatData = v
 					self.SGEMutex.Unlock()
 				}
 			}
 
 			// Wait for a bit.
-			time.Sleep(time.Second * time.Duration(30))
+			time.Sleep(time.Second * time.Duration(5))
 		}
 	}()
 }
