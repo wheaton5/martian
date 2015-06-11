@@ -54,9 +54,9 @@ app.controller('QWebCtrl', ($scope, $http, $interval) ->
             jobs = _.sortBy(jlist, "JB_name")
 
             # Count pending and errored jobs
-            pjobs = _.where(jobs, { "State": "pending" })
+            pjobs = _.where(jobs, { "StateCode": "qw" })
             $scope.pending_count = pjobs.length
-            ejobs = _.where(jobs, { "StateCode": "E" })
+            ejobs = _.where(jobs, { "StateCode": "Eqw" })
             $scope.error_count = ejobs.length
 
             # Append pending and error jobs to running jobs

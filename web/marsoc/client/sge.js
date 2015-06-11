@@ -51,11 +51,11 @@
       if (jlist) {
         jobs = _.sortBy(jlist, "JB_name");
         pjobs = _.where(jobs, {
-          "State": "pending"
+          "StateCode": "qw"
         });
         $scope.pending_count = pjobs.length;
         ejobs = _.where(jobs, {
-          "StateCode": "E"
+          "StateCode": "Eqw"
         });
         $scope.error_count = ejobs.length;
         $scope.jobs = _.compact(_.flattenDeep([$scope.jobs, pjobs, ejobs]));
