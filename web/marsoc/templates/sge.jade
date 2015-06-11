@@ -4,7 +4,7 @@
     Main UI for martian seqruns.
 
 doctype html
-html(ng-app="app")
+html(ng-app="app" ng-cloak)
     head
         title [[.InstanceName]] / Metasamples
         link(rel="stylesheet" href="/css/bootstrap.min.css")
@@ -42,51 +42,59 @@ html(ng-app="app")
                         a(href="http://lena.fuzzplex.com") LENA
         #qstat
             #qstat_summary
-                table
+                table.hero
                     tr
                         td 
-                            span.hero {{qstat.running_count}}
+                            span.hero {{running_count}}
                             br 
                             | Running Jobs
                         td 
-                            span.hero {{qstat.pending_count}}
+                            span.hero {{pending_count}}
                             br
                             | Pending Jobs
                         td 
-                            span.hero {{qstat.slots}} / 440
+                            span.hero {{slots_used}} / {{slots_total}}
                             br
                             | Active Cores
                         td 
-                            span.hero {{qstat.error_count}}
+                            span.hero {{error_count}}
                             br
                             | Errored Jobs
+                table.lwrapper
+                    tr
+                        td(ng-repeat="t in ['JB_owner','psid','stage','JB_job_number']")
+                            table.lboard
+                                tr(ng-repeat="ts in lboards[t]")
+                                    td {{ts.item}} 
+                                    td.right {{ts.count}}
             #run-table-wrapper
                 table.table
                     thead
                         tr
-                            th Slot
+                            th 
                             th Owner
                             th State
-                            th 
-                            th Name
+                            th Pipestance 
+                            th Chunk
+                            th.right C
                             th Job #
-                            th Priority
-                            th Slots
-                            th Queue
-                            th Submit
+                            th Node
+                            th Age
 
                     tbody
-                        tr(ng-repeat="job in qstat.jobs")
+                        tr(ng-repeat="job in jobs")
                             td {{$index+1}}
-                            td {{job.JB_owner=='mario'?'marsoc':job.JB_owner}}
+                            td {{job.JB_owner}}
                             td 
                                 .minibox(ng-class="job.State") {{job.State}} 
-                            td {{job.StateCode}}
-                            td {{job.JB_name}}
+                                |  {{job.StateCode}}
+                            td 
+                                b {{job.psid}}
+                                |  / {{job.stage}}
+                            td {{job.chunk}}
+                            td.right {{job.Slots}}
                             td {{job.JB_job_number}}
-                            td {{job.JAT_prio}}
-                            td {{job.Slots}}
-                            td {{job.Queue_name}}
-                            td {{job.JB_submission_time}}
+                            td {{job.node}}
+                            td {{job.ago}}
 
     script(src="/sge.js")
