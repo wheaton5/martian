@@ -34,15 +34,16 @@ type Package struct {
 }
 
 type PackageJson struct {
-	Name        string                     `json:"name"`
-	ArgshimPath string                     `json:"argshim_path"`
-	MroPath     string                     `json:"mro_path"`
-	Envs        map[string]*PackageJsonEnv `json:"envs"`
+	Name        string            `json:"name"`
+	ArgshimPath string            `json:"argshim_path"`
+	MroPath     string            `json:"mro_path"`
+	Envs        []*PackageJsonEnv `json:"envs"`
 }
 
 type PackageJsonEnv struct {
 	Value string `json:"value"`
 	Type  string `json:"type"`
+	Key   string `json:"key"`
 }
 
 func NewPackageManager(packagesPath string, defaultPackage string, debug bool, lena *Lena) *PackageManager {
@@ -194,15 +195,22 @@ func verifyPackage(packagePath string) (string, string, string, map[string]strin
 	name := packageJson.Name
 
 	envs := map[string]string{}
-	for key, envJson := range packageJson.Envs {
-		value := envJson.Value
+	for _, envJson := range packageJson.Envs {
+		key, value := envJson.Key, envJson.Value
 		switch envJson.Type {
 		case "path":
-			value = parsePathEnv(value, packagePath)
+			if !strings.HasPrefix(value, "/") {
+				value = path.Join(packagePath, value)
+			}
 		case "path_prepend":
-			value = parsePathEnv(value, packagePath)
-			if prefix := os.Getenv(key); len(prefix) > 0 {
-				// Prepend value to current environment variable
+			if !strings.HasPrefix(value, "/") {
+				value = path.Join(packagePath, value)
+			}
+
+			// Prepend value to current environment variable
+			if prefix, ok := envs[key]; ok {
+				value = value + ":" + prefix
+			} else if prefix := os.Getenv(key); len(prefix) > 0 {
 				value = value + ":" + prefix
 			}
 		case "string":
@@ -211,27 +219,8 @@ func verifyPackage(packagePath string) (string, string, string, map[string]strin
 			core.PrintInfo("package", "Unsupported env variable type %s.", envJson.Type)
 			os.Exit(1)
 		}
-		if _, ok := envs[key]; ok {
-			core.PrintInfo("package", "Duplicate env variable %s found.", key)
-			os.Exit(1)
-		}
 		envs[key] = value
 	}
 
 	return name, argshimPath, mroPath, envs
-}
-
-// Helper functions
-func parsePathEnv(env string, cwd string) string {
-	l := []string{}
-
-	values := strings.Split(env, ":")
-	for _, value := range values {
-		if !strings.HasPrefix(value, "/") {
-			// Assume path is relative if it does not begin with a slash
-			value = path.Join(cwd, value)
-		}
-		l = append(l, value)
-	}
-	return strings.Join(l, ":")
 }
