@@ -635,11 +635,11 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	core.LogInfo("pipeman", "Instantiating and pushed to pendingList: %s.", fqname)
 
 	psDir := path.Join(self.writePath, container, pipeline, psid)
-	mroVersion = getFilenameWithSuffix(psDir, mroVersion)
-	psPath := path.Join(psDir, mroVersion)
+	mroVersionPath := getFilenameWithSuffix(psDir, mroVersion)
+	psPath := path.Join(psDir, mroVersionPath)
 
-	scratchPsPath := path.Join(scratchPath, fmt.Sprintf("%s.%s.%s.%s", container, pipeline, psid, mroVersion))
-	aggregatePsPath := path.Join(self.aggregatePath, container, pipeline, psid, mroVersion)
+	scratchPsPath := path.Join(scratchPath, fmt.Sprintf("%s.%s.%s.%s", container, pipeline, psid, mroVersionPath))
+	aggregatePsPath := path.Join(self.aggregatePath, container, pipeline, psid, mroVersionPath)
 
 	// Clear all paths
 	os.Remove(psPath)
