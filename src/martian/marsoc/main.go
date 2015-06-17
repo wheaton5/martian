@@ -279,14 +279,13 @@ Options:
 	//=========================================================================
 	pman := NewPipestanceManager(rt, pipestancesPaths, scratchPaths, cachePath,
 		failCoopPath, stepSecs, autoInvoke, mailer, packages)
-	pman.loadCache()
-	pman.inventoryPipestances()
+	pman.loadPipestances()
 
 	//=========================================================================
 	// Start all daemon loops.
 	//=========================================================================
 	pool.goInventoryLoop()
-	pman.goRunListLoop()
+	pman.goRunLoop()
 	lena.goDownloadLoop()
 	sge.goQStatLoop()
 	emailNotifierLoop(pman, lena, mailer)
