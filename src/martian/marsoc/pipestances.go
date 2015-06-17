@@ -26,7 +26,8 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-var minBytesAvailable uint64 = 1024 * 1024 * 1024 * 1024 * 1.5 // 1.5 terabytes
+const minBytesAvailable = 1024 * 1024 * 1024 * 1024 * 1.5 // 1.5 terabytes
+const scratchTimeout = 24 * 7 * 2                         // 2 weeks
 
 type PipestanceFunc func(string, string, string) error
 type PipestanceInventoryFunc func(string, string, string, string, string, *sync.WaitGroup)
@@ -334,18 +335,55 @@ func (self *PipestanceManager) inventoryPipestances() {
 	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
 }
 
+func (self *PipestanceManager) cleanScratchPaths() {
+	for _, scratchPath := range self.scratchPaths {
+		scratchPsInfos, _ := ioutil.ReadDir(scratchPath)
+		for _, scratchPsInfo := range scratchPsInfos {
+			name := scratchPsInfo.Name()
+			modTime := scratchPsInfo.ModTime()
+
+			if time.Since(modTime) < time.Hour*scratchTimeout {
+				continue
+			}
+
+			container, pipeline, psid := parsePipestanceKey(name)
+			pkey := makePipestanceKey(container, pipeline, psid)
+
+			state, ok := self.GetPipestanceState(container, pipeline, psid)
+			if !ok || state == "failed" {
+				if err := self.WipePipestance(container, pipeline, psid); err != nil {
+					core.LogError(err, "pipeman", "Failed to wipe pipestance %s", pkey)
+				}
+			}
+		}
+	}
+}
+
 // Start an infinite process loop.
 func (self *PipestanceManager) goRunLoop() {
+	self.goProcessLoop()
+	self.goCleanLoop()
+}
+
+func (self *PipestanceManager) goProcessLoop() {
 	go func() {
 		// Sleep for 5 seconds to let the webserver fail on port rebind.
 		time.Sleep(time.Second * time.Duration(5))
 		for {
 			self.processRunningPipestances()
 
-			// TODO: Add routine for cleaning up scratch space!
-
 			// Wait for a bit.
 			time.Sleep(time.Second * time.Duration(self.stepms))
+		}
+	}()
+}
+
+func (self *PipestanceManager) goCleanLoop() {
+	go func() {
+		for {
+			self.cleanScratchPaths()
+
+			time.Sleep(time.Hour * time.Duration(24))
 		}
 	}()
 }
