@@ -236,11 +236,11 @@ Options:
 	jobMode := "sge"
 	profileMode := "cpu"
 	stackVars := true
-	tar := true
+	zip := true
 	checkSrcPath := true
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, -1, stackVars, tar, skipPreflight, enableMonitor, debug, false)
+		-1, -1, -1, stackVars, zip, skipPreflight, enableMonitor, debug, false)
 
 	//=========================================================================
 	// Setup Mailer.
