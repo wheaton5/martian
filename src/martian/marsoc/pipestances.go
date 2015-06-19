@@ -477,10 +477,13 @@ func (self *PipestanceManager) copyPipestance(pkey string) {
 }
 
 func (self *PipestanceManager) processRunningPipestances() {
-	// Copy the current run list, then clear it.
+	running := map[string]*core.Pipestance{}
+
+	// Copy the current run list
 	self.mutex.Lock()
-	running := self.running
-	self.running = map[string]*core.Pipestance{}
+	for pkey, pipestance := range self.running {
+		running[pkey] = pipestance
+	}
 	self.mutex.Unlock()
 
 	// Concurrently step all pipestances in the run list copy.
@@ -583,10 +586,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 					self.mutex.Unlock()
 				}
 			} else {
-				// If it is not done, put it back on the run list and step the nodes.
-				self.mutex.Lock()
-				self.running[pkey] = pipestance
-				self.mutex.Unlock()
+				// If it is not done, step the nodes.
 				pipestance.StepNodes()
 			}
 			wg.Done()
