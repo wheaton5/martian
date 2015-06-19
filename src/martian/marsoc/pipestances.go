@@ -491,7 +491,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 	wg.Add(len(running))
 
 	for pkey, pipestance := range running {
-		go func(pipestance *core.Pipestance, wg *sync.WaitGroup) {
+		go func(pkey string, pipestance *core.Pipestance, wg *sync.WaitGroup) {
 			pipestance.RefreshState()
 
 			state := pipestance.GetState()
@@ -590,7 +590,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 				pipestance.StepNodes()
 			}
 			wg.Done()
-		}(pipestance, &wg)
+		}(pkey, pipestance, &wg)
 	}
 
 	// Wait for this round of processing to complete, then write
