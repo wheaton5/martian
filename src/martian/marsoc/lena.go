@@ -59,6 +59,10 @@ type SequencingRun struct {
 	Date                  string   `json:"date"`
 	Loading_concentration float32  `json:"loading_concentration"`
 	Failure_reason        string   `json:"failure_reason"`
+	Read1_length          int      `json:"read1_length"`
+	Read2_length          int      `json:"read2_length"`
+	Barcode_index_read    int      `json:"barcode_index_read"`
+	Barcode_length        int      `json:"barcode_length"`
 	Samples               []string `json:"samples"`
 	Psstate               string   `json:"psstate"`
 }
@@ -79,8 +83,6 @@ type SampleDef struct {
 	Sequencer        string         `json:"sequencer"`
 	Sample_indexes   []*Oligo       `json:"sample_indexes"`
 	Sample_index_set []int          `json:"sample_index_set"`
-	Read1_length     int            `json:"read1_length"`
-	Read2_length     int            `json:"read2_length"`
 	Lane             string         `json:"lane"`
 	Gem_group        int            `json:"gem_group"`
 }
