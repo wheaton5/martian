@@ -72,7 +72,7 @@ type PipestanceForm struct {
 // Psstate  Current state of the sample's pipestance, if any
 // Callsrc  MRO invoke source to analyze this sample, per argshim
 func updateSampleState(sample *manager.Sample, rt *core.Runtime, lena *manager.Lena,
-	packages *manager.PackageManager, pman *manager.PipestanceManager) map[string]string {
+	packages *PackageManager, pman *manager.PipestanceManager) map[string]string {
 	pname := packages.GetPipelineForSample(sample)
 	sample.Pname = pname
 	sample.Psstate, _ = pman.GetPipestanceState(sample.Pscontainer, pname, strconv.Itoa(sample.Id))
@@ -138,7 +138,7 @@ func GetPreprocessTags(run *manager.Run, fcid string, instanceName string) []str
 	return tags
 }
 
-func InvokePreprocess(fcid string, rt *core.Runtime, packages *manager.PackageManager, pman *manager.PipestanceManager, pool *manager.SequencerPool, instanceName string) string {
+func InvokePreprocess(fcid string, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, pool *manager.SequencerPool, instanceName string) string {
 	run, ok := pool.Find(fcid)
 	if !ok {
 		return fmt.Sprintf("Could not find run with fcid %s.", fcid)
@@ -150,7 +150,7 @@ func InvokePreprocess(fcid string, rt *core.Runtime, packages *manager.PackageMa
 	return ""
 }
 
-func InvokeSample(sample *manager.Sample, rt *core.Runtime, packages *manager.PackageManager, pman *manager.PipestanceManager, lena *manager.Lena, instanceName string) string {
+func InvokeSample(sample *manager.Sample, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *manager.Lena, instanceName string) string {
 	// Invoke the pipestance.
 	fastqPaths := updateSampleState(sample, rt, lena, packages, pman)
 	errors := []string{}
@@ -170,7 +170,7 @@ func InvokeSample(sample *manager.Sample, rt *core.Runtime, packages *manager.Pa
 	return strings.Join(errors, "\n")
 }
 
-func InvokeAllSamples(fcid string, rt *core.Runtime, packages *manager.PackageManager, pman *manager.PipestanceManager, lena *manager.Lena, instanceName string) string {
+func InvokeAllSamples(fcid string, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *manager.Lena, instanceName string) string {
 	// Get all the samples for this fcid.
 	samples := lena.GetSamplesForFlowcell(fcid)
 
@@ -227,7 +227,7 @@ func callPreprocessAPI(body FcidForm, pipestanceFunc manager.PipestanceFunc) str
 
 func runWebServer(uiport string, instanceName string, martianVersion string, rt *core.Runtime,
 	pool *manager.SequencerPool, pman *manager.PipestanceManager, lena *manager.Lena,
-	packages *manager.PackageManager, sge *manager.SGE, info map[string]string) {
+	packages *PackageManager, sge *manager.SGE, info map[string]string) {
 
 	//=========================================================================
 	// Configure server.

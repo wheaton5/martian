@@ -67,7 +67,7 @@ type PipestanceManager struct {
 	mailQueue     []*PipestanceNotification
 	analysisQueue []*AnalysisNotification
 	mailer        *Mailer
-	packages      *PackageManager
+	packages      PackageManager
 }
 
 func makePipestanceKey(container string, pipeline string, psid string) string {
@@ -119,7 +119,7 @@ func getFilenameWithSuffix(dir string, fname string) string {
 
 func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPaths []string,
 	cachePath string, failCoopPath string, stepms int, autoInvoke bool, mailer *Mailer,
-	packages *PackageManager) *PipestanceManager {
+	packages PackageManager) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
 	self.paths = pipestancesPaths
@@ -1009,9 +1009,5 @@ func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline stri
 }
 
 func (self *PipestanceManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, map[string]string, error) {
-	if pipeline == "BCL_PROCESSOR_PD" {
-		// Use default environment for BCL_PROCESSOR_PD
-		return self.packages.getDefaultPipestanceEnvironment()
-	}
-	return self.packages.getPipestanceEnvironment(psid)
+	return self.packages.GetPipestanceEnvironment(container, pipeline, psid)
 }

@@ -74,7 +74,7 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 	return v, nil
 }
 
-func (self *ArgShim) getPipelineForSample(sample *Sample) string {
+func (self *ArgShim) GetPipelineForSample(sample *Sample) string {
 	self.mutex.Lock()
 	pipeline, ok := self.samplePipelinesMap[sample.Id]
 	self.mutex.Unlock()
@@ -129,10 +129,10 @@ func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interf
 	return src
 }
 
-func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run *Run, mroPath string) string {
+func (self *ArgShim) BuildCallSourceForRun(rt *core.Runtime, run *Run, mroPath string) string {
 	return self.buildCallSource(rt, self.buildArgsForRun(run), mroPath)
 }
 
-func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string, mroPath string) string {
+func (self *ArgShim) BuildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string, mroPath string) string {
 	return self.buildCallSource(rt, self.buildArgsForSample(sbag, fastqPaths), mroPath)
 }
