@@ -3,7 +3,7 @@
 //
 // Martian mailer.
 //
-package main
+package manager
 
 import (
 	"bytes"

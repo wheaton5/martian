@@ -3,7 +3,7 @@
 //
 // Marsoc LENA API wrapper.
 //
-package main
+package manager
 
 import (
 	"crypto/tls"
@@ -148,7 +148,7 @@ func NewLena(downloadUrl string, authToken string, cachePath string, mailer *Mai
 	return self
 }
 
-func (self *Lena) loadDatabase() {
+func (self *Lena) LoadDatabase() {
 	data, err := ioutil.ReadFile(self.dbPath)
 	if err != nil {
 		core.LogError(err, "lenaapi", "Could not read database file %s.", self.dbPath)
@@ -257,7 +257,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 }
 
 // Start an infinite download loop.
-func (self *Lena) goDownloadLoop() {
+func (self *Lena) GoDownloadLoop() {
 	go func() {
 		for {
 			//core.LogInfo("lenaapi", "Starting download...")
@@ -308,7 +308,7 @@ func (self *Lena) lenaAPI() ([]byte, error) {
 	return body, nil
 }
 
-func (self *Lena) getSamplesForFlowcell(fcid string) []*Sample {
+func (self *Lena) GetSamplesForFlowcell(fcid string) []*Sample {
 	// Get sample map for this fcid.
 	self.lenaDbMutex.RLock()
 	sampleMap, ok := self.fcidTable[fcid]
@@ -336,7 +336,7 @@ func (self *Lena) getSamplesForFlowcell(fcid string) []*Sample {
 	return sampleList
 }
 
-func (self *Lena) getMetasamples() []*Sample {
+func (self *Lena) GetMetasamples() []*Sample {
 	self.lenaDbMutex.RLock()
 	metasamples := make([]*Sample, len(self.metasamples))
 	copy(metasamples, self.metasamples)
@@ -344,7 +344,7 @@ func (self *Lena) getMetasamples() []*Sample {
 	return metasamples
 }
 
-func (self *Lena) getSampleWithId(sampleId string) *Sample {
+func (self *Lena) GetSampleWithId(sampleId string) *Sample {
 	if spid, err := strconv.Atoi(sampleId); err == nil {
 		self.lenaDbMutex.RLock()
 		sample, _ := self.spidTable[spid]
@@ -354,7 +354,7 @@ func (self *Lena) getSampleWithId(sampleId string) *Sample {
 	return nil
 }
 
-func (self *Lena) getSampleBagWithId(sampleId string) interface{} {
+func (self *Lena) GetSampleBagWithId(sampleId string) interface{} {
 	if spid, err := strconv.Atoi(sampleId); err == nil {
 		self.lenaDbMutex.RLock()
 		sbag := self.sbagTable[spid]

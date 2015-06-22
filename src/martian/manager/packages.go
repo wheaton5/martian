@@ -3,7 +3,7 @@
 //
 // Marsoc package manager.
 //
-package main
+package manager
 
 import (
 	"encoding/json"
@@ -46,6 +46,18 @@ type PackageJsonEnv struct {
 	Key   string `json:"key"`
 }
 
+func NewPackage(packagePath string, debug bool) *Package {
+	self := &Package{}
+	self.name, self.argshimPath, self.mroPath, self.envs = verifyPackage(packagePath)
+	self.mroVersion = core.GetMroVersion(self.mroPath)
+	self.argshim = NewArgShim(self.argshimPath, self.envs, debug)
+	return self
+}
+
+func (self *Package) GetMroPath() string {
+	return self.mroPath
+}
+
 func NewPackageManager(packagesPath string, defaultPackage string, debug bool, lena *Lena) *PackageManager {
 	self := &PackageManager{}
 	self.mutex = &sync.Mutex{}
@@ -58,15 +70,7 @@ func NewPackageManager(packagesPath string, defaultPackage string, debug bool, l
 	return self
 }
 
-func NewPackage(packagePath string, debug bool) *Package {
-	self := &Package{}
-	self.name, self.argshimPath, self.mroPath, self.envs = verifyPackage(packagePath)
-	self.mroVersion = core.GetMroVersion(self.mroPath)
-	self.argshim = NewArgShim(self.argshimPath, self.envs, debug)
-	return self
-}
-
-func (self *PackageManager) getPackages() []*Package {
+func (self *PackageManager) GetPackages() []*Package {
 	packages := []*Package{}
 	for _, p := range self.packages {
 		packages = append(packages, p)
@@ -75,19 +79,19 @@ func (self *PackageManager) getPackages() []*Package {
 }
 
 // Argshim functions
-func (self *PackageManager) getPipelineForSample(sample *Sample) string {
+func (self *PackageManager) GetPipelineForSample(sample *Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
 		return p.argshim.getPipelineForSample(sample)
 	}
 	return ""
 }
 
-func (self *PackageManager) buildCallSourceForRun(rt *core.Runtime, run *Run) string {
+func (self *PackageManager) BuildCallSourceForRun(rt *core.Runtime, run *Run) string {
 	p := self.packages[self.defaultPackage]
 	return p.argshim.buildCallSourceForRun(rt, run, p.mroPath)
 }
 
-func (self *PackageManager) buildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string, sample *Sample) string {
+func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string, sample *Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
 		return p.argshim.buildCallSourceForSample(rt, sbag, fastqPaths, p.mroPath)
 	}
@@ -96,7 +100,7 @@ func (self *PackageManager) buildCallSourceForSample(rt *core.Runtime, sbag inte
 
 // Pipestance manager functions
 func (self *PackageManager) getPipestanceEnvironment(psid string) (string, string, map[string]string, error) {
-	if sample := self.lena.getSampleWithId(psid); sample != nil {
+	if sample := self.lena.GetSampleWithId(psid); sample != nil {
 		if p, ok := self.packages[sample.Product]; ok {
 			self.mutex.Lock()
 			defer self.mutex.Unlock()

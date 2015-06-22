@@ -3,7 +3,7 @@
 //
 // Marsoc SGE Interface
 //
-package main
+package manager
 
 import (
 	"encoding/json"
@@ -67,7 +67,7 @@ func NewSGE() *SGE {
 }
 
 // Start an infinite qstat loop.
-func (self *SGE) goQStatLoop() {
+func (self *SGE) GoQStatLoop() {
 	go func() {
 		for {
 			// Run qstat in xml mode, and gather stdout.
@@ -93,7 +93,7 @@ func (self *SGE) goQStatLoop() {
 	}()
 }
 
-func (self *SGE) getJSON() string {
+func (self *SGE) GetJSON() string {
 	jstr := ""
 	self.SGEMutex.Lock()
 	if bytes, err := json.Marshal(self.QStatData); err != nil {

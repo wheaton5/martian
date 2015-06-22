@@ -3,7 +3,7 @@
 //
 // Marsoc argshim shim.
 //
-package main
+package manager
 
 import (
 	"bufio"

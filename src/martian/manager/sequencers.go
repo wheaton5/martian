@@ -3,7 +3,7 @@
 //
 // Marsoc sequencer management.
 //
-package main
+package manager
 
 import (
 	"encoding/json"
@@ -43,7 +43,7 @@ type Run struct {
 }
 
 type SequencerNotification struct {
-	run *Run
+	Run *Run
 }
 
 type Sequencer struct {
@@ -222,7 +222,7 @@ func (self *SequencerPool) CopyAndClearRunQueue() []*SequencerNotification {
 }
 
 // Try to pre-populate cache from on-disk JSON.
-func (self *SequencerPool) loadCache() {
+func (self *SequencerPool) LoadCache() {
 	bytes, err := ioutil.ReadFile(self.cachePath)
 	if err != nil {
 		core.LogError(err, "seqpool", "Could not read cache file %s.", self.cachePath)
@@ -250,7 +250,7 @@ func (self *SequencerPool) indexCache() {
 }
 
 // Start an infinite inventory loop.
-func (self *SequencerPool) goInventoryLoop() {
+func (self *SequencerPool) GoInventoryLoop() {
 	go func() {
 		for {
 			self.inventorySequencers()
@@ -345,7 +345,7 @@ func (a ByRevFdate) Less(i, j int) bool {
 }
 
 // Add a named sequencer to the pool.
-func (self *SequencerPool) add(name string) {
+func (self *SequencerPool) Add(name string) {
 	if strings.HasPrefix(name, "miseq") {
 		self.seqcers = append(self.seqcers, NewMiSeqSequencer(self, name))
 		core.LogInfo("seqpool", "Add MiSeq %s.", name)
@@ -362,6 +362,11 @@ func (self *SequencerPool) add(name string) {
 }
 
 // Find a run in the pool by flowcell id.
-func (self *SequencerPool) find(fcid string) *Run {
-	return self.runTable[fcid]
+func (self *SequencerPool) Find(fcid string) (*Run, bool) {
+	run, ok := self.runTable[fcid]
+	return run, ok
+}
+
+func (self *SequencerPool) GetRunList() []*Run {
+	return self.runList
 }

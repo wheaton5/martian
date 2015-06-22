@@ -3,7 +3,7 @@
 //
 // Marsoc pipestance management.
 //
-package main
+package manager
 
 import (
 	"encoding/json"
@@ -145,6 +145,14 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPa
 	return self
 }
 
+func (self *PipestanceManager) GetAutoInvoke() bool {
+	return self.autoInvoke
+}
+
+func (self *PipestanceManager) SetAutoInvoke(autoInvoke bool) {
+	self.autoInvoke = autoInvoke
+}
+
 func (self *PipestanceManager) CountRunningPipestances() int {
 	self.mutex.Lock()
 	count := len(self.running)
@@ -170,7 +178,7 @@ func (self *PipestanceManager) CopyAndClearAnalysisQueue() []*AnalysisNotificati
 	return analysisQueue
 }
 
-func (self *PipestanceManager) loadPipestances() {
+func (self *PipestanceManager) LoadPipestances() {
 	if err := self.loadCache(); err != nil {
 		self.inventoryPipestances()
 	}
@@ -360,7 +368,7 @@ func (self *PipestanceManager) cleanScratchPaths() {
 }
 
 // Start an infinite process loop.
-func (self *PipestanceManager) goRunLoop() {
+func (self *PipestanceManager) GoRunLoop() {
 	self.goProcessLoop()
 	self.goCleanLoop()
 }

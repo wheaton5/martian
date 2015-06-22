@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"martian/core"
+	"martian/manager"
 	"os"
 	"os/user"
 	"path"
@@ -19,7 +20,7 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-func sendNotificationMail(users []string, mailer *Mailer, notices []*PipestanceNotification) {
+func sendNotificationMail(users []string, mailer *manager.Mailer, notices []*manager.PipestanceNotification) {
 	// Build summary of the notices.
 	results := []string{}
 	worstState := "complete"
@@ -53,7 +54,7 @@ func sendNotificationMail(users []string, mailer *Mailer, notices []*PipestanceN
 	mailer.Sendmail(users, subj, body)
 }
 
-func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
+func emailNotifierLoop(pman *manager.PipestanceManager, lena *manager.Lena, mailer *manager.Mailer) {
 	go func() {
 		for {
 			// Copy and clear the mailQueue from PipestanceManager to avoid races.
@@ -61,11 +62,11 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 
 			// Build a table of users to lists of notifications.
 			// Also, collect all the notices that don't have a user associated.
-			emailTable := map[string][]*PipestanceNotification{}
-			userlessNotices := []*PipestanceNotification{}
+			emailTable := map[string][]*manager.PipestanceNotification{}
+			userlessNotices := []*manager.PipestanceNotification{}
 			for _, notice := range mailQueue {
 				// Get the sample with the psid in the notice.
-				sample := lena.getSampleWithId(notice.Psid)
+				sample := lena.GetSampleWithId(notice.Psid)
 
 				// If no sample, add to the userless table.
 				if sample == nil {
@@ -78,7 +79,7 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 				if ok {
 					emailTable[sample.User.Email] = append(nlist, notice)
 				} else {
-					emailTable[sample.User.Email] = []*PipestanceNotification{notice}
+					emailTable[sample.User.Email] = []*manager.PipestanceNotification{notice}
 				}
 			}
 
@@ -98,16 +99,16 @@ func emailNotifierLoop(pman *PipestanceManager, lena *Lena, mailer *Mailer) {
 	}()
 }
 
-func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, packages *PackageManager, rt *core.Runtime, mailer *Mailer) {
+func processRunLoop(pool *manager.SequencerPool, pman *manager.PipestanceManager, lena *manager.Lena, packages *manager.PackageManager, rt *core.Runtime, mailer *manager.Mailer) {
 	go func() {
 		for {
 			runQueue := pool.CopyAndClearRunQueue()
 			analysisQueue := pman.CopyAndClearAnalysisQueue()
 
-			if pman.autoInvoke {
+			if pman.GetAutoInvoke() {
 				fcids := []string{}
 				for _, notice := range runQueue {
-					run := notice.run
+					run := notice.Run
 					fcids = append(fcids, run.Fcid)
 					InvokePreprocess(run.Fcid, rt, packages, pman, pool, mailer.InstanceName)
 				}
@@ -134,13 +135,14 @@ func processRunLoop(pool *SequencerPool, pman *PipestanceManager, lena *Lena, pa
 	}()
 }
 
-func verifyMros(packages *PackageManager, rt *core.Runtime, checkSrcPath bool) {
-	for _, p := range packages.getPackages() {
-		if _, err := rt.CompileAll(p.mroPath, checkSrcPath); err != nil {
+func verifyMros(packages *manager.PackageManager, rt *core.Runtime, checkSrcPath bool) {
+	for _, p := range packages.GetPackages() {
+		mroPath := p.GetMroPath()
+		if _, err := rt.CompileAll(mroPath, checkSrcPath); err != nil {
 			core.Println(err.Error())
 			os.Exit(1)
 		}
-		rt.MroCache.CacheMros(p.mroPath)
+		rt.MroCache.CacheMros(mroPath)
 	}
 }
 
@@ -245,49 +247,50 @@ Options:
 	//=========================================================================
 	// Setup Mailer.
 	//=========================================================================
-	mailer := NewMailer(instanceName, emailHost, emailSender, emailRecipient,
-		instanceName != "MARSOC")
+	mailer := manager.NewMailer(instanceName, emailHost, emailSender,
+		emailRecipient, instanceName != "MARSOC")
 
 	//=========================================================================
 	// Setup SequencerPool, add sequencers, and load seq run cache.
 	//=========================================================================
-	pool := NewSequencerPool(seqrunsPath, cachePath)
+	pool := manager.NewSequencerPool(seqrunsPath, cachePath)
 	for _, seqcerName := range seqcerNames {
-		pool.add(seqcerName)
+		pool.Add(seqcerName)
 	}
-	pool.loadCache()
+	pool.LoadCache()
 
 	//=========================================================================
 	// Setup Lena and load cache.
 	//=========================================================================
-	lena := NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
-	lena.loadDatabase()
+	lena := manager.NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
+	lena.LoadDatabase()
 
 	//=========================================================================
 	// Setup SGE qstat'er.
 	//=========================================================================
-	sge := NewSGE()
+	sge := manager.NewSGE()
 
 	//=========================================================================
 	// Setup package manager.
 	//=========================================================================
-	packages := NewPackageManager(packagesPath, defaultPackage, debug, lena)
+	packages := manager.NewPackageManager(packagesPath, defaultPackage, debug,
+		lena)
 	verifyMros(packages, rt, checkSrcPath)
 
 	//=========================================================================
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
-	pman := NewPipestanceManager(rt, pipestancesPaths, scratchPaths, cachePath,
-		failCoopPath, stepSecs, autoInvoke, mailer, packages)
-	pman.loadPipestances()
+	pman := manager.NewPipestanceManager(rt, pipestancesPaths, scratchPaths,
+		cachePath, failCoopPath, stepSecs, autoInvoke, mailer, packages)
+	pman.LoadPipestances()
 
 	//=========================================================================
 	// Start all daemon loops.
 	//=========================================================================
-	pool.goInventoryLoop()
-	pman.goRunLoop()
-	lena.goDownloadLoop()
-	sge.goQStatLoop()
+	pool.GoInventoryLoop()
+	pman.GoRunLoop()
+	lena.GoDownloadLoop()
+	sge.GoQStatLoop()
 	emailNotifierLoop(pman, lena, mailer)
 	processRunLoop(pool, pman, lena, packages, rt, mailer)
 
