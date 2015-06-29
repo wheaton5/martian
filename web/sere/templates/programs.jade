@@ -1,0 +1,34 @@
+//-
+    Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+
+    Programs UI.
+
+doctype html
+html(ng-app="app")
+    include ./header.jade
+    body(ng-controller="ProgramsCtrl")
+        include ./navbar.jade
+        script(type="text/ng-template" id="start_cycle.html")
+            div.modal-header
+                h3.modal-title Start Cycle
+            div.modal-body
+                table
+                    tr
+                        td
+                            div.input-group
+                                label Name
+                                input.form-control(type="text" ng-model="data.cycle_name")
+            div.modal-footer
+                button.btn.btn-primary(ng-click="startCycle()") OK
+                button.btn.btn-warning(ng-click="cancelCycle()") Cancel
+        #ps
+            div(ng-repeat="program in programs")
+                h5 {{program.name}}
+                button.btn.btn-default(ng-if="!isProgramActive(program)" ng-click="startCycleForm(program)") Start Cycle
+                div(ng-repeat="cycle in program.cycles")
+                    a(ng-if="admin" href="/admin/program/{{program.name}}/{{cycle.id}}") Cycle {{cycle.id}}
+                    a(ng-if="!admin" href="/program/{{program.name}}/{{cycle.id}}") Cycle {{cycle.id}}
+                    | : {{cycle.name}}
+    script
+        | admin = [[.Admin]]
+    script(src="/programs.js")

@@ -182,6 +182,8 @@ func (self *PackageManager) verifyPackages() {
 					core.LogError(err, "package", "Package %s-%s in %s cannot be added.",
 						name, target, sakePath)
 				}
+
+				i += 1
 			}
 		}
 	}

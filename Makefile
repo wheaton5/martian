@@ -32,6 +32,7 @@ web:
 	cd web/martian; npm install; gulp; cd $(GOPATH)
 	cd web/marsoc; npm install; gulp; cd $(GOPATH)
 	cd web/kepler; npm install; gulp; cd $(GOPATH)
+	cd web/sere; npm install; gulp; cd $(GOPATH)
 
 $(GOTESTS): test-%:
 	go test -v martian/$*
@@ -80,6 +81,7 @@ sake-martian-strip:
 	# Strip marsoc.
 	rm -rf web/marsoc
 	rm -rf web/kepler
+	rm -rf web/sere
 
 sake-martian-cs-strip:
 	# Remove pd job templates.

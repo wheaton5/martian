@@ -34,26 +34,26 @@ type DatabaseResult struct {
 }
 
 type Program struct {
-	Name    string   `json:"program_name"`
+	Name    string   `json:"name"`
 	Battery *Battery `json:"battery"`
 	Cycles  []*Cycle `json:"cycles"`
 }
 
 type Battery struct {
-	Name  string  `json:"battery_name"`
+	Name  string  `json:"name"`
 	Tests []*Test `json:"tests"`
 }
 
 type Cycle struct {
-	Id        int      `json:"cycle_id"`
-	Name      string   `json:"cycle_name"`
+	Id        int      `json:"id"`
+	Name      string   `json:"name"`
 	StartDate string   `json:"start_date"`
 	EndDate   string   `json:"end_date"`
 	Rounds    []*Round `json:"rounds"`
 }
 
 type Round struct {
-	Id             int     `json:"round_id"`
+	Id             int     `json:"id"`
 	PackageName    string  `json:"package_name"`
 	PackageTarget  string  `json:"package_target"`
 	PackageVersion string  `json:"package_version"`
@@ -63,8 +63,8 @@ type Round struct {
 }
 
 type Test struct {
-	Name      string `json:"test_name"`
-	Id        int    `json:"test_id"`
+	Name      string `json:"name"`
+	Id        int    `json:"id"`
 	Container string `json:"container"`
 	Pipeline  string `json:"pipeline"`
 	Psid      string `json:"psid"`
@@ -228,26 +228,31 @@ func (self *DatabaseManager) createTables() {
 }
 
 func (self *DatabaseManager) ManageBatteries() ([]*Battery, error) {
-	res, err := self.query("select battery_name, group_concat(test_name) from battery_test")
+	res, err := self.query("select battery_name, test_name from battery_test order by battery_name")
 	if err != nil {
 		return nil, err
 	}
 
 	batteries := []*Battery{}
 	for _, row := range res.Rows {
-		tests := []*Test{}
+		name := row[0]
+		length := len(batteries)
 
-		testNames := strings.Split(row[1], ",")
-		for _, testName := range testNames {
-			tests = append(tests, &Test{
-				Name: testName,
-			})
+		var battery *Battery
+		if length == 0 || batteries[length-1].Name != name {
+			battery = &Battery{
+				Name:  name,
+				Tests: []*Test{},
+			}
+			batteries = append(batteries, battery)
+		} else {
+			battery = batteries[length-1]
 		}
-		battery := &Battery{
-			Name:  row[0],
-			Tests: tests,
+
+		test := &Test{
+			Name: row[1],
 		}
-		batteries = append(batteries, battery)
+		battery.Tests = append(battery.Tests, test)
 	}
 	return batteries, nil
 }
@@ -440,7 +445,7 @@ func (self *DatabaseManager) UpdateRound(programName string, cycleId int, roundI
 }
 
 func (self *DatabaseManager) GetPrograms() ([]*Program, error) {
-	res, err := self.query("select program_name, cycle_id, cycle_name, start_date, end_date from cycle order by program_name, cycle_id")
+	res, err := self.query("select program.program_name, cycle_id, cycle_name, start_date, end_date from program left outer join cycle order by program.program_name, cycle.cycle_id")
 	if err != nil {
 		return nil, err
 	}
@@ -461,14 +466,15 @@ func (self *DatabaseManager) GetPrograms() ([]*Program, error) {
 			program = programs[length-1]
 		}
 
-		id, _ := strconv.Atoi(row[1])
-		cycle := &Cycle{
-			Id:        id,
-			Name:      row[2],
-			StartDate: row[3],
-			EndDate:   row[4],
+		if id, err := strconv.Atoi(row[1]); err == nil {
+			cycle := &Cycle{
+				Id:        id,
+				Name:      row[2],
+				StartDate: row[3],
+				EndDate:   row[4],
+			}
+			program.Cycles = append(program.Cycles, cycle)
 		}
-		program.Cycles = append(program.Cycles, cycle)
 	}
 	return programs, nil
 }

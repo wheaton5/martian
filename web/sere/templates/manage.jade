@@ -1,0 +1,65 @@
+//-
+    Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+
+    Manage UI.
+
+doctype html
+html(ng-app="app")
+    include ./header.jade
+    body(ng-controller="ManageCtrl")
+        include ./navbar.jade
+        script(type="text/ng-template" id="create_item.html")
+            div.modal-header
+                h3.modal-title {{title}}
+            div.modal-body
+                table
+                    tr
+                        td
+                            div.input-group
+                                label Name
+                                input.form-control(type="text" ng-model="item.name")
+                    tr(ng-if="type == 'programs'")
+                        td
+                            div.input-group
+                                label Battery
+                                select.form-control(ng-model="item.battery" ng-options="battery.name for battery in data.batteries")
+                    tr(ng-if="type == 'batteries'")
+                        td
+                            div.input-group
+                                label Tests
+                                select.form-control(multiple="true" ng-model="item.tests" ng-options="test.name for test in data.tests")
+                    tr(ng-if="type == 'tests'")
+                        td
+                            div.input-group
+                                label ID
+                                input.form-control(type="text" ng-model="item.id")
+                    tr(ng-if="type == 'packages'")
+                        td
+                            div.input-group
+                                label Target
+                                input.form-control(type="text" ng-model="item.target")
+            div.modal-footer
+                button.btn.btn-primary(ng-click="createItem()") OK
+                button.btn.btn-warning(ng-click="cancelItem()") Cancel
+        #ps
+            table
+                tr
+                    td
+                        div.input-group
+                            label Type
+                            select.form-control(ng-model="type" ng-options="key for key in types")
+                    td
+                        div.filter_state
+                            button.btn.btn-default(ng-if="admin && type == 'programs'" ng-click="createItemForm()") Create Program
+                            button.btn.btn-default(ng-if="admin && type == 'batteries'" ng-click="createItemForm()") Create Battery
+                            button.btn.btn-default(ng-if="admin && type == 'tests'" ng-click="createItemForm()") Create Test
+                            button.btn.btn-default(ng-if="admin && type == 'packages'" ng-click="createItemForm()") Build Package
+
+            table.table(style="margin-top: 50px")
+                tr
+                    th(ng-repeat="col in cols[type]") {{col}}
+                tr(ng-repeat="item in data[type]")
+                    td(ng-repeat="col in cols[type]") {{getName(item[col])}}
+    script
+        | admin = [[.Admin]]
+    script(src="/manage.js")

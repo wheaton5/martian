@@ -79,23 +79,23 @@ type PipestancesForm struct {
 }
 
 type CreatePackageForm struct {
-	PackageName   string `json:"package_name"`
-	PackageTarget string `json:"package_target"`
+	PackageName   string `json:"name"`
+	PackageTarget string `json:"target"`
 }
 
 type CreateProgramForm struct {
-	ProgramName string `json:"program_name"`
+	ProgramName string `json:"name"`
 	Battery     string `json:"battery"`
 }
 
 type CreateBatteryForm struct {
-	BatteryName string   `json:"battery_name"`
+	BatteryName string   `json:"name"`
 	Tests       []string `json:"tests"`
 }
 
 type CreateTestForm struct {
-	TestName string `json:"test_name"`
-	TestId   string `json:"test_id"`
+	TestName string `json:"name"`
+	TestId   string `json:"id"`
 }
 
 func makeContainerKey(programName string, cycleId int, roundId int) string {
@@ -266,7 +266,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 			})
 	})
 
-	app.Get("/program/cycle/:program/:cycle", func(params martini.Params) string {
+	app.Get("/program/:program/:cycle", func(params martini.Params) string {
 		return core.Render("web/sere/templates", "program.html",
 			&MainPage{
 				InstanceName:   instanceName,
