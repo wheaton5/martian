@@ -27,8 +27,8 @@ type MainPage struct {
 	PageName       string
 	MartianVersion string
 	Admin          bool
-	Program        string
-	Cycle          string
+	ProgramName    string
+	CycleId        string
 }
 
 type GraphPage struct {
@@ -254,27 +254,27 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 			})
 	})
 
-	app.Get("/program/:program/:cycle", func(params martini.Params) string {
+	app.Get("/program/:program_name/:cycle_id", func(params martini.Params) string {
 		return core.Render("web/sere/templates", "program.html",
 			&MainPage{
 				InstanceName:   instanceName,
 				PageName:       "Program",
 				MartianVersion: martianVersion,
 				Admin:          false,
-				Program:        params["program"],
-				Cycle:          params["cycle"],
+				ProgramName:    params["program_name"],
+				CycleId:        params["cycle_id"],
 			})
 	})
 
-	app.Get("/program/:program/:cycle", func(params martini.Params) string {
+	app.Get("/admin/program/:program_name/:cycle_id", func(params martini.Params) string {
 		return core.Render("web/sere/templates", "program.html",
 			&MainPage{
 				InstanceName:   instanceName,
 				PageName:       "Program",
 				MartianVersion: martianVersion,
 				Admin:          true,
-				Program:        params["program"],
-				Cycle:          params["cycle"],
+				ProgramName:    params["program_name"],
+				CycleId:        params["cycle_id"],
 			})
 	})
 
@@ -346,9 +346,9 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	})
 
 	// API: Get program
-	app.Get("/api/program/:program/:cycle", func(params martini.Params) string {
-		programName := params["program"]
-		cycleId, err := strconv.Atoi(params["cycle"])
+	app.Get("/api/program/:program_name/:cycle_id", func(params martini.Params) string {
+		programName := params["program_name"]
+		cycleId, err := strconv.Atoi(params["cycle_id"])
 		if err != nil {
 			return err.Error()
 		}

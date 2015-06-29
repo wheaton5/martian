@@ -1,0 +1,46 @@
+//-
+    Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+
+    Program UI.
+
+doctype html
+html(ng-app="app")
+    include ./header.jade
+    body(ng-controller="ProgramCtrl")
+        include ./navbar.jade
+        script(type="text/ng-template" id="start_round.html")
+            div.modal-header
+                h3.modal-title Start Round
+            div.modal-body
+                table
+                    tr
+                        td
+                            div.input-group
+                                label Package
+                                select.form-control(ng-model="data.package" ng-options="formatPackage(p) for p in packages")
+            div.modal-footer
+                button.btn.btn-primary(ng-click="startRound()") OK
+                button.btn.btn-warning(ng-click="cancelRound()") Cancel
+        #ps
+            h3 {{program.name}} : {{cycle.name}}
+            br
+            table
+                tr
+                    td(ng-repeat="test in program.battery.tests")
+                        span.minibox(title="{{test.name}}") {{test.id}}
+                    td
+                        button.btn.btn-default(ng-click="startRoundForm()") Start Round
+                tr(ng-repeat="round in cycle.rounds")
+                    th
+                        b {{round.id}}
+                        | {{round.start_date}}
+                        br
+                        | {{round.package_name}}-{{round.package_target}}-{{round.package_version}}
+                    td(ng-repeat="test in round.tests")
+                        span.minibox(ng-class="test.state")
+                            a(href="/pipestance/{{test.container}}/{{test.pipeline}}/{{test.psid}}" title="{{test.name}}") {{test.id}}
+    script
+        | admin = [[.Admin]]
+        | program_name = [[.ProgramName]]
+        | cycle_id = [[.CycleId]]
+    script(src="/program.js")

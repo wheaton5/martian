@@ -480,7 +480,7 @@ func (self *DatabaseManager) GetPrograms() ([]*Program, error) {
 }
 
 func (self *DatabaseManager) GetProgram(programName string, cycleId int) (*Program, error) {
-	query := fmt.Sprintf("select battery.battery_name, test.test_name, test.test_id from battery join battery_test join test where battery.program_name = '%s'", programName)
+	query := fmt.Sprintf("select battery_test.battery_name, test.test_name, test.test_id from program join battery_test join test where program_name = '%s'", programName)
 	res, err := self.query(query)
 	if err != nil {
 		return nil, err

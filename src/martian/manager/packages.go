@@ -23,6 +23,7 @@ type Package struct {
 	ArgshimPath string            `json:"argshim_path"`
 	MroPath     string            `json:"mro_path"`
 	MroVersion  string            `json:"mro_version"`
+	State       string            `json:"state"`
 	Envs        map[string]string `json:"envs"`
 	Argshim     *ArgShim          `json:"-"`
 }

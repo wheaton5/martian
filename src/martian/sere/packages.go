@@ -72,6 +72,7 @@ func (self *PackageManager) ManagePackages() []*manager.Package {
 		p := &manager.Package{
 			Name:   pid.name,
 			Target: pid.target,
+			State:  "building",
 		}
 		packages = append(packages, p)
 	}
@@ -145,6 +146,7 @@ func (self *PackageManager) addPackage(name string, target string, path string) 
 		return err
 	}
 	p := manager.NewPackage(packagePath, self.debug)
+	p.State = "complete"
 
 	self.mutex.Lock()
 	if _, ok := self.packages[pid]; !ok {

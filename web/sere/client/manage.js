@@ -23,7 +23,7 @@
       programs: ['name', 'battery'],
       batteries: ['name', 'tests'],
       tests: ['name', 'id'],
-      packages: ['name', 'target', 'version']
+      packages: ['name', 'target', 'mro_version']
     };
     $scope.types = _.keys($scope.cols);
     $scope.type = 'programs';
