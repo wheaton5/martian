@@ -6,7 +6,6 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"martian/manager"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,7 +16,7 @@ type MarsocManager struct {
 }
 
 type Sample struct {
-	Sample        *manager.Sample   `json:"sample_bag"`
+	SampleBag     interface{}       `json:"sample_bag"`
 	FastqPaths    map[string]string `json:"fastq_paths"`
 	ReadyToInvoke bool              `json:"ready_to_invoke"`
 }

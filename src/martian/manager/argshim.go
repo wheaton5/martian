@@ -74,18 +74,18 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 	return v, nil
 }
 
-func (self *ArgShim) GetPipelineForSample(sample *Sample) string {
+func (self *ArgShim) GetPipelineForSample(id int, sbag interface{}) string {
 	self.mutex.Lock()
-	pipeline, ok := self.samplePipelinesMap[sample.Id]
+	pipeline, ok := self.samplePipelinesMap[id]
 	self.mutex.Unlock()
 	if ok {
 		return pipeline
 	}
 
-	if v, err := self.invoke("getPipelineForSample", []interface{}{sample}); err == nil {
+	if v, err := self.invoke("getPipelineForSample", []interface{}{sbag}); err == nil {
 		if tv, ok := v.(string); ok {
 			self.mutex.Lock()
-			self.samplePipelinesMap[sample.Id] = tv
+			self.samplePipelinesMap[id] = tv
 			self.mutex.Unlock()
 			return tv
 		}

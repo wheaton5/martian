@@ -28,6 +28,7 @@ type PackageManager struct {
 	packages    map[PackageId][]*manager.Package
 	building    map[PackageId]bool
 	mutex       *sync.RWMutex
+	rt          *core.Runtime
 	db          *DatabaseManager
 }
 
@@ -35,10 +36,11 @@ func getPackagePath(name string, target string, sakePath string) string {
 	return path.Join(sakePath, "packages", fmt.Sprintf("%s-%s", name, target))
 }
 
-func NewPackageManager(packagePath string, debug bool, db *DatabaseManager) *PackageManager {
+func NewPackageManager(packagePath string, debug bool, rt *core.Runtime, db *DatabaseManager) *PackageManager {
 	self := &PackageManager{}
 	self.packagePath = packagePath
 	self.debug = debug
+	self.rt = rt
 	self.db = db
 	self.building = map[PackageId]bool{}
 	self.mutex = &sync.RWMutex{}
@@ -147,6 +149,12 @@ func (self *PackageManager) addPackage(name string, target string, path string) 
 	}
 	p := manager.NewPackage(packagePath, self.debug)
 	p.State = "complete"
+
+	checkSrcPath := true
+	if _, err := self.rt.CompileAll(p.MroPath, checkSrcPath); err != nil {
+		return err
+	}
+	self.rt.MroCache.CacheMros(p.MroPath)
 
 	self.mutex.Lock()
 	if _, ok := self.packages[pid]; !ok {

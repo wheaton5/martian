@@ -46,7 +46,7 @@ func (self *PackageManager) GetPackages() []*manager.Package {
 // Argshim functions
 func (self *PackageManager) GetPipelineForSample(sample *manager.Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
-		return p.Argshim.GetPipelineForSample(sample)
+		return p.Argshim.GetPipelineForSample(sample.Id, sample)
 	}
 	return ""
 }

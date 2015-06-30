@@ -23,7 +23,7 @@ app.controller('ManageCtrl', ($scope, $http, $interval, $modal) ->
         programs: ['name', 'battery'],
         batteries: ['name', 'tests'],
         tests: ['name', 'id'],
-        packages: ['name', 'target', 'mro_version'],
+        packages: ['name', 'target', 'mro_version', 'state'],
     }
     $scope.types = _.keys($scope.cols)
     $scope.type = 'programs'

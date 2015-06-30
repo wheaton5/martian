@@ -71,6 +71,8 @@ type Test struct {
 	State     string `json:"state"`
 }
 
+const timeFormat = "2006-01-02 15:04"
+
 func openConn(name string, url string) (*sql.DB, error) {
 	conn, err := sql.Open(name, url)
 	if err != nil {
@@ -369,7 +371,7 @@ func (self *DatabaseManager) InsertCycle(programName string, cycleId int, cycleN
 		"program_name": programName,
 		"cycle_id":     cycleId,
 		"cycle_name":   cycleName,
-		"start_date":   time.Now(),
+		"start_date":   time.Now().Format(timeFormat),
 	})
 	if err != nil {
 		tx.Rollback()
@@ -393,7 +395,7 @@ func (self *DatabaseManager) InsertRound(programName string, cycleId int, roundI
 		"package_name":    packageName,
 		"package_target":  packageTarget,
 		"package_version": packageVersion,
-		"start_date":      time.Now(),
+		"start_date":      time.Now().Format(timeFormat),
 	})
 	if err != nil {
 		tx.Rollback()
@@ -410,7 +412,7 @@ func (self *DatabaseManager) UpdateCycle(programName string, cycleId int) error 
 	}
 
 	err := tx.update("cycle", map[string]interface{}{
-		"end_date": time.Now(),
+		"end_date": time.Now().Format(timeFormat),
 	}, map[string]interface{}{
 		"program_name": programName,
 		"cycle_id":     cycleId,
@@ -430,7 +432,7 @@ func (self *DatabaseManager) UpdateRound(programName string, cycleId int, roundI
 	}
 
 	err := tx.update("round", map[string]interface{}{
-		"end_date": time.Now(),
+		"end_date": time.Now().Format(timeFormat),
 	}, map[string]interface{}{
 		"program_name": programName,
 		"cycle_id":     cycleId,

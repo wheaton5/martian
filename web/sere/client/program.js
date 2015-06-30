@@ -1,9 +1,10 @@
 (function() {
-  var app, callApi;
+  var app, callApi, getTests;
 
   app = angular.module('app', ['ui.bootstrap']);
 
   callApi = function($scope, $http, $data, $url) {
+    $scope.showbutton = false;
     return $http.post($url, $data).success(function(data) {
       $scope.refreshProgram();
       if (data) {
@@ -12,14 +13,28 @@
     });
   };
 
+  getTests = function(tests, state) {
+    var i, len, results, test;
+    results = [];
+    for (i = 0, len = tests.length; i < len; i++) {
+      test = tests[i];
+      if (test.state === state) {
+        results.push(test);
+      }
+    }
+    return results;
+  };
+
   app.controller('ProgramCtrl', function($scope, $http, $interval, $modal) {
     $scope.admin = admin;
     $scope.program_name = program_name;
     $scope.cycle_id = cycle_id;
+    $scope.showbutton = true;
     $scope.refreshProgram = function() {
       $http.get('/api/program/' + $scope.program_name + '/' + $scope.cycle_id.toString()).success(function(data) {
         $scope.program = data;
-        return $scope.cycle = data.cycles[0];
+        $scope.cycle = data.cycles[0];
+        return $scope.showbutton = true;
       });
       return $http.get('/api/manage/get-items').success(function(data) {
         var p;
@@ -38,6 +53,26 @@
       });
     };
     $scope.refreshProgram();
+    $scope.someTests = function(round, state) {
+      var tests;
+      tests = getTests(round.tests, state);
+      return tests.length > 0;
+    };
+    $scope.invokeAll = function(round) {
+      var tests;
+      tests = getTests(round.tests, 'ready');
+      return callApi($scope, $http, tests, '/api/test/invoke-pipestances');
+    };
+    $scope.unfailAll = function(round) {
+      var tests;
+      tests = getTests(round.tests, 'failed');
+      return callApi($scope, $http, tests, '/api/test/restart-pipestances');
+    };
+    $scope.killAll = function(round) {
+      var tests;
+      tests = getTests(round.tests, 'running');
+      return callApi($scope, $http, tests, '/api/test/kill-pipestances');
+    };
     $scope.startRoundForm = function() {
       var modalInstance;
       modalInstance = $modal.open({

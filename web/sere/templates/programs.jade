@@ -24,7 +24,7 @@ html(ng-app="app")
         #ps
             div(ng-repeat="program in programs")
                 h5 {{program.name}}
-                button.btn.btn-default(ng-if="!isProgramActive(program)" ng-click="startCycleForm(program)") Start Cycle
+                button.btn.btn-default(ng-if="admin && !isProgramActive(program)" ng-click="startCycleForm(program)") Start Cycle
                 div(ng-repeat="cycle in program.cycles")
                     a(ng-if="admin" href="/admin/program/{{program.name}}/{{cycle.id}}") Cycle {{cycle.id}}
                     a(ng-if="!admin" href="/program/{{program.name}}/{{cycle.id}}") Cycle {{cycle.id}}

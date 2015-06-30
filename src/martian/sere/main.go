@@ -91,7 +91,7 @@ Options:
 	marsoc := NewMarsocManager(marsocDownloadUrl)
 
 	// Package manager
-	packages := NewPackageManager(packagesPath, debug, db)
+	packages := NewPackageManager(packagesPath, debug, rt, db)
 
 	// Pipestance manager
 	pman := manager.NewPipestanceManager(rt, pipestancesPaths, scratchPaths,
@@ -127,6 +127,11 @@ Options:
 		"mroprofile": profileMode,
 		"mroport":    uiport,
 	}
+
+	//=========================================================================
+	// Start all daemon loops.
+	//=========================================================================
+	pman.GoRunLoop()
 
 	//=========================================================================
 	// Start web server.

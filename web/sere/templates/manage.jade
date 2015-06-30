@@ -59,7 +59,10 @@ html(ng-app="app")
                 tr
                     th(ng-repeat="col in cols[type]") {{col}}
                 tr(ng-repeat="item in data[type]")
-                    td(ng-repeat="col in cols[type]") {{getName(item[col])}}
+                    td(ng-repeat="col in cols[type]")
+                        div(ng-if="col == 'state'")
+                            span.minibox(ng-class="item[col]") {{getName(item[col])}}
+                        div(ng-if="col != 'state'") {{getName(item[col])}}
     script
         | admin = [[.Admin]]
     script(src="/manage.js")

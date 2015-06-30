@@ -20,7 +20,7 @@ import (
 	"github.com/martini-contrib/gzip"
 )
 
-const separator = "__"
+const separator = "_"
 
 type MainPage struct {
 	InstanceName   string
@@ -46,6 +46,12 @@ type MetadataForm struct {
 	Name string
 }
 
+type PackageForm struct {
+	PackageName    string `json:"name"`
+	PackageTarget  string `json:"target"`
+	PackageVersion string `json:"mro_version"`
+}
+
 type CycleForm struct {
 	ProgramName string `json:"program_name"`
 	CycleId     int    `json:"cycle_id"`
@@ -53,12 +59,10 @@ type CycleForm struct {
 }
 
 type RoundForm struct {
-	ProgramName    string `json:"program_name"`
-	CycleId        int    `json:"cycle_id"`
-	RoundId        int    `json:"round_id"`
-	PackageName    string `json:"package_name"`
-	PackageTarget  string `json:"package_target"`
-	PackageVersion string `json:"package_version"`
+	ProgramName string      `json:"program_name"`
+	CycleId     int         `json:"cycle_id"`
+	RoundId     int         `json:"round_id"`
+	Package     PackageForm `json:"package"`
 }
 
 type TestForm struct {
@@ -137,9 +141,12 @@ func getProgram(programName string, cycleId int, pman *manager.PipestanceManager
 				return nil, err
 			}
 
-			pipeline := p.Argshim.GetPipelineForSample(sample.Sample)
+			pipeline := p.Argshim.GetPipelineForSample(test.Id, sample.SampleBag)
 			psid := test.Name
-			state, _ := pman.GetPipestanceState(container, pipeline, psid)
+			state, ok := pman.GetPipestanceState(container, pipeline, psid)
+			if !ok {
+				state = "ready"
+			}
 
 			round.Tests = append(round.Tests, &Test{
 				Name:      test.Name,
@@ -185,15 +192,15 @@ func invokePipestance(container string, pipeline string, psid string, rt *core.R
 	}
 
 	// Build call source
-	src := p.Argshim.BuildCallSourceForSample(rt, sample.Sample, sample.FastqPaths, p.MroPath)
+	src := p.Argshim.BuildCallSourceForSample(rt, sample.SampleBag, sample.FastqPaths, p.MroPath)
 	tags := []string{}
 
 	return pman.Invoke(container, pipeline, psid, src, tags)
 }
 
-func callPipestancesAPI(pipestances PipestancesForm, pipestanceFunc manager.PipestanceFunc) string {
+func callPipestancesAPI(pipestances []PipestanceForm, pipestanceFunc manager.PipestanceFunc) string {
 	errors := []string{}
-	for _, pipestance := range pipestances.Pipestances {
+	for _, pipestance := range pipestances {
 		if err := pipestanceFunc(pipestance.Container, pipestance.Pipeline, pipestance.Psid); err != nil {
 			errors = append(errors, err.Error())
 		}
@@ -378,11 +385,12 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 
 	// API: Start round
 	app.Post("/api/cycle/start-round", binding.Bind(RoundForm{}), func(body RoundForm, params martini.Params) string {
-		if _, err := packages.GetPackage(body.PackageName, body.PackageTarget, body.PackageVersion); err != nil {
+		p := body.Package
+		if _, err := packages.GetPackage(p.PackageName, p.PackageTarget, p.PackageVersion); err != nil {
 			return err.Error()
 		}
 
-		if err := db.InsertRound(body.ProgramName, body.CycleId, body.RoundId, body.PackageName, body.PackageTarget, body.PackageVersion); err != nil {
+		if err := db.InsertRound(body.ProgramName, body.CycleId, body.RoundId, p.PackageName, p.PackageTarget, p.PackageVersion); err != nil {
 			return err.Error()
 		}
 		return ""
@@ -397,9 +405,9 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	})
 
 	// API: Invoke pipestances
-	app.Post("/api/test/invoke-pipestances", binding.Bind(PipestancesForm{}), func(body PipestancesForm, p martini.Params) string {
+	app.Post("/api/test/invoke-pipestances", binding.Bind([]PipestanceForm{}), func(body []PipestanceForm, p martini.Params) string {
 		errors := []string{}
-		for _, pipestance := range body.Pipestances {
+		for _, pipestance := range body {
 			if err := invokePipestance(pipestance.Container, pipestance.Pipeline, pipestance.Psid, rt, pman, marsoc, db, packages); err != nil {
 				errors = append(errors, err.Error())
 			}
@@ -408,22 +416,12 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	})
 
 	// Api: Restart pipestances
-	app.Post("/api/test/restart-pipestances", binding.Bind(PipestancesForm{}), func(body PipestancesForm, p martini.Params) string {
+	app.Post("/api/test/restart-pipestances", binding.Bind([]PipestanceForm{}), func(body []PipestanceForm, p martini.Params) string {
 		return callPipestancesAPI(body, pman.UnfailPipestance)
 	})
 
-	// API: Archive pipestances
-	app.Post("/api/test/archive-pipestances", binding.Bind(PipestancesForm{}), func(body PipestancesForm, p martini.Params) string {
-		return callPipestancesAPI(body, pman.ArchivePipestanceHead)
-	})
-
-	// API: Wipe pipestances
-	app.Post("/api/test/wipe-pipestances", binding.Bind(PipestancesForm{}), func(body PipestancesForm, p martini.Params) string {
-		return callPipestancesAPI(body, pman.WipePipestance)
-	})
-
 	// API: Kill pipestances
-	app.Post("/api/test/kill-pipestances", binding.Bind(PipestancesForm{}), func(body PipestancesForm, p martini.Params) string {
+	app.Post("/api/test/kill-pipestances", binding.Bind([]PipestanceForm{}), func(body []PipestanceForm, p martini.Params) string {
 		return callPipestancesAPI(body, pman.KillPipestance)
 	})
 
