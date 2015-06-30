@@ -38,17 +38,41 @@ app.controller('ProgramCtrl', ($scope, $http, $interval, $modal) ->
         tests = getTests(round.tests, state)
         tests.length > 0
 
-    $scope.invokeAll = (round) ->
-        tests = getTests(round.tests, 'ready')
-        callApi($scope, $http, tests, '/api/test/invoke-pipestances')
+    $scope.invoke = (round) ->
+        $scope.pipestancesForm(round, 'Invoke Pipestances', 'ready')
 
-    $scope.unfailAll = (round) ->
-        tests = getTests(round.tests, 'failed')
-        callApi($scope, $http, tests, '/api/test/restart-pipestances')
+    $scope.unfail = (round) ->
+        $scope.pipestancesForm(round, 'Unfail pipestances', 'failed')
 
-    $scope.killAll = (round) ->
-        tests = getTests(round.tests, 'running')
-        callApi($scope, $http, tests, '/api/test/kill-pipestances')
+    $scope.kill = (round) ->
+        $scope.pipestancesForm(round, 'Kill Pipestances', 'running')
+
+    $scope.pipestancesForm = (round, title, state) ->
+        modalInstance = $modal.open({
+            animation: true,
+            templateUrl: 'pipestances.html',
+            controller: 'PipestancesCtrl',
+            resolve: {
+                tests: () ->
+                    getTests(round.tests, state)
+                title: () ->
+                    title
+                state: () ->
+                    state
+            }
+        })
+
+        modalInstance.result.then((data) ->
+            tests = (test for test in data.tests when test.selected)
+            switch data.state
+                when 'ready'
+                    url = '/api/test/invoke-pipestances'
+                when 'failed'
+                    url = '/api/test/restart-pipestances'
+                when 'running'
+                    url = '/api/test/kill-pipestances'
+            callApi($scope, $http, tests, url)
+        , null)
 
     $scope.startRoundForm = () ->
         modalInstance = $modal.open({
@@ -85,5 +109,22 @@ app.controller('StartRoundCtrl', ($scope, $modalInstance, program_name, cycle_id
         $modalInstance.close($scope.data)
 
     $scope.cancelRound = () ->
+        $modalInstance.dismiss('cancel')
+)
+
+app.controller('PipestancesCtrl', ($scope, $modalInstance, tests, title, state) ->
+    $scope.tests = tests
+    $scope.title = title
+    $scope.state = state
+
+    $scope.selectAll = () ->
+        for test in $scope.tests
+            test.selected = !test.selected
+
+    $scope.startPipestances = () ->
+        data = {tests: $scope.tests, state: $scope.state}
+        $modalInstance.close(data)
+
+    $scope.cancelPipestances = () ->
         $modalInstance.dismiss('cancel')
 )

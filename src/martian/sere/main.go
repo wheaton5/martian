@@ -96,6 +96,7 @@ Options:
 	// Pipestance manager
 	pman := manager.NewPipestanceManager(rt, pipestancesPaths, scratchPaths,
 		cachePath, failCoopPath, stepSecs, autoInvoke, mailer, packages)
+	pman.LoadPipestances()
 
 	//=========================================================================
 	// Collect pipestance static info.
