@@ -30,8 +30,11 @@
     $scope.program_name = program_name;
     $scope.cycle_id = cycle_id;
     $scope.showbutton = true;
+    $scope.program = null;
+    $scope.cycle = null;
+    $scope.packages = null;
     $scope.refreshProgram = function() {
-      $http.get('/api/program/' + $scope.program_name + '/' + $scope.cycle_id.toString()).success(function(data) {
+      $http.get('/api/program/' + $scope.program_name + '/' + $scope.cycle_id).success(function(data) {
         $scope.program = data;
         $scope.cycle = data.cycles[0];
         return $scope.showbutton = true;
@@ -53,6 +56,27 @@
       });
     };
     $scope.refreshProgram();
+    $scope.isCycleActive = function() {
+      if ($scope.cycle) {
+        return $scope.cycle.end_date.length === 0;
+      }
+      return false;
+    };
+    $scope.endCycle = function() {
+      var data, value;
+      $scope.showbutton = false;
+      value = window.confirm('Are you sure you want to end this cycle?');
+      if (value) {
+        data = {
+          program_name: $scope.program.name,
+          cycle_id: $scope.cycle.id
+        };
+        return callApi($scope, $http, data, '/api/program/end-cycle');
+      } else {
+        window.alert('This cycle is still active!');
+        return $scope.showbutton = true;
+      }
+    };
     $scope.someTests = function(round, state) {
       var tests;
       tests = getTests(round.tests, state);

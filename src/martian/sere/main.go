@@ -6,6 +6,7 @@
 package main
 
 import (
+	"fmt"
 	"martian/core"
 	"martian/manager"
 	"os"
@@ -17,6 +18,55 @@ import (
 
 	"github.com/docopt/docopt.go"
 )
+
+func sendNotificationMail(programName string, mailer *manager.Mailer, notices []*manager.PipestanceNotification) {
+	results := []string{}
+	worstState := "complete"
+	for _, notice := range notices {
+		_, cycleId, roundId := parseContainerKey(notice.Container)
+		testName := notice.Psid
+
+		url := fmt.Sprintf("%s.fuzzplex.com/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname,
+			notice.Psid)
+		result := fmt.Sprintf("Test '%s' for cycle %d, round %d is %s (http://%s)",
+			testName, cycleId, roundId, notice.State, url)
+		results = append(results, result)
+		if notice.State == "failed" {
+			worstState = notice.State
+			results = append(results, fmt.Sprintf("    %s: %s", notice.Stage, notice.Summary))
+		}
+	}
+
+	subj := fmt.Sprintf("Tests %s! (%s)", worstState, programName)
+	body := strings.Join(results, "\n")
+
+	users := []string{}
+	mailer.Sendmail(users, subj, body)
+}
+
+func emailNotifierLoop(pman *manager.PipestanceManager, mailer *manager.Mailer) {
+	go func() {
+		for {
+			mailQueue := pman.CopyAndClearMailQueue()
+
+			emailTable := map[string][]*manager.PipestanceNotification{}
+			for _, notice := range mailQueue {
+				programName, _, _ := parseContainerKey(notice.Container)
+
+				notifications, ok := emailTable[programName]
+				if ok {
+					emailTable[programName] = append(notifications, notice)
+				} else {
+					emailTable[programName] = []*manager.PipestanceNotification{notice}
+				}
+			}
+
+			for programName, notices := range emailTable {
+				sendNotificationMail(programName, mailer, notices)
+			}
+		}
+	}()
+}
 
 func main() {
 	core.SetupSignalHandlers()
@@ -133,6 +183,7 @@ Options:
 	// Start all daemon loops.
 	//=========================================================================
 	pman.GoRunLoop()
+	emailNotifierLoop(pman, mailer)
 
 	//=========================================================================
 	// Start web server.

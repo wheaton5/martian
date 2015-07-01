@@ -90,6 +90,7 @@ func (self *PackageManager) BuildPackage(name string, target string) error {
 	self.mutex.Lock()
 	// Check to see if package is being built already
 	if _, ok := self.building[pid]; ok {
+		self.mutex.Unlock()
 		return &core.MartianError{fmt.Sprintf("Package %s-%s already being built.", name, target)}
 	}
 	self.building[pid] = true

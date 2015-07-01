@@ -25,7 +25,7 @@
       var cycle;
       if (program.cycles.length > 0) {
         cycle = program.cycles[program.cycles.length - 1];
-        return (cycle.end_date != null) || cycle.end_date.length === 0;
+        return cycle.end_date.length === 0;
       }
       return false;
     };

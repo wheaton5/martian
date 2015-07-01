@@ -39,13 +39,17 @@ html(ng-app="app")
                 button.btn.btn-warning(ng-click="cancelPipestances()") Cancel
         #ps
             h3 {{program.name}} : {{cycle.name}}
+            span(ng-if="isCycleActive()")
+                button.btn.btn-primary(ng-click="endCycle()") End Cycle
+            span(ng-if="!isCycleActive()") This cycle is no longer active
+            br
             br
             table
                 tr
                     th Rounds
                     td(ng-repeat="test in program.battery.tests")
                         span.minibox(title="{{test.name}}") {{test.id}}
-                    td(ng-if="admin && showbutton")
+                    td(ng-if="isCycleActive() && admin && showbutton")
                         button.btn.btn-default(ng-click="startRoundForm()") Start Round
                 tr(ng-repeat="round in cycle.rounds")
                     td
@@ -62,9 +66,9 @@ html(ng-app="app")
                             a(ng-if="!admin" href="/pipestance/{{test.container}}/{{test.pipeline}}/{{test.psid}}" title="{{test.name}}") {{test.id}}
                             a(ng-if="admin" href="/admin/pipestance/{{test.container}}/{{test.pipeline}}/{{test.psid}}" title="{{test.name}}") {{test.id}}
                     td
-                        button.btn.btn-default(ng-if="someTests(round, 'ready') && admin && showbutton" ng-click="invoke(round)") Invoke
-                        button.btn.btn-default(ng-if="someTests(round, 'failed') && admin && showbutton" ng-click="unfail(round)") Unfail
-                        button.btn.btn-default(ng-if="someTests(round, 'running') && admin && showbutton" ng-click="kill(round)") Kill
+                        button.btn.btn-default(ng-if="someTests(round, 'ready') && isCycleActive() && admin && showbutton" ng-click="invoke(round)") Invoke
+                        button.btn.btn-default(ng-if="someTests(round, 'failed') && isCycleActive() && admin && showbutton" ng-click="unfail(round)") Unfail
+                        button.btn.btn-default(ng-if="someTests(round, 'running') && isCycleActive() && admin && showbutton" ng-click="kill(round)") Kill
     script
         | admin = [[.Admin]]
         | program_name = [[.ProgramName]]

@@ -26,7 +26,7 @@ app.controller('ProgramsCtrl', ($scope, $http, $interval, $modal) ->
     $scope.isProgramActive = (program) ->
         if program.cycles.length > 0
             cycle = program.cycles[program.cycles.length - 1]
-            return cycle.end_date? || cycle.end_date.length == 0
+            return cycle.end_date.length == 0
         return false
 
     $scope.startCycleForm = (program) ->

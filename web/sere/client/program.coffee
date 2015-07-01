@@ -22,8 +22,12 @@ app.controller('ProgramCtrl', ($scope, $http, $interval, $modal) ->
     $scope.cycle_id = cycle_id
     $scope.showbutton = true
 
+    $scope.program = null
+    $scope.cycle = null
+    $scope.packages = null
+
     $scope.refreshProgram = () ->
-        $http.get('/api/program/' + $scope.program_name + '/' + $scope.cycle_id.toString()).success((data) ->
+        $http.get('/api/program/' + $scope.program_name + '/' + $scope.cycle_id).success((data) ->
             $scope.program = data
             $scope.cycle = data.cycles[0]
             $scope.showbutton = true
@@ -33,6 +37,21 @@ app.controller('ProgramCtrl', ($scope, $http, $interval, $modal) ->
         )
 
     $scope.refreshProgram()
+
+    $scope.isCycleActive = () ->
+        if $scope.cycle
+            return $scope.cycle.end_date.length == 0
+        return false
+
+    $scope.endCycle = () ->
+        $scope.showbutton = false
+        value = window.confirm('Are you sure you want to end this cycle?')
+        if value
+            data = {program_name: $scope.program.name, cycle_id: $scope.cycle.id}
+            callApi($scope, $http, data, '/api/program/end-cycle')
+        else
+            window.alert('This cycle is still active!')
+            $scope.showbutton = true
 
     $scope.someTests = (round, state) ->
         tests = getTests(round.tests, state)

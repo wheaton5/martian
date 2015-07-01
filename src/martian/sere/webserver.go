@@ -23,12 +23,13 @@ import (
 const separator = "_"
 
 type MainPage struct {
-	InstanceName   string
-	PageName       string
-	MartianVersion string
-	Admin          bool
-	ProgramName    string
-	CycleId        string
+	InstanceName    string
+	PageName        string
+	MartianVersion  string
+	PipestanceCount int
+	Admin           bool
+	ProgramName     string
+	CycleId         string
 }
 
 type GraphPage struct {
@@ -224,64 +225,70 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	app.Get("/", func() string {
 		return core.Render("web/sere/templates", "programs.html",
 			&MainPage{
-				InstanceName:   instanceName,
-				PageName:       "Programs",
-				MartianVersion: martianVersion,
-				Admin:          false,
+				InstanceName:    instanceName,
+				PageName:        "Programs",
+				MartianVersion:  martianVersion,
+				PipestanceCount: pman.CountRunningPipestances(),
+				Admin:           false,
 			})
 	})
 
 	app.Get("/admin", func() string {
 		return core.Render("web/sere/templates", "programs.html",
 			&MainPage{
-				InstanceName:   instanceName,
-				PageName:       "Programs",
-				MartianVersion: martianVersion,
-				Admin:          true,
+				InstanceName:    instanceName,
+				PageName:        "Programs",
+				MartianVersion:  martianVersion,
+				PipestanceCount: pman.CountRunningPipestances(),
+				Admin:           true,
 			})
 	})
 
 	app.Get("/manage", func() string {
 		return core.Render("web/sere/templates", "manage.html",
 			&MainPage{
-				InstanceName:   instanceName,
-				PageName:       "Manage",
-				MartianVersion: martianVersion,
-				Admin:          false,
+				InstanceName:    instanceName,
+				PageName:        "Manage",
+				MartianVersion:  martianVersion,
+				PipestanceCount: pman.CountRunningPipestances(),
+				Admin:           false,
 			})
 	})
 
 	app.Get("/admin/manage", func() string {
 		return core.Render("web/sere/templates", "manage.html",
 			&MainPage{
-				InstanceName:   instanceName,
-				PageName:       "Manage",
-				MartianVersion: martianVersion,
-				Admin:          true,
+				InstanceName:    instanceName,
+				PageName:        "Manage",
+				MartianVersion:  martianVersion,
+				PipestanceCount: pman.CountRunningPipestances(),
+				Admin:           true,
 			})
 	})
 
 	app.Get("/program/:program_name/:cycle_id", func(params martini.Params) string {
 		return core.Render("web/sere/templates", "program.html",
 			&MainPage{
-				InstanceName:   instanceName,
-				PageName:       "Program",
-				MartianVersion: martianVersion,
-				Admin:          false,
-				ProgramName:    params["program_name"],
-				CycleId:        params["cycle_id"],
+				InstanceName:    instanceName,
+				PageName:        "Program",
+				MartianVersion:  martianVersion,
+				PipestanceCount: pman.CountRunningPipestances(),
+				Admin:           false,
+				ProgramName:     params["program_name"],
+				CycleId:         params["cycle_id"],
 			})
 	})
 
 	app.Get("/admin/program/:program_name/:cycle_id", func(params martini.Params) string {
 		return core.Render("web/sere/templates", "program.html",
 			&MainPage{
-				InstanceName:   instanceName,
-				PageName:       "Program",
-				MartianVersion: martianVersion,
-				Admin:          true,
-				ProgramName:    params["program_name"],
-				CycleId:        params["cycle_id"],
+				InstanceName:    instanceName,
+				PageName:        "Program",
+				MartianVersion:  martianVersion,
+				PipestanceCount: pman.CountRunningPipestances(),
+				Admin:           true,
+				ProgramName:     params["program_name"],
+				CycleId:         params["cycle_id"],
 			})
 	})
 
