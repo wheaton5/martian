@@ -71,7 +71,7 @@ type PipestanceForm struct {
 // Pname    The analysis pipeline to be run on it, according to argshim
 // Psstate  Current state of the sample's pipestance, if any
 // Callsrc  MRO invoke source to analyze this sample, per argshim
-func updateSampleState(sample *manager.Sample, rt *core.Runtime, lena *manager.Lena,
+func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 	packages *PackageManager, pman *manager.PipestanceManager) map[string]string {
 	pname := packages.GetPipelineForSample(sample)
 	sample.Pname = pname
@@ -101,7 +101,7 @@ func updateSampleState(sample *manager.Sample, rt *core.Runtime, lena *manager.L
 	return fastqPaths
 }
 
-func GetSampleTags(sample *manager.Sample, fastq_paths map[string]string, instanceName string) []string {
+func GetSampleTags(sample *Sample, fastq_paths map[string]string, instanceName string) []string {
 	tags := []string{core.MakeTag("instance", instanceName)}
 
 	// Flowcells
@@ -125,7 +125,7 @@ func GetSampleTags(sample *manager.Sample, fastq_paths map[string]string, instan
 	return tags
 }
 
-func GetPreprocessTags(run *manager.Run, fcid string, instanceName string) []string {
+func GetPreprocessTags(run *Run, fcid string, instanceName string) []string {
 	tags := []string{core.MakeTag("instance", instanceName), core.MakeTag("flowcell", fcid)}
 
 	// Number and size of all bcl files
@@ -138,7 +138,7 @@ func GetPreprocessTags(run *manager.Run, fcid string, instanceName string) []str
 	return tags
 }
 
-func InvokePreprocess(fcid string, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, pool *manager.SequencerPool, instanceName string) string {
+func InvokePreprocess(fcid string, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, pool *SequencerPool, instanceName string) string {
 	run, ok := pool.Find(fcid)
 	if !ok {
 		return fmt.Sprintf("Could not find run with fcid %s.", fcid)
@@ -150,7 +150,7 @@ func InvokePreprocess(fcid string, rt *core.Runtime, packages *PackageManager, p
 	return ""
 }
 
-func InvokeSample(sample *manager.Sample, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *manager.Lena, instanceName string) string {
+func InvokeSample(sample *Sample, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *Lena, instanceName string) string {
 	// Invoke the pipestance.
 	fastqPaths := updateSampleState(sample, rt, lena, packages, pman)
 	errors := []string{}
@@ -170,7 +170,7 @@ func InvokeSample(sample *manager.Sample, rt *core.Runtime, packages *PackageMan
 	return strings.Join(errors, "\n")
 }
 
-func InvokeAllSamples(fcid string, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *manager.Lena, instanceName string) string {
+func InvokeAllSamples(fcid string, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *Lena, instanceName string) string {
 	// Get all the samples for this fcid.
 	samples := lena.GetSamplesForFlowcell(fcid)
 
@@ -191,7 +191,7 @@ func callPipestanceAPI(body PipestanceForm, pipestanceFunc manager.PipestanceFun
 	return ""
 }
 
-func callMetasamplePipestanceAPI(body MetasampleIdForm, lena *manager.Lena, pipestanceFunc manager.PipestanceFunc) string {
+func callMetasamplePipestanceAPI(body MetasampleIdForm, lena *Lena, pipestanceFunc manager.PipestanceFunc) string {
 	// Get the sample with this id.
 	sample := lena.GetSampleWithId(body.Id)
 	if sample == nil {
@@ -204,7 +204,7 @@ func callMetasamplePipestanceAPI(body MetasampleIdForm, lena *manager.Lena, pipe
 	return ""
 }
 
-func callFcidPipestanceAPI(body FcidForm, lena *manager.Lena, pipestanceFunc manager.PipestanceFunc) string {
+func callFcidPipestanceAPI(body FcidForm, lena *Lena, pipestanceFunc manager.PipestanceFunc) string {
 	// Get all the samples for this fcid.
 	samples := lena.GetSamplesForFlowcell(body.Fcid)
 
@@ -226,8 +226,8 @@ func callPreprocessAPI(body FcidForm, pipestanceFunc manager.PipestanceFunc) str
 }
 
 func runWebServer(uiport string, instanceName string, martianVersion string, rt *core.Runtime,
-	pool *manager.SequencerPool, pman *manager.PipestanceManager, lena *manager.Lena,
-	packages *PackageManager, sge *manager.SGE, info map[string]string) {
+	pool *SequencerPool, pman *manager.PipestanceManager, lena *Lena,
+	packages *PackageManager, sge *SGE, info map[string]string) {
 
 	//=========================================================================
 	// Configure server.
@@ -279,7 +279,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		runList := pool.GetRunList()
 		wg.Add(len(runList))
 		for _, run := range runList {
-			go func(wg *sync.WaitGroup, run *manager.Run) {
+			go func(wg *sync.WaitGroup, run *Run) {
 				defer wg.Done()
 
 				// Get the state of the BCL_PROCESSOR_PD pipeline for this run.
@@ -348,7 +348,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		var wg sync.WaitGroup
 		wg.Add(len(samples))
 		for _, sample := range samples {
-			go func(wg *sync.WaitGroup, sample *manager.Sample) {
+			go func(wg *sync.WaitGroup, sample *Sample) {
 				updateSampleState(sample, rt, lena, packages, pman)
 				wg.Done()
 			}(&wg, sample)
@@ -423,7 +423,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		runList := pool.GetRunList()
 		wg.Add(len(runList))
 		for _, run := range runList {
-			go func(wg *sync.WaitGroup, run *manager.Run) {
+			go func(wg *sync.WaitGroup, run *Run) {
 				defer wg.Done()
 
 				if run.State != "complete" {
@@ -473,7 +473,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		metasamples := lena.GetMetasamples()
 		wg.Add(len(metasamples))
 		for _, metasample := range metasamples {
-			go func(wg *sync.WaitGroup, metasample *manager.Sample) {
+			go func(wg *sync.WaitGroup, metasample *Sample) {
 				defer wg.Done()
 
 				container := metasample.Pscontainer

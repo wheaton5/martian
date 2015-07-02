@@ -100,8 +100,8 @@ func (self *ArgShim) GetPipelineForTest(category string, id string, sbag interfa
 	return ""
 }
 
-func (self *ArgShim) buildArgsForRun(run *Run) map[string]interface{} {
-	if v, err := self.invoke("buildArgsForRun", []interface{}{run}); err == nil {
+func (self *ArgShim) buildArgsForRun(rbag interface{}) map[string]interface{} {
+	if v, err := self.invoke("buildArgsForRun", []interface{}{rbag}); err == nil {
 		if tv, ok := v.(map[string]interface{}); ok {
 			return tv
 		}
@@ -137,8 +137,8 @@ func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interf
 	return src
 }
 
-func (self *ArgShim) BuildCallSourceForRun(rt *core.Runtime, run *Run, mroPath string) string {
-	return self.buildCallSource(rt, self.buildArgsForRun(run), mroPath)
+func (self *ArgShim) BuildCallSourceForRun(rt *core.Runtime, rbag interface{}, mroPath string) string {
+	return self.buildCallSource(rt, self.buildArgsForRun(rbag), mroPath)
 }
 
 func (self *ArgShim) BuildCallSourceForTest(rt *core.Runtime, category string, id string, sbag interface{},

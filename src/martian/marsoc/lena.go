@@ -3,7 +3,7 @@
 //
 // Marsoc LENA API wrapper.
 //
-package manager
+package main
 
 import (
 	"crypto/tls"
@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"martian/core"
+	"martian/manager"
 	"net/http"
 	"path"
 	"sort"
@@ -131,10 +132,10 @@ type Lena struct {
 	sbagTable   map[int]interface{}
 	metasamples []*Sample
 	lenaDbMutex *sync.RWMutex
-	mailer      *Mailer
+	mailer      *manager.Mailer
 }
 
-func NewLena(downloadUrl string, authToken string, cachePath string, mailer *Mailer) *Lena {
+func NewLena(downloadUrl string, authToken string, cachePath string, mailer *manager.Mailer) *Lena {
 	self := &Lena{}
 	self.downloadUrl = downloadUrl
 	self.authToken = authToken

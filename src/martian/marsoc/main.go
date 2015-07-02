@@ -54,7 +54,7 @@ func sendNotificationMail(users []string, mailer *manager.Mailer, notices []*man
 	mailer.Sendmail(users, subj, body)
 }
 
-func emailNotifierLoop(pman *manager.PipestanceManager, lena *manager.Lena, mailer *manager.Mailer) {
+func emailNotifierLoop(pman *manager.PipestanceManager, lena *Lena, mailer *manager.Mailer) {
 	go func() {
 		for {
 			// Copy and clear the mailQueue from PipestanceManager to avoid races.
@@ -99,7 +99,7 @@ func emailNotifierLoop(pman *manager.PipestanceManager, lena *manager.Lena, mail
 	}()
 }
 
-func processRunLoop(pool *manager.SequencerPool, pman *manager.PipestanceManager, lena *manager.Lena, packages *PackageManager, rt *core.Runtime, mailer *manager.Mailer) {
+func processRunLoop(pool *SequencerPool, pman *manager.PipestanceManager, lena *Lena, packages *PackageManager, rt *core.Runtime, mailer *manager.Mailer) {
 	go func() {
 		for {
 			runQueue := pool.CopyAndClearRunQueue()
@@ -252,7 +252,7 @@ Options:
 	//=========================================================================
 	// Setup SequencerPool, add sequencers, and load seq run cache.
 	//=========================================================================
-	pool := manager.NewSequencerPool(seqrunsPath, cachePath)
+	pool := NewSequencerPool(seqrunsPath, cachePath)
 	for _, seqcerName := range seqcerNames {
 		pool.Add(seqcerName)
 	}
@@ -261,13 +261,13 @@ Options:
 	//=========================================================================
 	// Setup Lena and load cache.
 	//=========================================================================
-	lena := manager.NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
+	lena := NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
 	lena.LoadDatabase()
 
 	//=========================================================================
 	// Setup SGE qstat'er.
 	//=========================================================================
-	sge := manager.NewSGE()
+	sge := NewSGE()
 
 	//=========================================================================
 	// Setup package manager.

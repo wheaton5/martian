@@ -21,10 +21,10 @@ type PackageManager struct {
 	defaultPackage string
 	packages       map[string]*manager.Package
 	mutex          *sync.Mutex
-	lena           *manager.Lena
+	lena           *Lena
 }
 
-func NewPackageManager(packagesPath string, defaultPackage string, debug bool, lena *manager.Lena) *PackageManager {
+func NewPackageManager(packagesPath string, defaultPackage string, debug bool, lena *Lena) *PackageManager {
 	self := &PackageManager{}
 	self.mutex = &sync.Mutex{}
 	self.defaultPackage = defaultPackage
@@ -45,20 +45,20 @@ func (self *PackageManager) GetPackages() []*manager.Package {
 }
 
 // Argshim functions
-func (self *PackageManager) GetPipelineForSample(sample *manager.Sample) string {
+func (self *PackageManager) GetPipelineForSample(sample *Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
 		return p.Argshim.GetPipelineForTest("lena", strconv.Itoa(sample.Id), sample)
 	}
 	return ""
 }
 
-func (self *PackageManager) BuildCallSourceForRun(rt *core.Runtime, run *manager.Run) string {
+func (self *PackageManager) BuildCallSourceForRun(rt *core.Runtime, run *Run) string {
 	p := self.packages[self.defaultPackage]
 	return p.Argshim.BuildCallSourceForRun(rt, run, p.MroPath)
 }
 
 func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string,
-	sample *manager.Sample) string {
+	sample *Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
 		return p.Argshim.BuildCallSourceForTest(rt, "lena", strconv.Itoa(sample.Id), sbag, fastqPaths, p.MroPath)
 	}
