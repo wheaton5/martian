@@ -3,7 +3,7 @@
 //
 // Marsoc SGE Interface
 //
-package manager
+package main
 
 import (
 	"encoding/json"

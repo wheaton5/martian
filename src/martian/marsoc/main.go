@@ -54,7 +54,7 @@ func sendNotificationMail(users []string, mailer *manager.Mailer, notices []*man
 	mailer.Sendmail(users, subj, body)
 }
 
-func emailNotifierLoop(pman *manager.PipestanceManager, lena *manager.Lena, mailer *manager.Mailer) {
+func emailNotifierLoop(pman *manager.PipestanceManager, lena *Lena, mailer *manager.Mailer) {
 	go func() {
 		for {
 			// Copy and clear the mailQueue from PipestanceManager to avoid races.
@@ -99,7 +99,7 @@ func emailNotifierLoop(pman *manager.PipestanceManager, lena *manager.Lena, mail
 	}()
 }
 
-func processRunLoop(pool *manager.SequencerPool, pman *manager.PipestanceManager, lena *manager.Lena, packages *manager.PackageManager, rt *core.Runtime, mailer *manager.Mailer) {
+func processRunLoop(pool *SequencerPool, pman *manager.PipestanceManager, lena *Lena, packages *PackageManager, rt *core.Runtime, mailer *manager.Mailer) {
 	go func() {
 		for {
 			runQueue := pool.CopyAndClearRunQueue()
@@ -135,14 +135,13 @@ func processRunLoop(pool *manager.SequencerPool, pman *manager.PipestanceManager
 	}()
 }
 
-func verifyMros(packages *manager.PackageManager, rt *core.Runtime, checkSrcPath bool) {
+func verifyMros(packages *PackageManager, rt *core.Runtime, checkSrcPath bool) {
 	for _, p := range packages.GetPackages() {
-		mroPath := p.GetMroPath()
-		if _, err := rt.CompileAll(mroPath, checkSrcPath); err != nil {
+		if _, err := rt.CompileAll(p.MroPath, checkSrcPath); err != nil {
 			core.Println(err.Error())
 			os.Exit(1)
 		}
-		rt.MroCache.CacheMros(mroPath)
+		rt.MroCache.CacheMros(p.MroPath)
 	}
 }
 
@@ -253,7 +252,7 @@ Options:
 	//=========================================================================
 	// Setup SequencerPool, add sequencers, and load seq run cache.
 	//=========================================================================
-	pool := manager.NewSequencerPool(seqrunsPath, cachePath)
+	pool := NewSequencerPool(seqrunsPath, cachePath)
 	for _, seqcerName := range seqcerNames {
 		pool.Add(seqcerName)
 	}
@@ -262,19 +261,18 @@ Options:
 	//=========================================================================
 	// Setup Lena and load cache.
 	//=========================================================================
-	lena := manager.NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
+	lena := NewLena(lenaDownloadUrl, lenaAuthToken, cachePath, mailer)
 	lena.LoadDatabase()
 
 	//=========================================================================
 	// Setup SGE qstat'er.
 	//=========================================================================
-	sge := manager.NewSGE()
+	sge := NewSGE()
 
 	//=========================================================================
 	// Setup package manager.
 	//=========================================================================
-	packages := manager.NewPackageManager(packagesPath, defaultPackage, debug,
-		lena)
+	packages := NewPackageManager(packagesPath, defaultPackage, debug, lena)
 	verifyMros(packages, rt, checkSrcPath)
 
 	//=========================================================================

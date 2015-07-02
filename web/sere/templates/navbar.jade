@@ -1,0 +1,25 @@
+//-
+    Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+
+    SERE navbar.
+
+header.navbar.navbar-fixed-top
+    .navbar-header
+        .navbar-brand
+            .logo_container
+                img.logo(src="/images/10X_Logo_Reversed.png")
+            .navbar-upper(ng-class="{admin: admin}") [[.InstanceName]] &middot; [[.PageName]]
+                span(ng-if="admin")
+                    | &nbsp;(
+                    a.admin-exit(href="/") exit admin mode
+                    | )
+                span.navbar-right
+                    | Martian&nbsp;
+                    a.sampleid(href="https://github.com/10XDev/martian/releases") [[.MartianVersion]]
+             .navbar-lower
+                a(ng-if="admin" href="/admin") HOME
+                a(ng-if="!admin" href="/") HOME
+                | &nbsp;&nbsp;&nbsp;&nbsp;
+                a(ng-if="admin" href="/admin/manage") MANAGE
+                a(ng-if="!admin" href="/manage") MANAGE
+                span.navbar-right [[.PipestanceCount]] Pipestances In-Flight

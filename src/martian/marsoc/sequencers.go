@@ -3,7 +3,7 @@
 //
 // Marsoc sequencer management.
 //
-package manager
+package main
 
 import (
 	"encoding/json"

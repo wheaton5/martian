@@ -15,13 +15,18 @@ import (
 	"sync"
 )
 
+type TestKey struct {
+	category string
+	id       string
+}
+
 type ArgShim struct {
-	cmdPath            string
-	debug              bool
-	samplePipelinesMap map[int]string
-	writer             *bufio.Writer
-	reader             *bufio.Reader
-	mutex              *sync.Mutex
+	cmdPath          string
+	debug            bool
+	testPipelinesMap map[TestKey]string
+	writer           *bufio.Writer
+	reader           *bufio.Reader
+	mutex            *sync.Mutex
 }
 
 func NewArgShim(argshimPath string, envs map[string]string, debug bool) *ArgShim {
@@ -29,7 +34,7 @@ func NewArgShim(argshimPath string, envs map[string]string, debug bool) *ArgShim
 	self.cmdPath = argshimPath
 	self.debug = debug
 	self.mutex = &sync.Mutex{}
-	self.samplePipelinesMap = map[int]string{}
+	self.testPipelinesMap = map[TestKey]string{}
 
 	cmd := exec.Command(self.cmdPath)
 	cmd.Env = core.MergeEnv(envs)
@@ -74,18 +79,20 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 	return v, nil
 }
 
-func (self *ArgShim) getPipelineForSample(sample *Sample) string {
+func (self *ArgShim) GetPipelineForTest(category string, id string, sbag interface{}) string {
+	skey := TestKey{category, id}
+
 	self.mutex.Lock()
-	pipeline, ok := self.samplePipelinesMap[sample.Id]
+	pipeline, ok := self.testPipelinesMap[skey]
 	self.mutex.Unlock()
 	if ok {
 		return pipeline
 	}
 
-	if v, err := self.invoke("getPipelineForSample", []interface{}{sample}); err == nil {
+	if v, err := self.invoke("getPipelineForTest", []interface{}{category, id, sbag}); err == nil {
 		if tv, ok := v.(string); ok {
 			self.mutex.Lock()
-			self.samplePipelinesMap[sample.Id] = tv
+			self.testPipelinesMap[skey] = tv
 			self.mutex.Unlock()
 			return tv
 		}
@@ -93,8 +100,8 @@ func (self *ArgShim) getPipelineForSample(sample *Sample) string {
 	return ""
 }
 
-func (self *ArgShim) buildArgsForRun(run *Run) map[string]interface{} {
-	if v, err := self.invoke("buildArgsForRun", []interface{}{run}); err == nil {
+func (self *ArgShim) buildArgsForRun(rbag interface{}) map[string]interface{} {
+	if v, err := self.invoke("buildArgsForRun", []interface{}{rbag}); err == nil {
 		if tv, ok := v.(map[string]interface{}); ok {
 			return tv
 		}
@@ -102,8 +109,9 @@ func (self *ArgShim) buildArgsForRun(run *Run) map[string]interface{} {
 	return map[string]interface{}{}
 }
 
-func (self *ArgShim) buildArgsForSample(sbag interface{}, fastqPaths map[string]string) map[string]interface{} {
-	if v, err := self.invoke("buildArgsForSample", []interface{}{sbag, fastqPaths}); err == nil {
+func (self *ArgShim) buildArgsForTest(category string, id string, sbag interface{},
+	fastqPaths map[string]string) map[string]interface{} {
+	if v, err := self.invoke("buildArgsForTest", []interface{}{category, id, sbag, fastqPaths}); err == nil {
 		if tv, ok := v.(map[string]interface{}); ok {
 			return tv
 		}
@@ -129,10 +137,11 @@ func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interf
 	return src
 }
 
-func (self *ArgShim) buildCallSourceForRun(rt *core.Runtime, run *Run, mroPath string) string {
-	return self.buildCallSource(rt, self.buildArgsForRun(run), mroPath)
+func (self *ArgShim) BuildCallSourceForRun(rt *core.Runtime, rbag interface{}, mroPath string) string {
+	return self.buildCallSource(rt, self.buildArgsForRun(rbag), mroPath)
 }
 
-func (self *ArgShim) buildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string, mroPath string) string {
-	return self.buildCallSource(rt, self.buildArgsForSample(sbag, fastqPaths), mroPath)
+func (self *ArgShim) BuildCallSourceForTest(rt *core.Runtime, category string, id string, sbag interface{},
+	fastqPaths map[string]string, mroPath string) string {
+	return self.buildCallSource(rt, self.buildArgsForTest(category, id, sbag, fastqPaths), mroPath)
 }

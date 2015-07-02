@@ -1,0 +1,79 @@
+//-
+    Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+
+    Program UI.
+
+doctype html
+html(ng-app="app")
+    include ./header.jade
+    body(ng-controller="ProgramCtrl")
+        include ./navbar.jade
+        script(type="text/ng-template" id="start_round.html")
+            div.modal-header
+                h3.modal-title Start Round
+            div.modal-body
+                table
+                    tr
+                        td
+                            div.input-group
+                                label Package
+                                select.form-control(ng-model="data.package" ng-options="formatPackage(p) for p in packages")
+            div.modal-footer
+                button.btn.btn-primary(ng-click="startRound()") OK
+                button.btn.btn-warning(ng-click="cancelRound()") Cancel
+        script(type="text/ng-template" id="pipestances.html")
+            div.modal-header
+                h3.modal-title {{title}}
+            div.modal-body
+                table
+                   tr
+                       td(class="checkbox")
+                           input(type="checkbox" ng-click="selectAll()")
+                           div Select all
+                   tr(ng-repeat="test in tests")
+                       td(class="checkbox")
+                           input(type="checkbox" ng-model="test.selected")
+                           div {{test.category}}-{{test.id}}
+            div.modal-footer
+                button.btn.btn-primary(ng-click="startPipestances()") OK
+                button.btn.btn-warning(ng-click="cancelPipestances()") Cancel
+        #ps
+            h3 {{program.name}} : {{cycle.name}}
+            span(ng-if="isCycleActive() && admin")
+                button.btn.btn-primary(ng-click="endCycle()") End Cycle
+            span(ng-if="!isCycleActive()") This cycle is no longer active
+            br
+            br
+            table
+                tr
+                    th Rounds
+                    td(ng-repeat="test in program.battery.tests")
+                        span.minibox(title="{{test.name}}") {{test.category}}-{{test.id}}
+                    td(ng-if="isCycleActive() && admin && showbutton")
+                        button.btn.btn-default(ng-click="startRoundForm()") Start Round
+                tr(ng-repeat="round in cycle.rounds")
+                    td
+                        b ID :
+                        |  {{round.id}}
+                        br
+                        b Start date :
+                        |  {{round.start_date}}
+                        br
+                        b Package :
+                        |  {{round.package_name}} : {{round.package_target}}
+                        br
+                        b Version :
+                        | {{round.package_version}}
+                    td(ng-repeat="test in round.tests")
+                        span.minibox(ng-class="test.state" title="{{test.name}}")
+                            a(ng-if="!admin" href="/pipestance/{{test.container}}/{{test.pipeline}}/{{test.psid}}" title="{{test.name}}") {{test.category}}-{{test.id}}
+                            a(ng-if="admin" href="/admin/pipestance/{{test.container}}/{{test.pipeline}}/{{test.psid}}" title="{{test.name}}") {{test.category}}-{{test.id}}
+                    td
+                        button.btn.btn-default(ng-if="someTests(round, 'ready') && isCycleActive() && admin && showbutton" ng-click="invoke(round)") Invoke
+                        button.btn.btn-default(ng-if="someTests(round, 'failed') && isCycleActive() && admin && showbutton" ng-click="unfail(round)") Unfail
+                        button.btn.btn-default(ng-if="someTests(round, 'running') && isCycleActive() && admin && showbutton" ng-click="kill(round)") Kill
+    script
+        | admin = [[.Admin]]
+        | program_name = [[.ProgramName]]
+        | cycle_id = [[.CycleId]]
+    script(src="/program.js")
