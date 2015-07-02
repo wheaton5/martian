@@ -19,11 +19,12 @@ app.controller('ManageCtrl', ($scope, $http, $interval, $modal) ->
     $scope.admin = admin
     $scope.data = null
 
+    $scope.categories = ['lena', 'standard', 'fuzzer']
     $scope.cols = {
         programs: ['name', 'battery'],
         batteries: ['name', 'tests'],
-        tests: ['name', 'id'],
-        packages: ['name', 'target', 'mro_version', 'state'],
+        tests: ['name', 'category', 'id'],
+        packages: ['name', 'target', 'build_date', 'mro_version', 'state'],
     }
     $scope.types = _.keys($scope.cols)
     $scope.type = 'programs'
@@ -60,6 +61,8 @@ app.controller('ManageCtrl', ($scope, $http, $interval, $modal) ->
                     $scope.cols
                 type: () ->
                     $scope.type
+                categories: () ->
+                    $scope.categories
                 data: () ->
                     $scope.data
             }
@@ -74,7 +77,7 @@ app.controller('ManageCtrl', ($scope, $http, $interval, $modal) ->
                     data = {name: item.name, tests: test.name for test in item.tests}
                     url = '/api/manage/create-battery'
                 when 'tests'
-                    data = {name: item.name, id: item.id}
+                    data = {name: item.name, category: item.category, id: item.id}
                     url = '/api/manage/create-test'
                 when 'packages'
                     data = {name: item.name, target: item.target}
@@ -85,10 +88,11 @@ app.controller('ManageCtrl', ($scope, $http, $interval, $modal) ->
     if admin then $interval((() -> $scope.refreshItems()), 5000)
 )
 
-app.controller('CreateItemCtrl', ($scope, $modalInstance, title, cols, type, data) ->
+app.controller('CreateItemCtrl', ($scope, $modalInstance, title, cols, type, categories, data) ->
     $scope.title = title
     $scope.cols = cols
     $scope.type = type
+    $scope.categories = categories
     $scope.data = data
     $scope.item = {}
 

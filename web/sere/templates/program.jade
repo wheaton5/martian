@@ -33,13 +33,13 @@ html(ng-app="app")
                    tr(ng-repeat="test in tests")
                        td(class="checkbox")
                            input(type="checkbox" ng-model="test.selected")
-                           div {{test.id}}
+                           div {{test.category}}-{{test.id}}
             div.modal-footer
                 button.btn.btn-primary(ng-click="startPipestances()") OK
                 button.btn.btn-warning(ng-click="cancelPipestances()") Cancel
         #ps
             h3 {{program.name}} : {{cycle.name}}
-            span(ng-if="isCycleActive()")
+            span(ng-if="isCycleActive() && admin")
                 button.btn.btn-primary(ng-click="endCycle()") End Cycle
             span(ng-if="!isCycleActive()") This cycle is no longer active
             br
@@ -48,7 +48,7 @@ html(ng-app="app")
                 tr
                     th Rounds
                     td(ng-repeat="test in program.battery.tests")
-                        span.minibox(title="{{test.name}}") {{test.id}}
+                        span.minibox(title="{{test.name}}") {{test.category}}-{{test.id}}
                     td(ng-if="isCycleActive() && admin && showbutton")
                         button.btn.btn-default(ng-click="startRoundForm()") Start Round
                 tr(ng-repeat="round in cycle.rounds")
@@ -60,11 +60,14 @@ html(ng-app="app")
                         |  {{round.start_date}}
                         br
                         b Package :
-                        |  {{round.package_name}} : {{round.package_target}} : {{round.package_version}}
+                        |  {{round.package_name}} : {{round.package_target}}
+                        br
+                        b Version :
+                        | {{round.package_version}}
                     td(ng-repeat="test in round.tests")
                         span.minibox(ng-class="test.state" title="{{test.name}}")
-                            a(ng-if="!admin" href="/pipestance/{{test.container}}/{{test.pipeline}}/{{test.psid}}" title="{{test.name}}") {{test.id}}
-                            a(ng-if="admin" href="/admin/pipestance/{{test.container}}/{{test.pipeline}}/{{test.psid}}" title="{{test.name}}") {{test.id}}
+                            a(ng-if="!admin" href="/pipestance/{{test.container}}/{{test.pipeline}}/{{test.psid}}" title="{{test.name}}") {{test.category}}-{{test.id}}
+                            a(ng-if="admin" href="/admin/pipestance/{{test.container}}/{{test.pipeline}}/{{test.psid}}" title="{{test.name}}") {{test.category}}-{{test.id}}
                     td
                         button.btn.btn-default(ng-if="someTests(round, 'ready') && isCycleActive() && admin && showbutton" ng-click="invoke(round)") Invoke
                         button.btn.btn-default(ng-if="someTests(round, 'failed') && isCycleActive() && admin && showbutton" ng-click="unfail(round)") Unfail

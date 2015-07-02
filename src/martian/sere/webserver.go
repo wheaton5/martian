@@ -99,8 +99,9 @@ type CreateBatteryForm struct {
 }
 
 type CreateTestForm struct {
-	TestName string `json:"name"`
-	TestId   string `json:"id"`
+	TestName     string `json:"name"`
+	TestCategory string `json:"category"`
+	TestId       string `json:"id"`
 }
 
 func makeContainerKey(programName string, cycleId int, roundId int) string {
@@ -114,6 +115,21 @@ func parseContainerKey(container string) (string, int, int) {
 	cycleId, _ := strconv.Atoi(parts[1])
 	roundId, _ := strconv.Atoi(parts[2])
 	return programName, cycleId, roundId
+}
+
+func getSample(testCategory string, testId string, marsoc *MarsocManager) (*Sample, error) {
+	if testCategory == "lena" {
+		testId, err := strconv.Atoi(testId)
+		if err != nil {
+			return nil, err
+		}
+		sample, err := marsoc.GetSample(testId)
+		if err != nil {
+			return nil, err
+		}
+		return sample, nil
+	}
+	return nil, nil
 }
 
 func getProgram(programName string, cycleId int, pman *manager.PipestanceManager, marsoc *MarsocManager,
@@ -137,12 +153,17 @@ func getProgram(programName string, cycleId int, pman *manager.PipestanceManager
 
 		round.Tests = []*Test{}
 		for _, test := range program.Battery.Tests {
-			sample, err := marsoc.GetSample(test.Id)
+			sample, err := getSample(test.Category, test.Id, marsoc)
 			if err != nil {
 				return nil, err
 			}
 
-			pipeline := p.Argshim.GetPipelineForSample(test.Id, sample.SampleBag)
+			var sampleBag interface{}
+			if sample != nil {
+				sampleBag = sample.SampleBag
+			}
+
+			pipeline := p.Argshim.GetPipelineForTest(test.Category, test.Id, sampleBag)
 			psid := test.Name
 			state, ok := pman.GetPipestanceState(container, pipeline, psid)
 			if !ok {
@@ -151,6 +172,7 @@ func getProgram(programName string, cycleId int, pman *manager.PipestanceManager
 
 			round.Tests = append(round.Tests, &Test{
 				Name:      test.Name,
+				Category:  test.Category,
 				Id:        test.Id,
 				Container: container,
 				Pipeline:  pipeline,
@@ -187,13 +209,20 @@ func invokePipestance(container string, pipeline string, psid string, rt *core.R
 	}
 
 	// Get sample corresponding to test
-	sample, err := marsoc.GetSample(test.Id)
+	sample, err := getSample(test.Category, test.Id, marsoc)
 	if err != nil {
 		return err
 	}
 
+	var sampleBag interface{}
+	var fastqPaths map[string]string
+	if sample != nil {
+		sampleBag = sample.SampleBag
+		fastqPaths = sample.FastqPaths
+	}
+
 	// Build call source
-	src := p.Argshim.BuildCallSourceForSample(rt, sample.SampleBag, sample.FastqPaths, p.MroPath)
+	src := p.Argshim.BuildCallSourceForTest(rt, test.Category, test.Id, sampleBag, fastqPaths, p.MroPath)
 	tags := []string{}
 
 	return pman.Invoke(container, pipeline, psid, src, tags)
@@ -317,12 +346,11 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 
 	// API: Create test
 	app.Post("/api/manage/create-test", binding.Bind(CreateTestForm{}), func(body CreateTestForm, params martini.Params) string {
-		testId, err := strconv.Atoi(body.TestId)
-		if err != nil {
+		if _, err := getSample(body.TestCategory, body.TestId, marsoc); err != nil {
 			return err.Error()
 		}
 
-		if err := db.InsertTest(body.TestName, testId); err != nil {
+		if err := db.InsertTest(body.TestName, body.TestCategory, body.TestId); err != nil {
 			return err.Error()
 		}
 		return ""

@@ -176,7 +176,7 @@
     };
     $scope.packages = packages;
     $scope.formatPackage = function(p) {
-      return p.name + ' : ' + p.target + ' : ' + p.mro_version;
+      return p.name + ' : ' + p.target + ' : ' + p.mro_version + ' : ' + p.build_date;
     };
     $scope.startRound = function() {
       return $modalInstance.close($scope.data);

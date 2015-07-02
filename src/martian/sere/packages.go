@@ -145,7 +145,7 @@ func (self *PackageManager) addPackage(name string, target string, path string) 
 	pid := PackageId{name, target}
 
 	packagePath := getPackagePath(name, target, path)
-	if _, _, _, _, _, err := manager.VerifyPackage(packagePath); err != nil {
+	if _, _, _, _, _, _, err := manager.VerifyPackage(packagePath); err != nil {
 		return err
 	}
 	p := manager.NewPackage(packagePath, self.debug)
@@ -191,6 +191,9 @@ func (self *PackageManager) verifyPackages() {
 				}
 				if err := self.addPackage(name, target, sakePath); err != nil {
 					core.LogError(err, "package", "Package %s-%s in %s cannot be added.",
+						name, target, sakePath)
+				} else {
+					core.LogInfo("package", "Package %s-%s in %s added.",
 						name, target, sakePath)
 				}
 

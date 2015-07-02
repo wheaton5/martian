@@ -122,7 +122,7 @@ app.controller('StartRoundCtrl', ($scope, $modalInstance, program_name, cycle_id
     $scope.packages = packages
 
     $scope.formatPackage = (p) ->
-        p.name + ' : '+ p.target + ' : ' + p.mro_version
+        p.name + ' : '+ p.target + ' : ' + p.mro_version + ' : ' + p.build_date
 
     $scope.startRound = () ->
         $modalInstance.close($scope.data)

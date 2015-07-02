@@ -12,6 +12,7 @@ import (
 	"martian/manager"
 	"os"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -46,7 +47,7 @@ func (self *PackageManager) GetPackages() []*manager.Package {
 // Argshim functions
 func (self *PackageManager) GetPipelineForSample(sample *manager.Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
-		return p.Argshim.GetPipelineForSample(sample.Id, sample)
+		return p.Argshim.GetPipelineForTest("lena", strconv.Itoa(sample.Id), sample)
 	}
 	return ""
 }
@@ -59,7 +60,7 @@ func (self *PackageManager) BuildCallSourceForRun(rt *core.Runtime, run *manager
 func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string,
 	sample *manager.Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
-		return p.Argshim.BuildCallSourceForSample(rt, sbag, fastqPaths, p.MroPath)
+		return p.Argshim.BuildCallSourceForTest(rt, "lena", strconv.Itoa(sample.Id), sbag, fastqPaths, p.MroPath)
 	}
 	return ""
 }
@@ -127,7 +128,7 @@ func verifyPackages(packagesPath string, defaultPackage string, debug bool) map[
 	}
 	for _, info := range infos {
 		packagePath := path.Join(packagesPath, info.Name())
-		if _, _, _, _, _, err := manager.VerifyPackage(packagePath); err != nil {
+		if _, _, _, _, _, _, err := manager.VerifyPackage(packagePath); err != nil {
 			os.Exit(1)
 		}
 

@@ -19,11 +19,12 @@
   app.controller('ManageCtrl', function($scope, $http, $interval, $modal) {
     $scope.admin = admin;
     $scope.data = null;
+    $scope.categories = ['lena', 'standard', 'fuzzer'];
     $scope.cols = {
       programs: ['name', 'battery'],
       batteries: ['name', 'tests'],
-      tests: ['name', 'id'],
-      packages: ['name', 'target', 'mro_version', 'state']
+      tests: ['name', 'category', 'id'],
+      packages: ['name', 'target', 'build_date', 'mro_version', 'state']
     };
     $scope.types = _.keys($scope.cols);
     $scope.type = 'programs';
@@ -64,6 +65,9 @@
           type: function() {
             return $scope.type;
           },
+          categories: function() {
+            return $scope.categories;
+          },
           data: function() {
             return $scope.data;
           }
@@ -98,6 +102,7 @@
           case 'tests':
             data = {
               name: item.name,
+              category: item.category,
               id: item.id
             };
             url = '/api/manage/create-test';
@@ -119,10 +124,11 @@
     }
   });
 
-  app.controller('CreateItemCtrl', function($scope, $modalInstance, title, cols, type, data) {
+  app.controller('CreateItemCtrl', function($scope, $modalInstance, title, cols, type, categories, data) {
     $scope.title = title;
     $scope.cols = cols;
     $scope.type = type;
+    $scope.categories = categories;
     $scope.data = data;
     $scope.item = {};
     $scope.createItem = function() {

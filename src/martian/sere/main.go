@@ -64,6 +64,8 @@ func emailNotifierLoop(pman *manager.PipestanceManager, mailer *manager.Mailer) 
 			for programName, notices := range emailTable {
 				sendNotificationMail(programName, mailer, notices)
 			}
+
+			time.Sleep(time.Minute * time.Duration(30))
 		}
 	}()
 }

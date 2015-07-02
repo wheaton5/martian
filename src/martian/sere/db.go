@@ -64,7 +64,8 @@ type Round struct {
 
 type Test struct {
 	Name      string `json:"name"`
-	Id        int    `json:"id"`
+	Category  string `json:"category"`
+	Id        string `json:"id"`
 	Container string `json:"container"`
 	Pipeline  string `json:"pipeline"`
 	Psid      string `json:"psid"`
@@ -197,6 +198,7 @@ func (self *DatabaseManager) createTables() {
 	})
 	self.createTable("test", []string{
 		"test_name string not null primary key",
+		"test_category string",
 		"test_id string",
 	})
 	self.createTable("battery_test", []string{
@@ -260,17 +262,17 @@ func (self *DatabaseManager) ManageBatteries() ([]*Battery, error) {
 }
 
 func (self *DatabaseManager) ManageTests() ([]*Test, error) {
-	res, err := self.query("select test_name, test_id from test")
+	res, err := self.query("select test_name, test_category, test_id from test")
 	if err != nil {
 		return nil, err
 	}
 
 	tests := []*Test{}
 	for _, row := range res.Rows {
-		id, _ := strconv.Atoi(row[1])
 		test := &Test{
-			Name: row[0],
-			Id:   id,
+			Name:     row[0],
+			Category: row[1],
+			Id:       row[2],
 		}
 		tests = append(tests, test)
 	}
@@ -343,15 +345,16 @@ func (self *DatabaseManager) InsertBattery(batteryName string, testNames []strin
 	return tx.Commit()
 }
 
-func (self *DatabaseManager) InsertTest(testName string, testId int) error {
+func (self *DatabaseManager) InsertTest(testName string, testCategory string, testId string) error {
 	tx := self.NewDatabaseTx()
 	if err := tx.Begin(); err != nil {
 		return err
 	}
 
 	_, err := tx.insert("test", map[string]interface{}{
-		"test_name": testName,
-		"test_id":   testId,
+		"test_name":     testName,
+		"test_category": testCategory,
+		"test_id":       testId,
 	})
 	if err != nil {
 		tx.Rollback()
@@ -447,7 +450,7 @@ func (self *DatabaseManager) UpdateRound(programName string, cycleId int, roundI
 }
 
 func (self *DatabaseManager) GetPrograms() ([]*Program, error) {
-	res, err := self.query("select program.program_name, cycle_id, cycle_name, start_date, end_date from program left outer join cycle order by program.program_name, cycle.cycle_id")
+	res, err := self.query("select program.program_name, cycle_id, cycle_name, start_date, end_date from program left outer join cycle on program.program_name = cycle.program_name order by program.program_name, cycle.cycle_id")
 	if err != nil {
 		return nil, err
 	}
@@ -482,7 +485,7 @@ func (self *DatabaseManager) GetPrograms() ([]*Program, error) {
 }
 
 func (self *DatabaseManager) GetProgram(programName string, cycleId int) (*Program, error) {
-	query := fmt.Sprintf("select battery_test.battery_name, test.test_name, test.test_id from program join battery_test join test where program_name = '%s'", programName)
+	query := fmt.Sprintf("select battery_test.battery_name, test.test_name, test.test_category, test.test_id from program join battery_test on program.battery_name = battery_test.battery_name join test on battery_test.test_name = test.test_name where program_name = '%s'", programName)
 	res, err := self.query(query)
 	if err != nil {
 		return nil, err
@@ -503,10 +506,10 @@ func (self *DatabaseManager) GetProgram(programName string, cycleId int) (*Progr
 				Tests: []*Test{},
 			}
 		}
-		id, _ := strconv.Atoi(row[2])
 		program.Battery.Tests = append(program.Battery.Tests, &Test{
-			Name: row[1],
-			Id:   id,
+			Name:     row[1],
+			Category: row[2],
+			Id:       row[3],
 		})
 	}
 
@@ -578,7 +581,7 @@ func (self *DatabaseManager) GetRound(programName string, cycleId int, roundId i
 }
 
 func (self *DatabaseManager) GetTest(testName string) (*Test, error) {
-	query := fmt.Sprintf("select test_id from test where test_name = '%s'", testName)
+	query := fmt.Sprintf("select test_category, test_id from test where test_name = '%s'", testName)
 	res, err := self.query(query)
 	if err != nil {
 		return nil, err
@@ -589,10 +592,10 @@ func (self *DatabaseManager) GetTest(testName string) (*Test, error) {
 	}
 
 	row := res.Rows[0]
-	testId, _ := strconv.Atoi(row[0])
 	test := &Test{
-		Name: testName,
-		Id:   testId,
+		Name:     testName,
+		Category: row[0],
+		Id:       row[1],
 	}
 	return test, nil
 }
