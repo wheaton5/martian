@@ -34,8 +34,8 @@ func sendNotificationMail(users []string, mailer *manager.Mailer, notices []*man
 		} else {
 			url = fmt.Sprintf("%s.fuzzplex.com/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
 		}
-		result := fmt.Sprintf("%s of %s/%s is %s (%s http://%s)", notice.Pname, notice.Container, notice.Psid, strings.ToUpper(notice.State), notice.Name, url)
-		results = append(results, result)
+		result := fmt.Sprintf("    %s of %s/%s is %s (http://%s)", notice.Pname, notice.Container, notice.Psid, strings.ToUpper(notice.State), url)
+		results = append(results, notice.Name, result)
 		vdrsize += notice.Vdrsize
 		if notice.State == "failed" {
 			worstState = notice.State
