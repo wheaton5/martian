@@ -34,7 +34,7 @@ func sendNotificationMail(users []string, mailer *manager.Mailer, notices []*man
 		} else {
 			url = fmt.Sprintf("%s.fuzzplex.com/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
 		}
-		result := fmt.Sprintf("%s of %s/%s is %s (http://%s)", notice.Pname, notice.Container, notice.Psid, strings.ToUpper(notice.State), url)
+		result := fmt.Sprintf("%s of %s/%s is %s (%s http://%s)", notice.Pname, notice.Container, notice.Psid, strings.ToUpper(notice.State), notice.Name, url)
 		results = append(results, result)
 		vdrsize += notice.Vdrsize
 		if notice.State == "failed" {
@@ -75,6 +75,7 @@ func emailNotifierLoop(pman *manager.PipestanceManager, lena *Lena, mailer *mana
 				}
 
 				// Otherwise, build a list of notices for each user.
+				notice.Name = sample.Description
 				nlist, ok := emailTable[sample.User.Email]
 				if ok {
 					emailTable[sample.User.Email] = append(nlist, notice)

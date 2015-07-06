@@ -38,25 +38,29 @@
       state: false
     };
     $scope.showbutton = true;
+    $scope.name = null;
     $scope.fcid = null;
     $scope.pipeline = null;
     $scope.psid = null;
     $scope.refreshPipestances = function() {
       $http.get('/api/get-pipestances').success(function(data) {
-        var fcids, p, pipelines, psids, _i, _len, _ref;
+        var fcids, names, p, pipelines, psids, _i, _len, _ref;
         $scope.pipestances = _.sortBy(data, function(p) {
           return [p.fcid, p.pipeline, p.psid, p.state];
         });
+        names = {};
         fcids = {};
         pipelines = {};
         psids = {};
         _ref = $scope.pipestances;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           p = _ref[_i];
+          names[p.name] = true;
           fcids[p.fcid] = true;
           pipelines[p.pipeline] = true;
           psids[p.psid] = true;
         }
+        $scope.names = _.keys(names);
         $scope.fcids = _.keys(fcids);
         $scope.pipelines = _.keys(pipelines);
         $scope.psids = _.keys(psids);
@@ -70,7 +74,7 @@
     $scope.refreshPipestances();
     $scope.filterPipestance = function(p) {
       var prop, _i, _len, _ref;
-      _ref = ['fcid', 'pipeline', 'psid', 'state'];
+      _ref = ['name', 'fcid', 'pipeline', 'psid', 'state'];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         prop = _ref[_i];
         if ($scope[prop] && $scope[prop] !== p[prop]) {

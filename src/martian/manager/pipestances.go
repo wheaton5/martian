@@ -33,6 +33,7 @@ type PipestanceFunc func(string, string, string) error
 type PipestanceInventoryFunc func(string, string, string, string, string, *sync.WaitGroup)
 
 type PipestanceNotification struct {
+	Name      string
 	State     string
 	Container string
 	Pname     string

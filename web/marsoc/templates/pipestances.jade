@@ -57,6 +57,10 @@ html(ng-app="app")
                     tr
                         td
                             div.input-group
+                                label Name
+                                input.form-control(type="text" ng-model="name" typeahead="name for name in names | filter:$viewValue | limitTo: 8")
+                        td
+                            div.input-group
                                 label Flowcell
                                 input.form-control(type="text" ng-model="fcid" typeahead="fcid for fcid in fcids | filter:$viewValue | limitTo: 8")
                         td
@@ -92,14 +96,16 @@ html(ng-app="app")
             table.table#ps_table(style="margin-top: 50px")
                 thead
                     tr
-                        th.col-date(style="padding-left: 20px") Flowcell
+                        th.col-date(style="padding-left:20px") Name
+                        th Flowcell
                         th Pipeline
                         th Sample ID
                         th State
                         th(ng-if="admin") Actions
                 tbody
                     tr(ng-repeat="p in pipestances" ng-if="filterPipestance(p)")
-                        td.col-date(style="padding-left: 20px") {{p.fcid}}
+                        td.col-date(style="padding-left: 20px") {{p.name}}
+                        td {{p.fcid}}
                         td {{p.pipeline}}
                         td
                             a(href="/pipestance/{{p.fcid}}/{{p.pipeline}}/{{p.psid}}") {{p.psid}}
