@@ -33,6 +33,7 @@ type PipestanceFunc func(string, string, string) error
 type PipestanceInventoryFunc func(string, string, string, string, string, *sync.WaitGroup)
 
 type PipestanceNotification struct {
+	Name      string
 	State     string
 	Container string
 	Pname     string
@@ -552,6 +553,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 					// For ANALYZER_PD, queue up notification for batch email of users.
 					self.mutex.Lock()
 					self.mailQueue = append(self.mailQueue, &PipestanceNotification{
+						Name:      psid,
 						State:     "complete",
 						Container: container,
 						Pname:     pname,
@@ -598,6 +600,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 					// For ANALYZER_PD, queue up notification for batch email of users.
 					self.mutex.Lock()
 					self.mailQueue = append(self.mailQueue, &PipestanceNotification{
+						Name:      psid,
 						State:     "failed",
 						Container: container,
 						Pname:     pname,

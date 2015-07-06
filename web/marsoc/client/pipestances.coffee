@@ -29,6 +29,7 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
     $scope.autoinvoke = { button: true, state: false }
 
     $scope.showbutton = true
+    $scope.name = null
     $scope.fcid = null
     $scope.pipeline = null
     $scope.psid = null
@@ -38,13 +39,16 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
             $scope.pipestances = _.sortBy(data, (p) ->
                 [p.fcid, p.pipeline, p.psid, p.state]
             )
+            names = {}
             fcids = {}
             pipelines = {}
             psids = {}
             for p in $scope.pipestances
+                names[p.name] = true
                 fcids[p.fcid] = true
                 pipelines[p.pipeline] = true
                 psids[p.psid] = true
+            $scope.names = _.keys(names)
             $scope.fcids = _.keys(fcids)
             $scope.pipelines = _.keys(pipelines)
             $scope.psids = _.keys(psids)
@@ -58,7 +62,7 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
     $scope.refreshPipestances()
 
     $scope.filterPipestance = (p) ->
-        for prop in ['fcid', 'pipeline', 'psid', 'state']
+        for prop in ['name', 'fcid', 'pipeline', 'psid', 'state']
             if $scope[prop] && $scope[prop] != p[prop]
                 return false
         return true
