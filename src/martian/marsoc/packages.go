@@ -17,6 +17,8 @@ import (
 	"time"
 )
 
+type PackageFunc func(p *manager.Package) bool
+
 type PackageManager struct {
 	defaultPackage string
 	packages       map[string]*manager.Package
@@ -36,12 +38,26 @@ func NewPackageManager(packagesPath string, defaultPackage string, debug bool, l
 	return self
 }
 
-func (self *PackageManager) GetPackages() []*manager.Package {
+func (self *PackageManager) getPackages(packageFunc PackageFunc) []*manager.Package {
 	packages := []*manager.Package{}
 	for _, p := range self.packages {
-		packages = append(packages, p)
+		if packageFunc(p) {
+			packages = append(packages, p)
+		}
 	}
 	return packages
+}
+
+func (self *PackageManager) GetPackages() []*manager.Package {
+	return self.getPackages(func(p *manager.Package) bool {
+		return true
+	})
+}
+
+func (self *PackageManager) GetDirtyPackages() []*manager.Package {
+	return self.getPackages(func(p *manager.Package) bool {
+		return p.IsDirty()
+	})
 }
 
 // Argshim functions
@@ -98,11 +114,13 @@ func (self *PackageManager) getDefaultPipestanceEnvironment() (string, string, m
 func (self *PackageManager) refreshVersions() {
 	go func() {
 		for {
-			self.mutex.Lock()
 			for _, p := range self.packages {
-				p.MroVersion = core.GetMroVersion(p.MroPath)
+				mroVersion := core.GetMroVersion(p.MroPath)
+
+				self.mutex.Lock()
+				p.MroVersion = mroVersion
+				self.mutex.Unlock()
 			}
-			self.mutex.Unlock()
 
 			time.Sleep(time.Minute * time.Duration(5))
 		}
