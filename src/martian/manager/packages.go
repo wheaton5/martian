@@ -52,6 +52,10 @@ func NewPackage(packagePath string, debug bool) *Package {
 	return self
 }
 
+func (self *Package) IsDirty() bool {
+	return strings.Contains(self.MroVersion, "dirty")
+}
+
 func VerifyPackage(packagePath string) (string, string, string, string, string, map[string]string, error) {
 	packageFile := path.Join(packagePath, "marsoc.json")
 	if _, err := os.Stat(packageFile); os.IsNotExist(err) {

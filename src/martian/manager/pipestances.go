@@ -50,6 +50,7 @@ type PipestanceManager struct {
 	rt            *core.Runtime
 	cachePath     string
 	autoInvoke    bool
+	runLoop       bool
 	stepms        int
 	aggregatePath string
 	writePath     string
@@ -131,6 +132,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPa
 	self.failCoopPath = failCoopPath
 	self.stepms = stepms
 	self.autoInvoke = autoInvoke
+	self.runLoop = true
 	self.pipelines = rt.MroCache.GetPipelines()
 	self.completed = map[string]bool{}
 	self.failed = map[string]bool{}
@@ -150,7 +152,18 @@ func (self *PipestanceManager) GetAutoInvoke() bool {
 }
 
 func (self *PipestanceManager) SetAutoInvoke(autoInvoke bool) {
+	core.LogInfo("pipeman", "Setting autoinvoke = %v", autoInvoke)
 	self.autoInvoke = autoInvoke
+}
+
+func (self *PipestanceManager) EnableRunLoop() {
+	core.LogInfo("pipeman", "Enabling run loop.")
+	self.runLoop = true
+}
+
+func (self *PipestanceManager) DisableRunLoop() {
+	core.LogInfo("pipeman", "Disabling run loop.")
+	self.runLoop = false
 }
 
 func (self *PipestanceManager) CountRunningPipestances() int {
@@ -378,7 +391,9 @@ func (self *PipestanceManager) goProcessLoop() {
 		// Sleep for 5 seconds to let the webserver fail on port rebind.
 		time.Sleep(time.Second * time.Duration(5))
 		for {
-			self.processRunningPipestances()
+			if self.runLoop {
+				self.processRunningPipestances()
+			}
 
 			// Wait for a bit.
 			time.Sleep(time.Second * time.Duration(self.stepms))

@@ -135,6 +135,34 @@ func processRunLoop(pool *SequencerPool, pman *manager.PipestanceManager, lena *
 	}()
 }
 
+func checkDirtyLoop(pman *manager.PipestanceManager, packages *PackageManager, mailer *manager.Mailer) {
+	lastDirty := false
+
+	go func() {
+		for {
+			isDirty := false
+
+			for _, p := range packages.GetDirtyPackages() {
+				mailer.Sendmail(
+					[]string{},
+					fmt.Sprintf("Package %s dirty!", p.Name),
+					fmt.Sprintf("Hey Preppie,\n\nPackage %s has dirty version %s. Running pipestances is disabled until this is resolved!", p.Name, p.MroVersion),
+				)
+				isDirty = true
+			}
+
+			if !lastDirty && isDirty {
+				pman.DisableRunLoop()
+			} else if lastDirty && !isDirty {
+				pman.EnableRunLoop()
+			}
+			lastDirty = isDirty
+
+			time.Sleep(time.Minute * time.Duration(5))
+		}
+	}()
+}
+
 func verifyMros(packages *PackageManager, rt *core.Runtime, checkSrcPath bool) {
 	for _, p := range packages.GetPackages() {
 		if _, err := rt.CompileAll(p.MroPath, checkSrcPath); err != nil {
@@ -162,7 +190,8 @@ Options:
     --vdrmode=<name>   Enables Volatile Data Removal.
                            Valid options are rolling, post and disable.
                            Defaults to rolling.
-    --skip-preflight   Skips preflight stages.
+    --check-dirty      Check packages for dirty versions.
+                           Disables running pipestances if dirty.
     --autoinvoke       Turns on automatic pipestance invocation.
     --debug            Enable debug printing for package argshims.
     -h --help          Show this message.
@@ -204,7 +233,7 @@ Options:
 	}, false)
 
 	// Parse options.
-	skipPreflight := opts["--skip-preflight"].(bool)
+	checkDirty := opts["--check-dirty"].(bool)
 	autoInvoke := opts["--autoinvoke"].(bool)
 	debug := opts["--debug"].(bool)
 	vdrMode := "rolling"
@@ -239,6 +268,7 @@ Options:
 	stackVars := true
 	zip := true
 	checkSrcPath := true
+	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		-1, -1, -1, stackVars, zip, skipPreflight, enableMonitor, debug, false)
@@ -291,6 +321,10 @@ Options:
 	sge.GoQStatLoop()
 	emailNotifierLoop(pman, lena, mailer)
 	processRunLoop(pool, pman, lena, packages, rt, mailer)
+
+	if checkDirty {
+		checkDirtyLoop(pman, packages, mailer)
+	}
 
 	//=========================================================================
 	// Collect pipestance static info.
