@@ -21,16 +21,20 @@ type PackageFunc func(p *manager.Package) bool
 
 type PackageManager struct {
 	defaultPackage string
+	isDirty        bool
 	packages       map[string]*manager.Package
 	mutex          *sync.Mutex
 	lena           *Lena
+	mailer         *manager.Mailer
 }
 
-func NewPackageManager(packagesPath string, defaultPackage string, debug bool, lena *Lena) *PackageManager {
+func NewPackageManager(packagesPath string, defaultPackage string, debug bool, lena *Lena,
+	mailer *manager.Mailer) *PackageManager {
 	self := &PackageManager{}
 	self.mutex = &sync.Mutex{}
 	self.defaultPackage = defaultPackage
 	self.lena = lena
+	self.mailer = mailer
 	self.packages = verifyPackages(packagesPath, defaultPackage, debug)
 
 	core.LogInfo("package", "%d packages found.", len(self.packages))
@@ -54,10 +58,30 @@ func (self *PackageManager) GetPackages() []*manager.Package {
 	})
 }
 
-func (self *PackageManager) GetDirtyPackages() []*manager.Package {
-	return self.getPackages(func(p *manager.Package) bool {
+func (self *PackageManager) CheckDirtyPackages() bool {
+	packages := self.getPackages(func(p *manager.Package) bool {
 		return p.IsDirty()
 	})
+
+	lastDirty := self.isDirty
+	if len(packages) > 0 {
+		self.isDirty = true
+	} else {
+		self.isDirty = false
+	}
+
+	// Send emails only when packages are first detected with dirty version.
+	if !lastDirty {
+		for _, p := range packages {
+			self.mailer.Sendmail(
+				[]string{},
+				fmt.Sprintf("Package %s dirty!", p.Name),
+				fmt.Sprintf("Hey Preppie,\n\nPackage %s has dirty version %s. Running pipestances is disabled until this is resolved!", p.Name, p.MroVersion),
+			)
+		}
+	}
+
+	return self.isDirty
 }
 
 // Argshim functions

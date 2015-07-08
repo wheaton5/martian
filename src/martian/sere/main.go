@@ -23,13 +23,12 @@ func sendNotificationMail(programName string, mailer *manager.Mailer, notices []
 	results := []string{}
 	worstState := "complete"
 	for _, notice := range notices {
-		_, cycleId, roundId := parseContainerKey(notice.Container)
 		testName := notice.Psid
 
-		url := fmt.Sprintf("%s.fuzzplex.com/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname,
+		url := fmt.Sprintf("%s.fuzzplex.com/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname,
 			notice.Psid)
-		result := fmt.Sprintf("Test '%s' for cycle %d, round %d is %s (http://%s)",
-			testName, cycleId, roundId, notice.State, url)
+		result := fmt.Sprintf("Test '%s' is %s (http://%s)",
+			testName, strings.ToUpper(notice.State), url)
 		results = append(results, result)
 		if notice.State == "failed" {
 			worstState = notice.State

@@ -83,15 +83,18 @@
       return tests.length > 0;
     };
     $scope.invoke = function(round) {
-      return $scope.pipestancesForm(round, 'Invoke Pipestances', 'ready');
+      return $scope.pipestancesForm(round, 'Invoke Pipestances', 'ready', '/api/test/invoke-pipestances');
     };
     $scope.unfail = function(round) {
-      return $scope.pipestancesForm(round, 'Unfail pipestances', 'failed');
+      return $scope.pipestancesForm(round, 'Unfail pipestances', 'failed', '/api/test/restart-pipestances');
     };
     $scope.kill = function(round) {
-      return $scope.pipestancesForm(round, 'Kill Pipestances', 'running');
+      return $scope.pipestancesForm(round, 'Kill Pipestances', 'running', '/api/test/kill-pipestances');
     };
-    $scope.pipestancesForm = function(round, title, state) {
+    $scope.wipe = function(round) {
+      return $scope.pipestancesForm(round, 'Wipe Pipestances', 'failed', '/api/test/wipe-pipestances');
+    };
+    $scope.pipestancesForm = function(round, title, state, url) {
       var modalInstance;
       modalInstance = $modal.open({
         animation: true,
@@ -104,13 +107,13 @@
           title: function() {
             return title;
           },
-          state: function() {
-            return state;
+          url: function() {
+            return url;
           }
         }
       });
       return modalInstance.result.then(function(data) {
-        var test, tests, url;
+        var test, tests;
         tests = (function() {
           var i, len, ref, results;
           ref = data.tests;
@@ -123,17 +126,7 @@
           }
           return results;
         })();
-        switch (data.state) {
-          case 'ready':
-            url = '/api/test/invoke-pipestances';
-            break;
-          case 'failed':
-            url = '/api/test/restart-pipestances';
-            break;
-          case 'running':
-            url = '/api/test/kill-pipestances';
-        }
-        return callApi($scope, $http, tests, url);
+        return callApi($scope, $http, tests, data.url);
       }, null);
     };
     $scope.startRoundForm = function() {
@@ -186,10 +179,10 @@
     };
   });
 
-  app.controller('PipestancesCtrl', function($scope, $modalInstance, tests, title, state) {
+  app.controller('PipestancesCtrl', function($scope, $modalInstance, tests, title, url) {
     $scope.tests = tests;
     $scope.title = title;
-    $scope.state = state;
+    $scope.url = url;
     $scope.selectAll = function() {
       var i, len, ref, results, test;
       ref = $scope.tests;
@@ -204,7 +197,7 @@
       var data;
       data = {
         tests: $scope.tests,
-        state: $scope.state
+        url: $scope.url
       };
       return $modalInstance.close(data);
     };

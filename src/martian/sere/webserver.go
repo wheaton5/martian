@@ -144,27 +144,28 @@ func getProgram(programName string, cycleId int, pman *manager.PipestanceManager
 	}
 
 	cycle := program.Cycles[0]
-	for _, round := range cycle.Rounds {
-		container := makeContainerKey(program.Name, cycle.Id, round.Id)
-		p, err := packages.GetPackage(round.PackageName, round.PackageTarget, round.PackageVersion)
+	for _, test := range program.Battery.Tests {
+		sample, err := getSample(test.Category, test.Id, marsoc)
 		if err != nil {
 			return nil, err
 		}
 
-		round.Tests = []*Test{}
-		for _, test := range program.Battery.Tests {
-			sample, err := getSample(test.Category, test.Id, marsoc)
+		var sampleBag interface{}
+		if sample != nil {
+			sampleBag = sample.SampleBag
+		}
+
+		for _, round := range cycle.Rounds {
+			container := makeContainerKey(program.Name, cycle.Id, round.Id)
+
+			p, err := packages.GetPackage(round.PackageName, round.PackageTarget, round.PackageVersion)
 			if err != nil {
 				return nil, err
 			}
 
-			var sampleBag interface{}
-			if sample != nil {
-				sampleBag = sample.SampleBag
-			}
-
 			pipeline := p.Argshim.GetPipelineForTest(test.Category, test.Id, sampleBag)
 			psid := test.Name
+
 			state, ok := pman.GetPipestanceState(container, pipeline, psid)
 			if !ok {
 				state = "ready"
@@ -458,6 +459,11 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	// API: Kill pipestances
 	app.Post("/api/test/kill-pipestances", binding.Bind([]PipestanceForm{}), func(body []PipestanceForm, p martini.Params) string {
 		return callPipestancesAPI(body, pman.KillPipestance)
+	})
+
+	// API: Wipe pipestances
+	app.Post("/api/test/kill-pipestances", binding.Bind([]PipestanceForm{}), func(body []PipestanceForm, p martini.Params) string {
+		return callPipestancesAPI(body, pman.WipePipestance)
 	})
 
 	//=========================================================================

@@ -72,6 +72,7 @@ html(ng-app="app")
                         button.btn.btn-default(ng-if="someTests(round, 'ready') && isCycleActive() && admin && showbutton" ng-click="invoke(round)") Invoke
                         button.btn.btn-default(ng-if="someTests(round, 'failed') && isCycleActive() && admin && showbutton" ng-click="unfail(round)") Unfail
                         button.btn.btn-default(ng-if="someTests(round, 'running') && isCycleActive() && admin && showbutton" ng-click="kill(round)") Kill
+                        button.btn.btn-default(ng-if="someTests(round, 'failed') && isCycleActive() && admin && showbutton" ng-click="wipe(round)") Wipe
     script
         | admin = [[.Admin]]
         | program_name = [[.ProgramName]]

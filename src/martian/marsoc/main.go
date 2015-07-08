@@ -137,27 +137,15 @@ func processRunLoop(pool *SequencerPool, pman *manager.PipestanceManager, lena *
 }
 
 func checkDirtyLoop(pman *manager.PipestanceManager, packages *PackageManager, mailer *manager.Mailer) {
-	lastDirty := false
-
 	go func() {
 		for {
-			isDirty := false
+			isDirty := packages.CheckDirtyPackages()
 
-			for _, p := range packages.GetDirtyPackages() {
-				mailer.Sendmail(
-					[]string{},
-					fmt.Sprintf("Package %s dirty!", p.Name),
-					fmt.Sprintf("Hey Preppie,\n\nPackage %s has dirty version %s. Running pipestances is disabled until this is resolved!", p.Name, p.MroVersion),
-				)
-				isDirty = true
-			}
-
-			if !lastDirty && isDirty {
+			if isDirty {
 				pman.DisableRunLoop()
-			} else if lastDirty && !isDirty {
+			} else {
 				pman.EnableRunLoop()
 			}
-			lastDirty = isDirty
 
 			time.Sleep(time.Minute * time.Duration(5))
 		}
@@ -303,7 +291,8 @@ Options:
 	//=========================================================================
 	// Setup package manager.
 	//=========================================================================
-	packages := NewPackageManager(packagesPath, defaultPackage, debug, lena)
+	packages := NewPackageManager(packagesPath, defaultPackage, debug, lena,
+		mailer)
 	verifyMros(packages, rt, checkSrcPath)
 
 	//=========================================================================
