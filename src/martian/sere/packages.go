@@ -129,6 +129,8 @@ func (self *PackageManager) GetPackage(name string, target string, mroVersion st
 	pid := PackageId{name, target}
 
 	self.mutex.RLock()
+	defer self.mutex.RUnlock()
+
 	if packages, ok := self.packages[pid]; ok {
 		for _, p := range packages {
 			if p.MroVersion == mroVersion {
@@ -136,7 +138,6 @@ func (self *PackageManager) GetPackage(name string, target string, mroVersion st
 			}
 		}
 	}
-	self.mutex.RUnlock()
 
 	return nil, &core.MartianError{fmt.Sprintf("Package %s-%s with mro version %s not found.", name, target, mroVersion)}
 }
