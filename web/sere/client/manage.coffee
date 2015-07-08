@@ -49,16 +49,16 @@ app.controller('ManageCtrl', ($scope, $http, $interval, $modal) ->
             return values.join(', ')
         return prop
 
-    $scope.createItemForm = () ->
+    $scope.manageItemForm = (action) ->
         modalInstance = $modal.open({
             animation: true,
-            templateUrl: 'create_item.html',
-            controller: 'CreateItemCtrl',
+            templateUrl: 'manage_item.html',
+            controller: 'ManageItemCtrl',
             resolve : {
                 title: () ->
-                    'Create ' + capitalize($scope.type)
-                cols: () ->
-                    $scope.cols
+                    capitalize(action) + ' ' + capitalize($scope.type)
+                action: () ->
+                    action
                 type: () ->
                     $scope.type
                 categories: () ->
@@ -72,31 +72,32 @@ app.controller('ManageCtrl', ($scope, $http, $interval, $modal) ->
             switch $scope.type
                 when 'programs'
                     data = {name: item.name, battery: item.battery.name}
-                    url = '/api/manage/create-program'
+                    url = '/api/manage/' + action + '-program'
                 when 'batteries'
                     data = {name: item.name, tests: test.name for test in item.tests}
-                    url = '/api/manage/create-battery'
+                    url = '/api/manage/' + action + '-battery'
                 when 'tests'
                     data = {name: item.name, category: item.category, id: item.id}
-                    url = '/api/manage/create-test'
+                    url = '/api/manage/' + action + '-test'
                 when 'packages'
                     data = {name: item.name, target: item.target}
-                    url = '/api/manage/create-package'
+                    url = '/api/manage/' + action + '-package'
             callApi($scope, $http, data, url)
         , null)
 
     if admin then $interval((() -> $scope.refreshItems()), 5000)
 )
 
-app.controller('CreateItemCtrl', ($scope, $modalInstance, title, cols, type, categories, data) ->
+app.controller('ManageItemCtrl', ($scope, $modalInstance, title, action, type, categories, data) ->
     $scope.title = title
-    $scope.cols = cols
+    $scope.action = action
     $scope.type = type
     $scope.categories = categories
     $scope.data = data
+    $scope.names = (item.name for item in data[type])
     $scope.item = {}
 
-    $scope.createItem = () ->
+    $scope.manageItem = () ->
         $modalInstance.close($scope.item)
 
     $scope.cancelItem = () ->

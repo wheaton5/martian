@@ -8,7 +8,7 @@ html(ng-app="app")
     include ./header.jade
     body(ng-controller="ManageCtrl")
         include ./navbar.jade
-        script(type="text/ng-template" id="create_item.html")
+        script(type="text/ng-template" id="manage_item.html")
             div.modal-header
                 h3.modal-title {{title}}
             div.modal-body
@@ -17,12 +17,13 @@ html(ng-app="app")
                         td
                             div.input-group
                                 label Name
-                                input.form-control(type="text" ng-model="item.name")
+                                input.form-control(ng-if="action == 'create'" type="text" ng-model="item.name")
+                                select.form-control(ng-if="action == 'update'" ng-init="item.name = names[0]" ng-model="item.name" ng-options="name for name in names")
                     tr(ng-if="type == 'programs'")
                         td
                             div.input-group
                                 label Battery
-                                select.form-control(ng-model="item.battery" ng-options="battery.name for battery in data.batteries")
+                                select.form-control(ng-init="item.battery = data.batteries[0]" ng-model="item.battery" ng-options="battery.name for battery in data.batteries")
                     tr(ng-if="type == 'batteries'")
                         td
                             div.input-group
@@ -32,7 +33,7 @@ html(ng-app="app")
                         td
                             div.input-group
                                 label Category
-                                select.form-control(ng-model="item.category" ng-options="category for category in categories")
+                                select.form-control(ng-init="item.category = categories[0]" ng-model="item.category" ng-options="category for category in categories")
                     tr(ng-if="type == 'tests'")
                         td
                             div.input-group
@@ -44,7 +45,7 @@ html(ng-app="app")
                                 label Target
                                 input.form-control(type="text" ng-model="item.target")
             div.modal-footer
-                button.btn.btn-primary(ng-click="createItem()") OK
+                button.btn.btn-primary(ng-click="manageItem()") OK
                 button.btn.btn-warning(ng-click="cancelItem()") Cancel
         #ps
             table
@@ -55,10 +56,11 @@ html(ng-app="app")
                             select.form-control(ng-model="type" ng-options="key for key in types")
                     td
                         div.filter_state
-                            button.btn.btn-default(ng-if="admin && type == 'programs'" ng-click="createItemForm()") Create Program
-                            button.btn.btn-default(ng-if="admin && type == 'batteries'" ng-click="createItemForm()") Create Battery
-                            button.btn.btn-default(ng-if="admin && type == 'tests'" ng-click="createItemForm()") Create Test
-                            button.btn.btn-default(ng-if="admin && type == 'packages'" ng-click="createItemForm()") Build Package
+                            button.btn.btn-default(ng-if="admin && type == 'programs'" ng-click="manageItemForm('create')") Create Program
+                            button.btn.btn-default(ng-if="admin && type == 'batteries'" ng-click="manageItemForm('create')") Create Battery
+                            button.btn.btn-default(ng-if="admin && type == 'tests'" ng-click="manageItemForm('create')") Create Test
+                            button.btn.btn-default(ng-if="admin && type == 'packages'" ng-click="manageItemForm('create')") Build Package
+                            button.btn.btn-default(ng-if="admin && type == 'batteries'" ng-click="manageItemForm('update')") Update Battery
 
             table.table(style="margin-top: 50px")
                 tr

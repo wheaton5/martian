@@ -365,6 +365,14 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		return ""
 	})
 
+	// API: Update battery
+	app.Post("/api/manage/update-battery", binding.Bind(CreateBatteryForm{}), func(body CreateBatteryForm, params martini.Params) string {
+		if err := db.UpdateBattery(body.BatteryName, body.Tests); err != nil {
+			return err.Error()
+		}
+		return ""
+	})
+
 	// API: Create program
 	app.Post("/api/manage/create-program", binding.Bind(CreateProgramForm{}), func(body CreateProgramForm, params martini.Params) string {
 		if strings.Contains(body.ProgramName, separator) {
@@ -376,8 +384,6 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		}
 		return ""
 	})
-
-	// TODO: Add remove / update API for all items in manage API!
 
 	// API: Get programs
 	app.Get("/api/program/get-programs", func() string {

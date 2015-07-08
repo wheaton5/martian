@@ -317,6 +317,20 @@ func (self *DatabaseManager) InsertProgram(programName string, batteryName strin
 	return tx.Commit()
 }
 
+func (self *DatabaseManager) updateBattery(tx *DatabaseTx, batteryName string, testNames []string) error {
+	for _, testName := range testNames {
+		_, err := tx.insert("battery_test", map[string]interface{}{
+			"battery_name": batteryName,
+			"test_name":    testName,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (self *DatabaseManager) InsertBattery(batteryName string, testNames []string) error {
 	tx := self.NewDatabaseTx()
 	if err := tx.Begin(); err != nil {
@@ -331,15 +345,23 @@ func (self *DatabaseManager) InsertBattery(batteryName string, testNames []strin
 		return err
 	}
 
-	for _, testName := range testNames {
-		_, err := tx.insert("battery_test", map[string]interface{}{
-			"battery_name": batteryName,
-			"test_name":    testName,
-		})
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
+	if err := self.updateBattery(tx, batteryName, testNames); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (self *DatabaseManager) UpdateBattery(batteryName string, testNames []string) error {
+	tx := self.NewDatabaseTx()
+	if err := tx.Begin(); err != nil {
+		return err
+	}
+
+	if err := self.updateBattery(tx, batteryName, testNames); err != nil {
+		tx.Rollback()
+		return err
 	}
 
 	return tx.Commit()

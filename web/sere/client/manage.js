@@ -49,18 +49,18 @@
       }
       return prop;
     };
-    $scope.createItemForm = function() {
+    $scope.manageItemForm = function(action) {
       var modalInstance;
       modalInstance = $modal.open({
         animation: true,
-        templateUrl: 'create_item.html',
-        controller: 'CreateItemCtrl',
+        templateUrl: 'manage_item.html',
+        controller: 'ManageItemCtrl',
         resolve: {
           title: function() {
-            return 'Create ' + capitalize($scope.type);
+            return capitalize(action) + ' ' + capitalize($scope.type);
           },
-          cols: function() {
-            return $scope.cols;
+          action: function() {
+            return action;
           },
           type: function() {
             return $scope.type;
@@ -81,7 +81,7 @@
               name: item.name,
               battery: item.battery.name
             };
-            url = '/api/manage/create-program';
+            url = '/api/manage/' + action + '-program';
             break;
           case 'batteries':
             data = {
@@ -97,7 +97,7 @@
                 return results;
               })()
             };
-            url = '/api/manage/create-battery';
+            url = '/api/manage/' + action + '-battery';
             break;
           case 'tests':
             data = {
@@ -105,14 +105,14 @@
               category: item.category,
               id: item.id
             };
-            url = '/api/manage/create-test';
+            url = '/api/manage/' + action + '-test';
             break;
           case 'packages':
             data = {
               name: item.name,
               target: item.target
             };
-            url = '/api/manage/create-package';
+            url = '/api/manage/' + action + '-package';
         }
         return callApi($scope, $http, data, url);
       }, null);
@@ -124,14 +124,25 @@
     }
   });
 
-  app.controller('CreateItemCtrl', function($scope, $modalInstance, title, cols, type, categories, data) {
+  app.controller('ManageItemCtrl', function($scope, $modalInstance, title, action, type, categories, data) {
+    var item;
     $scope.title = title;
-    $scope.cols = cols;
+    $scope.action = action;
     $scope.type = type;
     $scope.categories = categories;
     $scope.data = data;
+    $scope.names = (function() {
+      var i, len, ref, results;
+      ref = data[type];
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        item = ref[i];
+        results.push(item.name);
+      }
+      return results;
+    })();
     $scope.item = {};
-    $scope.createItem = function() {
+    $scope.manageItem = function() {
       return $modalInstance.close($scope.item);
     };
     return $scope.cancelItem = function() {
