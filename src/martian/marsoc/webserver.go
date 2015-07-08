@@ -454,8 +454,6 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 							state = "ready"
 						}
 
-						sample := lena.GetSampleWithId(psid)
-
 						runPipestances = append(runPipestances,
 							map[string]interface{}{
 								"name":     sample.Description,
@@ -495,12 +493,10 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 					state = "ready"
 				}
 
-				sample := lena.GetSampleWithId(psid)
-
 				pipestanceMutex.Lock()
 				pipestances = append(pipestances,
 					map[string]interface{}{
-						"name":     sample.Description,
+						"name":     metasample.Description,
 						"fcid":     container,
 						"pipeline": pipeline,
 						"psid":     psid,
