@@ -204,6 +204,7 @@ func (self *DatabaseManager) createTables() {
 	self.createTable("battery_test", []string{
 		"battery_name string",
 		"test_name string",
+		"primary key (battery_name, test_name)",
 		"foreign key(battery_name) references battery(battery_name)",
 		"foreign key(test_name) references test(test_name)",
 	})
