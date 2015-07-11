@@ -468,7 +468,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	})
 
 	// API: Wipe pipestances
-	app.Post("/api/test/kill-pipestances", binding.Bind([]PipestanceForm{}), func(body []PipestanceForm, p martini.Params) string {
+	app.Post("/api/test/wipe-pipestances", binding.Bind([]PipestanceForm{}), func(body []PipestanceForm, p martini.Params) string {
 		return callPipestancesAPI(body, pman.WipePipestance)
 	})
 
