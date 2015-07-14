@@ -231,7 +231,7 @@ Options:
 	if value := opts["--mempercore"]; value != nil {
 		if value, err := strconv.Atoi(value.(string)); err == nil {
 			reqMemPerCore = value
-			core.LogInfo("options", "--mempercore=%s", reqMemPerCore)
+			core.LogInfo("options", "--mempercore=%d", reqMemPerCore)
 		}
 	}
 
