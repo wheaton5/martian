@@ -176,15 +176,16 @@ Usage:
     marsoc -h | --help | --version
 
 Options:
-    --vdrmode=<name>   Enables Volatile Data Removal.
+    --mempercore=<num>   Set max GB each job may use at one time.
+    --vdrmode=<name>     Enables Volatile Data Removal.
                            Valid options are rolling, post and disable.
                            Defaults to rolling.
-    --check-dirty      Check packages for dirty versions.
+    --check-dirty        Check packages for dirty versions.
                            Disables running pipestances if dirty.
-    --autoinvoke       Turns on automatic pipestance invocation.
-    --debug            Enable debug printing for package argshims.
-    -h --help          Show this message.
-    --version          Show version.`
+    --autoinvoke         Turns on automatic pipestance invocation.
+    --debug              Enable debug printing for package argshims.
+    -h --help            Show this message.
+    --version            Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
 	core.Println("MARSOC - %s\n", martianVersion)
@@ -225,6 +226,15 @@ Options:
 	checkDirty := opts["--check-dirty"].(bool)
 	autoInvoke := opts["--autoinvoke"].(bool)
 	debug := opts["--debug"].(bool)
+
+	reqMemPerCore := -1
+	if value := opts["--mempercore"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			reqMemPerCore = value
+			core.LogInfo("options", "--mempercore=%s", reqMemPerCore)
+		}
+	}
+
 	vdrMode := "rolling"
 	if value := opts["--vdrmode"]; value != nil {
 		vdrMode = value.(string)
@@ -260,7 +270,8 @@ Options:
 	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, -1, stackVars, zip, skipPreflight, enableMonitor, debug, false)
+		-1, -1, reqMemPerCore, stackVars, zip, skipPreflight, enableMonitor,
+		debug, false)
 
 	//=========================================================================
 	// Setup Mailer.

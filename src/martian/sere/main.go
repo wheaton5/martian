@@ -78,13 +78,20 @@ Usage:
     sere -h | --help | --version
 
 Options:
-    --debug            Enable debug printing for package argshims.
-    -h --help          Show this message.
-    --version          Show version.`
+    --mempercore=<num>   Set max GB each job may use at one time.
+    --debug              Enable debug printing for package argshims.
+    -h --help            Show this message.
+    --version            Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
 	core.Println("SERE - %s\n", martianVersion)
 
+	if martianFlags := os.Getenv("MROFLAGS"); len(martianFlags) > 0 {
+		martianOptions := strings.Split(martianFlags, " ")
+		core.ParseMroFlags(opts, doc, martianOptions, []string{})
+	}
+
+	// Required Martian environment variables.
 	env := core.EnvRequire([][]string{
 		{"SERE_PORT", ">2000"},
 		{"SERE_INSTANCE_NAME", "displayed_in_ui"},
@@ -103,6 +110,17 @@ Options:
 
 	core.LogTee(path.Join(env["SERE_LOG_PATH"], time.Now().Format("20060102150405")+".log"))
 
+	// Parse options.
+	debug := opts["--debug"].(bool)
+	reqMemPerCore := -1
+	if value := opts["--mempercore"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			reqMemPerCore = value
+			core.LogInfo("options", "--mempercore=%s", reqMemPerCore)
+		}
+	}
+
+	// Prepare configuration variables.
 	uiport := env["SERE_PORT"]
 	instanceName := env["SERE_INSTANCE_NAME"]
 	packagesPath := env["SERE_PACKAGES_PATH"]
@@ -125,11 +143,11 @@ Options:
 	enableMonitor := true
 	autoInvoke := true
 	stepSecs := 5
-	debug := opts["--debug"].(bool)
 
 	// Runtime
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, -1, stackVars, zip, skipPreflight, enableMonitor, debug, false)
+		-1, -1, reqMemPerCore, stackVars, zip, skipPreflight, enableMonitor,
+		debug, false)
 
 	// Mailer
 	mailer := manager.NewMailer(instanceName, emailHost, emailSender,
