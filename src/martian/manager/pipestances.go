@@ -567,9 +567,6 @@ func (self *PipestanceManager) processRunningPipestances() {
 				// cache as failed, and flush the cache.
 				core.LogInfo("pipeman", "Failed and removing from run list: %s.", pkey)
 
-				// Remove job monitors.
-				pipestance.RemoveJobMonitors()
-
 				// Unlock.
 				pipestance.Unlock()
 
@@ -612,7 +609,8 @@ func (self *PipestanceManager) processRunningPipestances() {
 					self.mutex.Unlock()
 				}
 			} else {
-				// If it is not done, step the nodes.
+				// If it is not done, check job heartbeats and step the nodes.
+				pipestance.CheckHeartbeats()
 				pipestance.StepNodes()
 			}
 			wg.Done()
