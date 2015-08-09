@@ -31,3 +31,6 @@
 [submodule "src/github.com/aws/aws-sdk-go"]
 	path = src/github.com/aws/aws-sdk-go
 	url = git@github.com:aws/aws-sdk-go.git
+[submodule "src/github.com/vaughan0/go-ini"]
+	path = src/github.com/vaughan0/go-ini
+	url = git@github.com:vaughan0/go-ini.git
