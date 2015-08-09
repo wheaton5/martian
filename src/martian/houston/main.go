@@ -27,6 +27,7 @@ Options:
 
 	env := core.EnvRequire([][]string{
 		{"HOUSTON_PORT", ">2000"},
+		{"HOUSTON_BUCKET", "s3_bucket"},
 		{"HOUSTON_LOG_PATH", "path/to/houston/logs"},
 		{"HOUSTON_DOWNLOAD_PATH", "path/to/houston/downloads"},
 		{"HOUSTON_STORAGE_PATH", "path/to/houston/storage"},
@@ -35,8 +36,12 @@ Options:
 	core.LogTee(path.Join(env["HOUSTON_LOG_PATH"], time.Now().Format("20060102150405")+".log"))
 
 	//uiport := env["HOUSTON_PORT"]
+	bucket := env["HOUSTON_BUCKET"]
 	dlPath := env["HOUSTON_DOWNLOAD_PATH"]
 	stPath := env["HOUSTON_STORAGE_PATH"]
+
+	dl := NewDownloadManager(bucket, dlPath, stPath)
+	dl.StartDownloadLoop()
 	//pipestancesPaths := strings.Split(env["HOUSTON_PIPESTANCES_PATH"], ":")
 
 	// Compute MRO path.
@@ -56,8 +61,6 @@ Options:
 
 	// Start pipestance manager daemon.
 	//pman.Start()
-
-	runs3(dlPath, stPath)
 
 	// Let daemons take over.
 	done := make(chan bool)
