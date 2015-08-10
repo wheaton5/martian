@@ -1,0 +1,52 @@
+//- 
+    Copyright (c) 2014 10X Genomics, Inc. All rights reserved.
+    
+    Main UI for martian seqruns.
+
+doctype html
+html(ng-app="app")
+    head
+        title [[.InstanceName]] / Sequencer Runs
+        link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/marsoc.css")
+        link(rel="stylesheet" href="/css/main.css")
+        script(src="/js/angular.min.js")
+        script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="/js/lodash.min.js")
+        script(src="/js/moment.min.js")
+    body(ng-controller="MartianRunCtrl")
+        header.navbar.navbar-fixed-top
+            .navbar-header
+                .navbar-brand
+                    .logo_container
+                        img.logo(src="/images/10X_Logo_Reversed.png")
+                    .navbar-upper [[.InstanceName]]
+                    .navbar-lower
+                        a(href="/") HOME
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="/metasamples") METASAMPLES
+                        | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
+                        a(href="/pipestances") PIPESTANCES
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="/razor") RAZOR
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://compute2.fuzzplex.com:9090") MRV
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://lena.fuzzplex.com") LENA
+        #runs.detail
+            table.table.table-striped#run-table
+                thead
+                    tr
+                        th Date                        
+                        th Customer
+                        th PSID
+                        th Pipestance                        
+                tbody
+                    tr(ng-repeat="ps in pstances")
+                        td {{ps.date}}
+                        td {{ps.domain}}
+                        td {{ps.psid}}                        
+                        td
+                            a(href="/pipestance/{{ps.domain}}/{{ps.date}}/{{ps.psid}}") Pipestance
+        
+    script(src="/marsoc.js")

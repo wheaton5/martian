@@ -8,6 +8,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"martian/core"
 	"martian/manager"
 	"net/http"
@@ -26,23 +27,25 @@ import (
 
 //const MAXDOWNLOAD = 5 * 1000 * 1000 * 1000 // 5GB
 const DOWNLOAD_MAXIMUM = 1 * 1000 * 1000 // 1MB
-const DOWNLOAD_INTERVAL = 2              // minutes
+const DOWNLOAD_INTERVAL = 5              // minutes
 
 type Download struct {
-	size     uint64
-	year     string
-	month    string
-	day      string
-	user     string
-	domain   string
-	uid      string
-	fname    string
-	ftype    string
-	fdir     string
-	permPath string
+	size   uint64
+	year   string
+	month  string
+	day    string
+	user   string
+	domain string
+	uid    string
+	fname  string
+	fbase  string
+	ftype  string
+	fdir   string
+	fsPath string
+	psPath string
 }
 
-func NewDownload(stPath string, size uint64, year string, month string, day string, user string, domain string, uid string, fname string) *Download {
+func NewDownload(stPath string, psPath string, size uint64, year string, month string, day string, user string, domain string, uid string, fname string) *Download {
 	self := &Download{}
 	self.size = size
 	self.year = year
@@ -52,9 +55,11 @@ func NewDownload(stPath string, size uint64, year string, month string, day stri
 	self.domain = domain
 	self.uid = uid
 	self.fname = fname
-	self.ftype = path.Ext(self.fname)
-	self.fdir = fmt.Sprintf("%s%s", self.uid, self.ftype)
-	self.permPath = path.Join(stPath, self.year, self.month, self.day, self.domain, self.user, self.fdir)
+	self.fbase = strings.Split(path.Base(fname), ".")[0]
+	self.ftype = path.Ext(fname)
+	self.fdir = fmt.Sprintf("%s%s", uid, self.ftype)
+	self.fsPath = path.Join(stPath, fmt.Sprintf("%s@%s", domain, user), fmt.Sprintf("%s-%s-%s-%s", year, month, day, uid), self.fbase)
+	self.psPath = path.Join(psPath, fmt.Sprintf("%s@%s", domain, user), fmt.Sprintf("%s-%s-%s-%s", year, month, day, uid), self.fbase)
 	return self
 }
 
@@ -62,15 +67,17 @@ type DownloadManager struct {
 	bucket       string
 	downloadPath string
 	storagePath  string
+	psPath       string
 	keyRE        *regexp.Regexp
 	mailer       *manager.Mailer
 }
 
-func NewDownloadManager(bucket string, downloadPath string, storagePath string, mailer *manager.Mailer) *DownloadManager {
+func NewDownloadManager(bucket string, downloadPath string, storagePath string, psPath string, mailer *manager.Mailer) *DownloadManager {
 	self := &DownloadManager{}
 	self.bucket = bucket
 	self.downloadPath = downloadPath
 	self.storagePath = storagePath
+	self.psPath = psPath
 	self.keyRE = regexp.MustCompile("^(\\d{4})-(\\d{2})-(\\d{2})-(.*)@(.*)-([A-Z0-9]{5,6})-(.*)$")
 	self.mailer = mailer
 	return self
@@ -119,10 +126,16 @@ func (self *DownloadManager) download() {
 		}
 
 		// Create download object
-		d := NewDownload(self.storagePath, size, subs[1], subs[2], subs[3], subs[4], subs[5], subs[6], subs[7])
+		d := NewDownload(self.storagePath, self.psPath, size, subs[1], subs[2], subs[3], subs[4], subs[5], subs[6], subs[7])
 
-		// Skip if permPath already exists
-		if _, err := os.Stat(d.permPath); err == nil {
+		// Skip if psPath already exists
+		if _, err := os.Stat(d.psPath); err == nil {
+			//core.LogInfo("download", "    Already in pipestance storage, skipping")
+			continue
+		}
+
+		// Skip if fsPath already exists
+		if _, err := os.Stat(d.fsPath); err == nil {
 			//core.LogInfo("download", "    Already in permanent storage, skipping")
 			continue
 		}
@@ -162,30 +175,59 @@ func (self *DownloadManager) download() {
 
 		// Handling of downloaded file depends on type
 		var cmd *exec.Cmd
-		if strings.HasPrefix(mimeType, "application/x-gzip") {
-			core.LogInfo("download", "    Tar file, untaring")
-			cmd = exec.Command("tar", "xf", downloadedFile, "-C", d.permPath)
-		} else if strings.HasPrefix(mimeType, "text/plain") {
-			core.LogInfo("download", "    Text file, copying")
-			cmd = exec.Command("cp", downloadedFile, path.Join(d.permPath, d.fname))
+		if strings.HasPrefix(mimeType, "application/x-gzip") && strings.HasSuffix(d.fname, "debug.tgz") {
+			core.LogInfo("download", "    Pipestance, untaring")
+
+			// Create pipestance folder
+			if err := os.MkdirAll(d.psPath, 0755); err != nil {
+				core.LogError(err, "download", "    Could not create directory: %s", d.psPath)
+				continue
+			}
+
+			// Untar pipestance into folder
+			cmd = exec.Command("tar", "xf", downloadedFile, "-C", d.psPath)
+			if _, err = cmd.Output(); err != nil {
+				core.LogError(err, "download", "    Error while untaring pipestance")
+			}
+
+			// Delete downloaded tar file
+			os.Remove(downloadedFile)
+
+			// Build HEAD symlink to pipestance folder
+			files, _ := ioutil.ReadDir(d.psPath)
+			if len(files) != 1 {
+				core.LogInfo("download", "    Tar file did not contain a pipestance folder")
+				continue
+			}
+			os.Symlink(files[0].Name(), path.Join(d.psPath, "HEAD"))
+			continue
 		} else {
-			core.LogInfo("download", "    Unknown file, copying")
-			cmd = exec.Command("cp", downloadedFile, path.Join(d.permPath, d.fname))
-		}
 
-		// Create permanent storage folder for this key
-		if err := os.MkdirAll(d.permPath, 0755); err != nil {
-			core.LogError(err, "download", "    Could not create directory: %s", d.permPath)
-			continue
-		}
+			if strings.HasPrefix(mimeType, "application/x-gzip") {
+				core.LogInfo("download", "    Tar file, untaring")
+				cmd = exec.Command("tar", "xf", downloadedFile, "-C", d.fsPath)
+			} else if strings.HasPrefix(mimeType, "text/plain") {
+				core.LogInfo("download", "    Text file, copying")
+				cmd = exec.Command("cp", downloadedFile, path.Join(d.fsPath, d.fname))
+			} else {
+				core.LogInfo("download", "    Unknown file, copying")
+				cmd = exec.Command("cp", downloadedFile, path.Join(d.fsPath, d.fname))
+			}
 
-		// Execute handler command
-		if _, err = cmd.Output(); err != nil {
-			core.LogError(err, "download", "    Error while running handler")
+			// Create permanent storage folder for this key
+			if err := os.MkdirAll(d.fsPath, 0755); err != nil {
+				core.LogError(err, "download", "    Could not create directory: %s", d.fsPath)
+				continue
+			}
 
-			// Remove the permPath so this can be retried later
-			os.RemoveAll(d.permPath)
-			continue
+			// Execute handler command
+			if _, err = cmd.Output(); err != nil {
+				core.LogError(err, "download", "    Error while running handler")
+
+				// Remove the fsPath so this can be retried later
+				os.RemoveAll(d.fsPath)
+				continue
+			}
 		}
 
 		// Success! Remove the temporary downloaded file, and add to fetch list

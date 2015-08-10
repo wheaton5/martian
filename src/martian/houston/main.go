@@ -30,21 +30,23 @@ Options:
 		{"HOUSTON_PORT", ">2000"},
 		{"HOUSTON_INSTANCE_NAME", "displayed_in_ui"},
 		{"HOUSTON_BUCKET", "s3_bucket"},
-		{"HOUSTON_LOG_PATH", "path/to/houston/logs"},
 		{"HOUSTON_DOWNLOAD_PATH", "path/to/houston/downloads"},
-		{"HOUSTON_STORAGE_PATH", "path/to/houston/storage"},
+		{"HOUSTON_LOGS_PATH", "path/to/houston/logs"},
+		{"HOUSTON_FILES_PATH", "path/to/houston/files"},
+		{"HOUSTON_PIPESTANCES_PATH", "path/to/houston/pipestances"},
 		{"HOUSTON_EMAIL_HOST", "smtp.server.local"},
 		{"HOUSTON_EMAIL_SENDER", "email@address.com"},
 		{"HOUSTON_EMAIL_RECIPIENT", "email@address.com"},
 	}, true)
 
-	core.LogTee(path.Join(env["HOUSTON_LOG_PATH"], time.Now().Format("20060102150405")+".log"))
+	core.LogTee(path.Join(env["HOUSTON_LOGS_PATH"], time.Now().Format("20060102150405")+".log"))
 
-	//uiport := env["HOUSTON_PORT"]
+	uiport := env["HOUSTON_PORT"]
 	instanceName := env["HOUSTON_INSTANCE_NAME"]
 	bucket := env["HOUSTON_BUCKET"]
 	dlPath := env["HOUSTON_DOWNLOAD_PATH"]
-	stPath := env["HOUSTON_STORAGE_PATH"]
+	psPath := env["HOUSTON_PIPESTANCES_PATH"]
+	stPath := env["HOUSTON_FILES_PATH"]
 	emailHost := env["HOUSTON_EMAIL_HOST"]
 	emailSender := env["HOUSTON_EMAIL_SENDER"]
 	emailRecipient := env["HOUSTON_EMAIL_RECIPIENT"]
@@ -54,10 +56,8 @@ Options:
 		emailRecipient, false)
 
 	// Downloader
-	dl := NewDownloadManager(bucket, dlPath, stPath, mailer)
+	dl := NewDownloadManager(bucket, dlPath, stPath, psPath, mailer)
 	dl.StartDownloadLoop()
-
-	//pipestancesPaths := strings.Split(env["HOUSTON_PIPESTANCES_PATH"], ":")
 
 	// Compute MRO path.
 	//cwd, _ := filepath.Abs(path.Dir(os.Args[0]))
@@ -69,10 +69,10 @@ Options:
 
 	//rt := core.NewRuntime("local", "disable", "disable", martianVersion)
 	//db := NewDatabaseManager("sqlite3", dbPath)
-	//pman := NewPipestanceManager(pipestancesPaths, mroPath, mroVersion, db, rt)
+	pman := NewPipestanceManager(psPath)
 
 	// Run web server.
-	//go runWebServer(uiport, martianVersion, db)
+	go runWebServer(uiport, martianVersion, pman)
 
 	// Start pipestance manager daemon.
 	//pman.Start()

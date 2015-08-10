@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/go-martini/martini"
-	"github.com/martini-contrib/binding"
+	_ "github.com/martini-contrib/binding"
 	"github.com/martini-contrib/gzip"
 )
 
@@ -15,16 +15,22 @@ type MainPage struct {
 	InstanceName   string
 	MartianVersion string
 }
-
-type SqlForm struct {
-	Query string
+type GraphPage struct {
+	InstanceName string
+	Container    string
+	Pname        string
+	Psid         string
+	Admin        bool
+	AdminStyle   bool
+	Release      bool
 }
 
-func runWebServer(uiport string, martianVersion string, db *DatabaseManager) {
+func runWebServer(uiport string, martianVersion string, pman *PipestanceManager) {
 	m := martini.New()
 	r := martini.NewRouter()
+	instanceName := "HOUSTON"
 	m.Use(martini.Recovery())
-	m.Use(martini.Static(core.RelPath("../web/kepler/client"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(core.RelPath("../web/houston/client"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.Use(martini.Static(core.RelPath("../web/marsoc/res"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.Use(martini.Static(core.RelPath("../web/marsoc/client"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.Use(martini.Static(core.RelPath("../web/martian/res"), martini.StaticOptions{"", true, "index.html", nil}))
@@ -35,21 +41,27 @@ func runWebServer(uiport string, martianVersion string, db *DatabaseManager) {
 	app.Use(gzip.All())
 
 	app.Get("/", func() string {
-		return core.Render("web/kepler/templates", "sql.html",
+		return core.Render("web/houston/templates", "main.html",
 			&MainPage{
-				InstanceName:   "Kepler",
+				InstanceName:   instanceName,
 				MartianVersion: martianVersion,
 			})
 	})
 
-	app.Post("/api/get-sql", binding.Bind(SqlForm{}), func(body SqlForm, params martini.Params) string {
-		result, err := db.Query(body.Query)
-		if err != nil {
-			return core.MakeJSON(map[string]interface{}{
-				"error": err.Error(),
-			})
-		}
-		return core.MakeJSON(result)
+	app.Get("/api/get-pipestances", func() string {
+		return core.MakeJSON(pman.Enumerate())
+	})
+
+	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
+		return core.Render("web/martian/templates", "graph.html", &GraphPage{
+			InstanceName: instanceName,
+			Container:    p["container"],
+			Pname:        p["pname"],
+			Psid:         p["psid"],
+			Admin:        false,
+			AdminStyle:   false,
+			Release:      core.IsRelease(),
+		})
 	})
 
 	if err := http.ListenAndServe(":"+uiport, app); err != nil {
