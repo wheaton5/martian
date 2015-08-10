@@ -187,13 +187,15 @@ func (self *DownloadManager) download() {
 	}
 
 	// Send out email enumerating newly downloaded files
-	results := []string{}
-	for i, d := range fetchedList {
-		results = append(results, fmt.Sprintf("%d. %s@%s  %s  (%s)", i+1, d.user, d.domain, d.fname, humanize.Bytes(d.size)))
-	}
-	subj := fmt.Sprintf("%d New Customer Uploads", len(fetchedList))
-	body := strings.Join(results, "\n")
+	if len(fetchedList) > 0 {
+		results := []string{}
+		for i, d := range fetchedList {
+			results = append(results, fmt.Sprintf("%d. %s@%s  %s  (%s)", i+1, d.user, d.domain, d.fname, humanize.Bytes(d.size)))
+		}
+		subj := fmt.Sprintf("%d New Customer Uploads", len(fetchedList))
+		body := strings.Join(results, "\n")
 
-	users := []string{}
-	self.mailer.Sendmail(users, subj, body)
+		users := []string{}
+		self.mailer.Sendmail(users, subj, body)
+	}
 }
