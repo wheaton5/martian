@@ -107,7 +107,7 @@ func (self *DownloadManager) download() {
 		size := uint64(*object.Size)
 
 		if size > DOWNLOAD_MAXIMUM {
-			core.LogInfo("download", "Too large %d: %s", size, key)
+			core.LogInfo("download", "Too large %s: %s", humanize.Bytes(size), key)
 			continue
 		}
 
@@ -136,18 +136,26 @@ func (self *DownloadManager) download() {
 			core.LogError(err, "download", "    Could not create file for download")
 			continue
 		}
-		numBytes, err := s3manager.NewDownloader(nil).Download(fd,
-			&s3.GetObjectInput{Bucket: &self.bucket, Key: &key})
-		core.LogInfo("download", "    Downloaded %d bytes", numBytes)
+		defer fd.Close()
+
+		// Download file from S3
+		if numBytes, err := s3manager.NewDownloader(nil).Download(fd,
+			&s3.GetObjectInput{Bucket: &self.bucket, Key: &key}); err != nil {
+			core.LogError(err, "download", "    Download failed")
+			continue
+		} else {
+			core.LogInfo("download", "    Downloaded %s", humanize.Bytes(uint64(numBytes)))
+		}
 
 		// Read 512 bytes of downloaded file for MIME type detection
-		fd.Seek(0, 0)
+		if _, err = fd.Seek(0, 0); err != nil {
+			core.LogError(err, "download", "    Failed to seek to beginning of downloaded file")
+			continue
+		}
 		var magic []byte
 		magic = make([]byte, 512)
-		_, err = fd.Read(magic)
-		fd.Close()
-		if err != nil {
-			core.LogError(err, "download", "    Could not read from downloaded file")
+		if _, err = fd.Read(magic); err != nil {
+			core.LogError(err, "download", "    Failed to read downloaded file")
 			continue
 		}
 		mimeType := http.DetectContentType(magic)
@@ -155,7 +163,7 @@ func (self *DownloadManager) download() {
 		// Handling of downloaded file depends on type
 		var cmd *exec.Cmd
 		if strings.HasPrefix(mimeType, "application/x-gzip") {
-			core.LogInfo("download", "    Tar file, untar'ing")
+			core.LogInfo("download", "    Tar file, untaring")
 			cmd = exec.Command("tar", "xf", downloadedFile, "-C", d.permPath)
 		} else if strings.HasPrefix(mimeType, "text/plain") {
 			core.LogInfo("download", "    Text file, copying")
@@ -180,9 +188,8 @@ func (self *DownloadManager) download() {
 			continue
 		}
 
-		// Success! Remove the temporary downloaded file
+		// Success! Remove the temporary downloaded file, and add to fetch list
 		os.Remove(downloadedFile)
-		core.LogInfo("download", "    Handler complete, removed download file")
 		fetchedList = append(fetchedList, d)
 	}
 
