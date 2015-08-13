@@ -10,6 +10,7 @@ import (
 	_ "time"
 )
 
+/*
 type Pipestance struct {
 	Domain string `json:"domain"`
 	Date   string `json:"date"`
@@ -44,3 +45,4 @@ func (self *PipestanceManager) Enumerate() []*Pipestance {
 	}
 	return pstances
 }
+*/

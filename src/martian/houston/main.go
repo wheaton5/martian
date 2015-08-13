@@ -12,6 +12,19 @@ import (
 	"github.com/docopt/docopt.go"
 )
 
+type PackageManager struct {
+	defaultPackage string
+	isDirty        bool
+	packages       map[string]*manager.Package
+	mutex          *sync.Mutex
+	lena           *Lena
+	mailer         *manager.Mailer
+}
+
+func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, map[string]string, error) {
+	return "", "", map[string]string{}, nil
+}
+
 func main() {
 	core.SetupSignalHandlers()
 	doc := `Houston.
@@ -67,9 +80,12 @@ Options:
 	//}
 	//mroVersion := core.GetMroVersion(mroPath)
 
-	//rt := core.NewRuntime("local", "disable", "disable", martianVersion)
+	rt := core.NewRuntime("local", "disable", "disable", martianVersion)
 	//db := NewDatabaseManager("sqlite3", dbPath)
-	pman := NewPipestanceManager(psPath)
+	//pman := NewPipestanceManager(psPath)
+	pman := manager.NewPipestanceManager(rt, []string{psPath}, []string{dlPath},
+		dlPath, dlPath, 5, false, mailer, nil)
+	pman.LoadPipestances()
 
 	// Run web server.
 	go runWebServer(uiport, martianVersion, pman)
