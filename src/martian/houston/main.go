@@ -12,19 +12,6 @@ import (
 	"github.com/docopt/docopt.go"
 )
 
-type PackageManager struct {
-	defaultPackage string
-	isDirty        bool
-	packages       map[string]*manager.Package
-	mutex          *sync.Mutex
-	lena           *Lena
-	mailer         *manager.Mailer
-}
-
-func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, map[string]string, error) {
-	return "", "", map[string]string{}, nil
-}
-
 func main() {
 	core.SetupSignalHandlers()
 	doc := `Houston.
@@ -72,20 +59,9 @@ Options:
 	dl := NewDownloadManager(bucket, dlPath, stPath, psPath, mailer)
 	dl.StartDownloadLoop()
 
-	// Compute MRO path.
-	//cwd, _ := filepath.Abs(path.Dir(os.Args[0]))
-	//mroPath := cwd
-	//if value := os.Getenv("MROPATH"); len(value) > 0 {
-	//	mroPath = value
-	//}
-	//mroVersion := core.GetMroVersion(mroPath)
-
 	rt := core.NewRuntime("local", "disable", "disable", martianVersion)
-	//db := NewDatabaseManager("sqlite3", dbPath)
-	//pman := NewPipestanceManager(psPath)
-	pman := manager.NewPipestanceManager(rt, []string{psPath}, []string{dlPath},
-		dlPath, dlPath, 5, false, mailer, nil)
-	pman.LoadPipestances()
+
+	pman := NewPipestanceManager(psPath, rt)
 
 	// Run web server.
 	go runWebServer(uiport, martianVersion, pman)
