@@ -25,9 +25,8 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-//const DOWNLOAD_MAXIMUM = 5 * 1000 * 1000 * 1000 // 5GB
-const DOWNLOAD_MAXIMUM = 10 * 1000 * 1000 // 1MB
-const DOWNLOAD_INTERVAL = 5               // minutes
+const DOWNLOAD_MAXIMUM = 5 * 1000 * 1000 * 1000 // 5GB
+const DOWNLOAD_INTERVAL = 5                     // minutes
 
 type Download struct {
 	size   uint64
