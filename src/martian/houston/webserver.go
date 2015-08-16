@@ -5,9 +5,11 @@ import (
 	"martian/core"
 	"net/http"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/go-martini/martini"
-	_ "github.com/martini-contrib/binding"
+	"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/gzip"
 )
 
@@ -15,6 +17,7 @@ type MainPage struct {
 	InstanceName   string
 	MartianVersion string
 }
+
 type GraphPage struct {
 	InstanceName string
 	Container    string
@@ -23,6 +26,11 @@ type GraphPage struct {
 	Admin        bool
 	AdminStyle   bool
 	Release      bool
+}
+
+type MetadataForm struct {
+	Path string
+	Name string
 }
 
 func runWebServer(uiport string, martianVersion string, pman *PipestanceManager) {
@@ -69,30 +77,67 @@ func runWebServer(uiport string, martianVersion string, pman *PipestanceManager)
 		pname := p["pname"]
 		psid := p["psid"]
 		state := map[string]interface{}{}
-		//psinfo := map[string]string{}
+		psinfo := map[string]string{}
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
+		parts := strings.Split(container, "@")
+		psinfo["state"] = pman.GetPipestanceState(container, pname, psid)
+		jobmode, localcores, localmem := pman.GetPipestanceJobMode(container, pname, psid)
+		psinfo["jobmode"] = jobmode
+		psinfo["maxcores"] = localcores
+		psinfo["maxmemgb"] = localmem
+		psinfo["hostname"] = parts[0]
+		psinfo["username"] = parts[1]
+		psinfo["container"] = container
+		psinfo["pname"] = pname
+		psinfo["psid"] = psid
+		martianVersion, mroVersion, _ := pman.GetPipestanceVersions(container, pname, psid)
+		psinfo["version"] = martianVersion
+		psinfo["mroversion"] = mroVersion
+		psinfo["invokesrc"], _ = pman.GetPipestanceInvokeSrc(container, pname, psid)
+		psinfo["start"], _ = pman.GetPipestanceTimestamp(container, pname, psid)
+		psinfo["cmdline"], _ = pman.GetPipestanceCommandline(container, pname, psid)
+		state["info"] = psinfo
 		state["nodes"] = ser
-		/*
-			for k, v := range info {
-				psinfo[k] = v
-			}
-			psstate, _ := pman.GetPipestanceState(container, pname, psid)
-			psinfo["state"] = psstate
-			psinfo["pname"] = pname
-			psinfo["psid"] = psid
-			psinfo["start"], _ = pman.GetPipestanceTimestamp(container, pname, psid)
-			psinfo["invokesrc"], _ = pman.GetPipestanceInvokeSrc(container, pname, psid)
-			martianVersion, mroVersion, _ := pman.GetPipestanceVersions(container, pname, psid)
-			psinfo["version"] = martianVersion
-			psinfo["mroversion"] = mroVersion
-			mroPath, mroVersion, _, _ := pman.GetPipestanceEnvironment(container, pname, psid)
-			psinfo["mropath"] = mroPath
-			psinfo["mroversion"] = mroVersion
-			ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
-			state["nodes"] = ser
-			state["info"] = psinfo
-		*/
-		js := core.MakeJSON(state)
+		return core.MakeJSON(state)
+	})
+
+	// API: Get metadata file contents.
+	app.Post("/api/get-metadata/:container/:pname/:psid", binding.Bind(MetadataForm{}), func(body MetadataForm, p martini.Params) string {
+		if strings.Index(body.Path, "..") > -1 {
+			return "'..' not allowed in path."
+		}
+
+		container := p["container"]
+		pname := p["pname"]
+		psid := p["psid"]
+		data, err := pman.GetPipestanceMetadata(container, pname, psid, path.Join(body.Path, "_"+body.Name))
+		if err != nil {
+			return err.Error()
+		}
+		return data
+	})
+
+	app.Get("/api/get-metadata-top/:container/:pname/:psid/:fname", func(p martini.Params) string {
+		container := p["container"]
+		pname := p["pname"]
+		psid := p["psid"]
+		fname := p["fname"]
+		data, err := pman.GetPipestanceTopFile(container, pname, psid, fname)
+		if err != nil {
+			return err.Error()
+		}
+		return data
+	})
+
+	// API: Get pipestance performance stats.
+	app.Get("/api/get-perf/:container/:pname/:psid", func(p martini.Params) string {
+		container := p["container"]
+		pname := p["pname"]
+		psid := p["psid"]
+		perf := map[string]interface{}{}
+		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "perf")
+		perf["nodes"] = ser
+		js := core.MakeJSON(perf)
 		return js
 	})
 

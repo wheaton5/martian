@@ -1,7 +1,7 @@
 //- 
     Copyright (c) 2014 10X Genomics, Inc. All rights reserved.
     
-    Main UI for martian seqruns.
+    Main UI for Houston
 
 doctype html
 html(ng-app="app")
@@ -39,14 +39,14 @@ html(ng-app="app")
                     tr
                         th Date                        
                         th Customer
-                        th PSID
-                        th Pipestance                        
+                        th(colspan="2") Pipestance                        
                 tbody
                     tr(ng-repeat="ps in pstances")
-                        td {{ps.date}}
-                        td {{ps.domain}}
-                        td {{ps.psid}}                        
+                        td {{ps.display_date}}
+                        td.col-flowcell {{ps.domain}}
                         td
-                            a(href="/pipestance/{{ps.domain}}/{{ps.date}}/{{ps.psid}}") Pipestance
+                            span.minibox(ng-class="ps.state") {{ps.state}}
+                        td
+                            a(href="/pipestance/{{ps.domain}}/{{ps.date}}/{{ps.psid}}" style="color: #007dc3") {{ps.psid}}
         
     script(src="/marsoc.js")

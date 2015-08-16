@@ -10,7 +10,9 @@ app.controller('MartianRunCtrl', ($scope, $http, $interval) ->
     $scope.pstances = null
     
     $http.get('/api/get-pipestances').success((data) ->
-        $scope.pstances = data        
+        for d in data
+            d.display_date = d.date.substring(0,10)
+        $scope.pstances = data
     )
 )
 

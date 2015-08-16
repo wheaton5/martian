@@ -1,19 +1,17 @@
 package main
 
 import (
-	_ "encoding/json"
 	"io/ioutil"
 	"martian/core"
-	_ "os"
+	"os"
 	"path"
-	_ "sync"
-	_ "time"
 )
 
 type Pipestance struct {
 	Domain string `json:"domain"`
 	Date   string `json:"date"`
 	Psid   string `json:"psid"`
+	State  string `json:"state"`
 }
 
 type PipestanceManager struct {
@@ -39,7 +37,8 @@ func (self *PipestanceManager) Enumerate() []*Pipestance {
 			psidInfos, _ := ioutil.ReadDir(path.Join(self.psPath, domain, date))
 			for _, psidInfo := range psidInfos {
 				psid := psidInfo.Name()
-				ps := &Pipestance{Domain: domain, Date: date, Psid: psid}
+				state := self.GetPipestanceState(domain, date, psid)
+				ps := &Pipestance{Domain: domain, Date: date, Psid: psid, State: state}
 				pstances = append(pstances, ps)
 			}
 		}
@@ -47,26 +46,84 @@ func (self *PipestanceManager) Enumerate() []*Pipestance {
 	return pstances
 }
 
-func (self *PipestanceManager) makePipestancePath(container string, pipeline string, psid string) string {
-	return path.Join(self.psPath, container, pipeline, psid, "HEAD")
+func (self *PipestanceManager) GetPipestanceState(container string, pname string, psid string) string {
+	pipestance, ok := self.GetPipestance(container, pname, psid, true)
+	if !ok {
+		return "waiting"
+	}
+
+	return pipestance.GetState()
 }
 
-func (self *PipestanceManager) GetPipestance(container string, pipeline string, psid string, readOnly bool) (*core.Pipestance, bool) {
-	psPath := self.makePipestancePath(container, pipeline, psid)
-	pipestance, _ := self.rt.ReattachToPipestanceWithMroSrc(psid, psPath, "", "",
-		"99", map[string]string{}, false, true)
+func (self *PipestanceManager) makePipestancePath(container string, pname string, psid string) string {
+	return path.Join(self.psPath, container, pname, psid, "HEAD")
+}
+
+func (self *PipestanceManager) getPipestanceMetadata(container string, pname string, psid string, fname string) (string, error) {
+	psPath := self.makePipestancePath(container, pname, psid)
+
+	data, err := ioutil.ReadFile(path.Join(psPath, fname))
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (self *PipestanceManager) GetPipestanceTopFile(container string, pname string, psid string, fname string) (string, error) {
+	return self.getPipestanceMetadata(container, pname, psid, "_"+fname)
+}
+
+func (self *PipestanceManager) GetPipestanceMetadata(container string, pname string, psid string, metadataPath string) (string, error) {
+	psPath := self.makePipestancePath(container, pname, psid)
+	permanentPsPath, _ := os.Readlink(psPath)
+	return self.rt.GetMetadata(permanentPsPath, metadataPath)
+}
+
+func (self *PipestanceManager) GetPipestanceCommandline(container string, pname string, psid string) (string, error) {
+	return self.getPipestanceMetadata(container, pname, psid, "_cmdline")
+}
+
+func (self *PipestanceManager) GetPipestanceInvokeSrc(container string, pname string, psid string) (string, error) {
+	return self.getPipestanceMetadata(container, pname, psid, "_invocation")
+}
+
+func (self *PipestanceManager) GetPipestanceTimestamp(container string, pname string, psid string) (string, error) {
+	data, err := self.getPipestanceMetadata(container, pname, psid, "_timestamp")
+	if err != nil {
+		return "", err
+	}
+	return core.ParseTimestamp(data), nil
+}
+func (self *PipestanceManager) GetPipestance(container string, pname string, psid string, readOnly bool) (*core.Pipestance, bool) {
+	psPath := self.makePipestancePath(container, pname, psid)
+	pipestance, _ := self.rt.ReattachToPipestanceWithMroSrc(psid, psPath, "", "", "", map[string]string{}, false, true)
 	pipestance.LoadMetadata()
 	return pipestance, true
 }
 
-func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string, name string) (interface{}, bool) {
-	psPath := self.makePipestancePath(container, pipeline, psid)
+func (self *PipestanceManager) GetPipestanceVersions(container string, pname string, psid string) (string, string, error) {
+	data, err := self.getPipestanceMetadata(container, pname, psid, "_versions")
+	if err != nil {
+		return "", "", err
+	}
+	return core.ParseVersions(data)
+}
+
+func (self *PipestanceManager) GetPipestanceJobMode(container string, pname string, psid string) (string, string, string) {
+	data, err := self.getPipestanceMetadata(container, pname, psid, "_cmdline")
+	if err != nil {
+		return "", "", ""
+	}
+	return core.ParseJobMode(data)
+}
+
+func (self *PipestanceManager) GetPipestanceSerialization(container string, pname string, psid string, name string) (interface{}, bool) {
+	psPath := self.makePipestancePath(container, pname, psid)
 	if ser, ok := self.rt.GetSerialization(psPath, name); ok {
 		return ser, true
 	}
 
-	readOnly := true
-	pipestance, ok := self.GetPipestance(container, pipeline, psid, readOnly)
+	pipestance, ok := self.GetPipestance(container, pname, psid, true)
 	if !ok {
 		return nil, false
 	}
