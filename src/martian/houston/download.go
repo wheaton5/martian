@@ -198,10 +198,7 @@ func (self *DownloadManager) download() {
 			continue
 		} else {
 
-			if strings.HasPrefix(mimeType, "application/x-gzip") {
-				core.LogInfo("dwnload", "    Tar file, untaring")
-				cmd = exec.Command("tar", "xf", downloadedFile, "-C", d.path)
-			} else if strings.HasPrefix(mimeType, "text/plain") {
+			if strings.HasPrefix(mimeType, "text/plain") {
 				core.LogInfo("dwnload", "    Text file, copying")
 				cmd = exec.Command("cp", downloadedFile, path.Join(d.path, d.fname))
 			} else {
