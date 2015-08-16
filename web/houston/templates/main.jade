@@ -22,31 +22,37 @@ html(ng-app="app")
                         img.logo(src="/images/10X_Logo_Reversed.png")
                     .navbar-upper [[.InstanceName]]
                     .navbar-lower
-                        a(href="/") HOME
+                        a(href="/") PIPESTANCES
                         | &nbsp;&nbsp;&nbsp;&nbsp;
-                        a(href="/metasamples") METASAMPLES
+                        a(href="/files") FILES
                         | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
-                        a(href="/pipestances") PIPESTANCES
+                        a(href="http://marsoc.fuzzplex.com/razor") RAZOR
                         | &nbsp;&nbsp;&nbsp;&nbsp;
-                        a(href="/razor") RAZOR
+                        a(href="http://marsoc.fuzzplex.com") MARSOC
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://sere.fuzzplex.com") SERE
                         | &nbsp;&nbsp;&nbsp;&nbsp;
                         a(href="http://compute2.fuzzplex.com:9090") MRV
                         | &nbsp;&nbsp;&nbsp;&nbsp;
                         a(href="http://lena.fuzzplex.com") LENA
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="https://10xtech.atlassian.net/issues/?filter=11200") CUSTOMER BUGS
         #runs.detail
             table.table.table-striped#run-table
                 thead
-                    tr
+                    tr(style="cursor: auto")
                         th Date                        
                         th Customer
-                        th(colspan="2") Pipestance                        
+                        th(colspan="2") Pipestance
+                        th Path
                 tbody
-                    tr(ng-repeat="ps in pstances")
+                    tr(ng-repeat="ps in pstances" style="cursor: auto")
                         td {{ps.display_date}}
-                        td.col-flowcell {{ps.domain}}
+                        td.col-fixed {{ps.domain}}
                         td
                             span.minibox(ng-class="ps.state") {{ps.state}}
-                        td
+                        td.col-fixed
                             a(href="/pipestance/{{ps.domain}}/{{ps.date}}/{{ps.psid}}" style="color: #007dc3") {{ps.psid}}
+                        td.col-fixed {{ps.path}}
         
     script(src="/marsoc.js")

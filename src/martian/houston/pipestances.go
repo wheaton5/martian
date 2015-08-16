@@ -12,6 +12,7 @@ type Pipestance struct {
 	Date   string `json:"date"`
 	Psid   string `json:"psid"`
 	State  string `json:"state"`
+	Path   string `json:"path"`
 }
 
 type PipestanceManager struct {
@@ -38,7 +39,8 @@ func (self *PipestanceManager) Enumerate() []*Pipestance {
 			for _, psidInfo := range psidInfos {
 				psid := psidInfo.Name()
 				state := self.GetPipestanceState(domain, date, psid)
-				ps := &Pipestance{Domain: domain, Date: date, Psid: psid, State: state}
+				path := path.Join(self.psPath, domain, date, psid)
+				ps := &Pipestance{Domain: domain, Date: date, Psid: psid, State: state, Path: path}
 				pstances = append(pstances, ps)
 			}
 		}

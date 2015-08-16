@@ -31,15 +31,21 @@ html(ng-app="app" ng-cloak)
                         | &nbsp;&nbsp;&nbsp;&nbsp;
                         a(ng-if="admin" href="/admin/metasamples") METASAMPLES
                         a(ng-if="!admin" href="/metasamples") METASAMPLES
-                        | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
                         a(ng-if="admin" href="/admin/pipestances") PIPESTANCES
                         a(ng-if="!admin" href="/pipestances") PIPESTANCES
-                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
                         a(href="/razor") RAZOR
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="/") MARSOC
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://sere.fuzzplex.com") SERE
                         | &nbsp;&nbsp;&nbsp;&nbsp;
                         a(href="http://compute2.fuzzplex.com:9090") MRV
                         | &nbsp;&nbsp;&nbsp;&nbsp;
                         a(href="http://lena.fuzzplex.com") LENA
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="https://10xtech.atlassian.net/issues/?filter=11200") CUSTOMER BUGS
         #qstat
             #qstat_summary
                 table.hero

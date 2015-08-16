@@ -250,6 +250,10 @@ img.logo {
     width: 120px;
     font-family: Menlo, Arial;
 }
+#run-table td.col-fixed {    
+    font-family: Menlo, Arial;
+    font-size: 13px;
+}
 table#run-table tr.tablehover td {
   background-color: #007dc3; 
   color: white; 
