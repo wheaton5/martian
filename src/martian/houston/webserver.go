@@ -1,3 +1,9 @@
+//
+// Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+//
+// Houston web server.
+//
+
 package main
 
 import (

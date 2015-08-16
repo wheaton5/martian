@@ -30,6 +30,7 @@ Options:
 		{"HOUSTON_PORT", ">2000"},
 		{"HOUSTON_INSTANCE_NAME", "displayed_in_ui"},
 		{"HOUSTON_BUCKET", "s3_bucket"},
+		{"HOUSTON_CACHE_PATH", "path/to/houston/cache"},
 		{"HOUSTON_DOWNLOAD_PATH", "path/to/houston/downloads"},
 		{"HOUSTON_LOGS_PATH", "path/to/houston/logs"},
 		{"HOUSTON_FILES_PATH", "path/to/houston/files"},
@@ -44,6 +45,7 @@ Options:
 	uiport := env["HOUSTON_PORT"]
 	instanceName := env["HOUSTON_INSTANCE_NAME"]
 	bucket := env["HOUSTON_BUCKET"]
+	cachePath := env["HOUSTON_CACHE_PATH"]
 	dlPath := env["HOUSTON_DOWNLOAD_PATH"]
 	psPath := env["HOUSTON_PIPESTANCES_PATH"]
 	stPath := env["HOUSTON_FILES_PATH"]
@@ -59,15 +61,17 @@ Options:
 	dl := NewDownloadManager(bucket, dlPath, stPath, psPath, mailer)
 	dl.StartDownloadLoop()
 
+	// Runtime
 	rt := core.NewRuntime("local", "disable", "disable", martianVersion)
 
-	pman := NewPipestanceManager(psPath, rt)
+	// PipestanceManager
+	pman := NewPipestanceManager(rt, psPath, cachePath)
 
 	// Run web server.
 	go runWebServer(uiport, martianVersion, pman)
 
 	// Start pipestance manager daemon.
-	//pman.Start()
+	pman.StartInventoryLoop()
 
 	// Let daemons take over.
 	done := make(chan bool)
