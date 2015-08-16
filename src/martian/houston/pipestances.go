@@ -20,6 +20,7 @@ type Pipestance struct {
 	Domain string `json:"domain"`
 	Date   string `json:"date"`
 	Psid   string `json:"psid"`
+	Kind   string `json:"kind"`
 	State  string `json:"state"`
 	Path   string `json:"path"`
 }
@@ -37,15 +38,15 @@ func (a ByDate) Less(i, j int) bool {
 }
 
 type PipestanceManager struct {
-	psPath    string
+	filesPath string
 	cachePath string
 	cache     map[string]*Pipestance
 	rt        *core.Runtime
 }
 
-func NewPipestanceManager(rt *core.Runtime, psPath string, cachePath string) *PipestanceManager {
+func NewPipestanceManager(rt *core.Runtime, filesPath string, cachePath string) *PipestanceManager {
 	self := &PipestanceManager{}
-	self.psPath = psPath
+	self.filesPath = filesPath
 	self.cachePath = path.Join(cachePath, "pipestances")
 	self.cache = map[string]*Pipestance{}
 	self.rt = rt
@@ -95,22 +96,37 @@ func writeJson(fpath string, object interface{}) {
 }
 
 func (self *PipestanceManager) inventoryPipestances() {
-	domainInfos, _ := ioutil.ReadDir(self.psPath)
+	domainInfos, _ := ioutil.ReadDir(self.filesPath)
 	for _, domainInfo := range domainInfos {
 		domain := domainInfo.Name()
-		dateInfos, _ := ioutil.ReadDir(path.Join(self.psPath, domain))
+		dateInfos, _ := ioutil.ReadDir(path.Join(self.filesPath, domain))
 		for _, dateInfo := range dateInfos {
 			date := dateInfo.Name()
-			psidInfos, _ := ioutil.ReadDir(path.Join(self.psPath, domain, date))
+			psidInfos, _ := ioutil.ReadDir(path.Join(self.filesPath, domain, date))
 			for _, psidInfo := range psidInfos {
 				psid := psidInfo.Name()
 				key := self.makePipestanceKey(domain, date, psid)
 
 				// If this pipestance is not already cached, cache it
 				if _, ok := self.cache[key]; !ok {
-					state := self.GetPipestanceState(domain, date, psid)
-					path := path.Join(self.psPath, domain, date, psid)
-					self.cache[key] = &Pipestance{Domain: domain, Date: date, Psid: psid, State: state, Path: path}
+					p := path.Join(self.filesPath, domain, date, psid)
+
+					state := "none"
+					kind := "files"
+					if fi, err := os.Lstat(path.Join(p, "HEAD")); err == nil && (fi.Mode()&os.ModeSymlink == os.ModeSymlink) {
+						// Check if this is a pipestance by presence of HEAD symlink
+						state = self.GetPipestanceState(domain, date, psid)
+						kind = "pipestance"
+
+					} else {
+						// Otherwise link to first file
+						fileInfos, _ := ioutil.ReadDir(p)
+						if len(fileInfos) > 0 {
+							state = fileInfos[0].Name()
+						}
+					}
+
+					self.cache[key] = &Pipestance{Domain: domain, Date: date, Psid: psid, Kind: kind, State: state, Path: p}
 					core.LogInfo("pipeman", "Discovered new pipestance %s.", key)
 				}
 			}
@@ -119,18 +135,26 @@ func (self *PipestanceManager) inventoryPipestances() {
 	writeJson(self.cachePath, self.cache)
 }
 
+func (self *PipestanceManager) GetBareFile(container string, pname string, psid string, fname string) (string, error) {
+	data, err := ioutil.ReadFile(path.Join(self.filesPath, container, pname, psid, fname))
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
 func (self *PipestanceManager) makePipestanceKey(container string, pname string, psid string) string {
 	return container + pname + psid
 }
 
 func (self *PipestanceManager) makePipestancePath(container string, pname string, psid string) string {
-	return path.Join(self.psPath, container, pname, psid, "HEAD")
+	return path.Join(self.filesPath, container, pname, psid, "HEAD")
 }
 
 func (self *PipestanceManager) getPipestanceMetadata(container string, pname string, psid string, fname string) (string, error) {
-	psPath := self.makePipestancePath(container, pname, psid)
+	filesPath := self.makePipestancePath(container, pname, psid)
 
-	data, err := ioutil.ReadFile(path.Join(psPath, fname))
+	data, err := ioutil.ReadFile(path.Join(filesPath, fname))
 	if err != nil {
 		return "", err
 	}
@@ -138,8 +162,8 @@ func (self *PipestanceManager) getPipestanceMetadata(container string, pname str
 }
 
 func (self *PipestanceManager) GetPipestance(container string, pname string, psid string, readOnly bool) (*core.Pipestance, bool) {
-	psPath := self.makePipestancePath(container, pname, psid)
-	pipestance, _ := self.rt.ReattachToPipestanceWithMroSrc(psid, psPath, "", "", "", map[string]string{}, false, true)
+	filesPath := self.makePipestancePath(container, pname, psid)
+	pipestance, _ := self.rt.ReattachToPipestanceWithMroSrc(psid, filesPath, "", "", "", map[string]string{}, false, true)
 	pipestance.LoadMetadata()
 	return pipestance, true
 }
@@ -154,12 +178,12 @@ func (self *PipestanceManager) GetPipestanceState(container string, pname string
 }
 
 func (self *PipestanceManager) GetPipestanceTopFile(container string, pname string, psid string, fname string) (string, error) {
-	return self.getPipestanceMetadata(container, pname, psid, "_"+fname)
+	return self.getPipestanceMetadata(container, pname, psid, fname)
 }
 
 func (self *PipestanceManager) GetPipestanceMetadata(container string, pname string, psid string, metadataPath string) (string, error) {
-	psPath := self.makePipestancePath(container, pname, psid)
-	permanentPsPath, _ := os.Readlink(psPath)
+	filesPath := self.makePipestancePath(container, pname, psid)
+	permanentPsPath, _ := os.Readlink(filesPath)
 	return self.rt.GetMetadata(permanentPsPath, metadataPath)
 }
 
@@ -196,8 +220,8 @@ func (self *PipestanceManager) GetPipestanceJobMode(container string, pname stri
 }
 
 func (self *PipestanceManager) GetPipestanceSerialization(container string, pname string, psid string, name string) (interface{}, bool) {
-	psPath := self.makePipestancePath(container, pname, psid)
-	if ser, ok := self.rt.GetSerialization(psPath, name); ok {
+	filesPath := self.makePipestancePath(container, pname, psid)
+	if ser, ok := self.rt.GetSerialization(filesPath, name); ok {
 		return ser, true
 	}
 
@@ -208,7 +232,7 @@ func (self *PipestanceManager) GetPipestanceSerialization(container string, pnam
 
 	// Cache serialization of pipestance
 	pipestance.Immortalize()
-	if ser, ok := self.rt.GetSerialization(psPath, name); ok {
+	if ser, ok := self.rt.GetSerialization(filesPath, name); ok {
 		return ser, true
 	}
 

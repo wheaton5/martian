@@ -41,11 +41,10 @@ type Download struct {
 	fbase  string
 	ftype  string
 	fdir   string
-	fsPath string
-	psPath string
+	path   string
 }
 
-func NewDownload(stPath string, psPath string, size uint64, year string, month string, day string, user string, domain string, uid string, fname string) *Download {
+func NewDownload(filesPath string, size uint64, year string, month string, day string, user string, domain string, uid string, fname string) *Download {
 	self := &Download{}
 	self.size = size
 	self.year = year
@@ -58,26 +57,23 @@ func NewDownload(stPath string, psPath string, size uint64, year string, month s
 	self.fbase = strings.Split(path.Base(fname), ".")[0]
 	self.ftype = path.Ext(fname)
 	self.fdir = fmt.Sprintf("%s%s", uid, self.ftype)
-	self.fsPath = path.Join(stPath, fmt.Sprintf("%s@%s", domain, user), fmt.Sprintf("%s-%s-%s-%s", year, month, day, uid), self.fbase)
-	self.psPath = path.Join(psPath, fmt.Sprintf("%s@%s", domain, user), fmt.Sprintf("%s-%s-%s-%s", year, month, day, uid), self.fbase)
+	self.path = path.Join(filesPath, fmt.Sprintf("%s@%s", domain, user), fmt.Sprintf("%s-%s-%s-%s", year, month, day, uid), self.fbase)
 	return self
 }
 
 type DownloadManager struct {
 	bucket       string
 	downloadPath string
-	storagePath  string
-	psPath       string
+	filesPath    string
 	keyRE        *regexp.Regexp
 	mailer       *manager.Mailer
 }
 
-func NewDownloadManager(bucket string, downloadPath string, storagePath string, psPath string, mailer *manager.Mailer) *DownloadManager {
+func NewDownloadManager(bucket string, downloadPath string, filesPath string, mailer *manager.Mailer) *DownloadManager {
 	self := &DownloadManager{}
 	self.bucket = bucket
 	self.downloadPath = downloadPath
-	self.storagePath = storagePath
-	self.psPath = psPath
+	self.filesPath = filesPath
 	self.keyRE = regexp.MustCompile("^(\\d{4})-(\\d{2})-(\\d{2})-(.*)@(.*)-([A-Z0-9]{5,6})-(.*)$")
 	self.mailer = mailer
 	return self
@@ -126,16 +122,16 @@ func (self *DownloadManager) download() {
 		}
 
 		// Create download object
-		d := NewDownload(self.storagePath, self.psPath, size, subs[1], subs[2], subs[3], subs[4], subs[5], subs[6], subs[7])
+		d := NewDownload(self.filesPath, size, subs[1], subs[2], subs[3], subs[4], subs[5], subs[6], subs[7])
 
 		// Skip if psPath already exists
-		if _, err := os.Stat(d.psPath); err == nil {
+		if _, err := os.Stat(d.path); err == nil {
 			//core.LogInfo("download", "    Already in pipestance storage, skipping")
 			continue
 		}
 
 		// Skip if fsPath already exists
-		if _, err := os.Stat(d.fsPath); err == nil {
+		if _, err := os.Stat(d.path); err == nil {
 			//core.LogInfo("download", "    Already in permanent storage, skipping")
 			continue
 		}
@@ -179,13 +175,13 @@ func (self *DownloadManager) download() {
 			core.LogInfo("dwnload", "    Pipestance, untaring")
 
 			// Create pipestance folder
-			if err := os.MkdirAll(d.psPath, 0755); err != nil {
-				core.LogError(err, "dwnload", "    Could not create directory: %s", d.psPath)
+			if err := os.MkdirAll(d.path, 0755); err != nil {
+				core.LogError(err, "dwnload", "    Could not create directory: %s", d.path)
 				continue
 			}
 
 			// Untar pipestance into folder
-			cmd = exec.Command("tar", "xf", downloadedFile, "-C", d.psPath)
+			cmd = exec.Command("tar", "xf", downloadedFile, "-C", d.path)
 			if _, err = cmd.Output(); err != nil {
 				core.LogError(err, "dwnload", "    Error while untaring pipestance")
 			}
@@ -194,29 +190,29 @@ func (self *DownloadManager) download() {
 			os.Remove(downloadedFile)
 
 			// Build HEAD symlink to pipestance folder
-			files, _ := ioutil.ReadDir(d.psPath)
+			files, _ := ioutil.ReadDir(d.path)
 			if len(files) != 1 {
 				core.LogInfo("dwnload", "    Tar file did not contain a pipestance folder")
 				continue
 			}
-			os.Symlink(files[0].Name(), path.Join(d.psPath, "HEAD"))
+			os.Symlink(files[0].Name(), path.Join(d.path, "HEAD"))
 			continue
 		} else {
 
 			if strings.HasPrefix(mimeType, "application/x-gzip") {
 				core.LogInfo("dwnload", "    Tar file, untaring")
-				cmd = exec.Command("tar", "xf", downloadedFile, "-C", d.fsPath)
+				cmd = exec.Command("tar", "xf", downloadedFile, "-C", d.path)
 			} else if strings.HasPrefix(mimeType, "text/plain") {
 				core.LogInfo("dwnload", "    Text file, copying")
-				cmd = exec.Command("cp", downloadedFile, path.Join(d.fsPath, d.fname))
+				cmd = exec.Command("cp", downloadedFile, path.Join(d.path, d.fname))
 			} else {
 				core.LogInfo("dwnload", "    Unknown file, copying")
-				cmd = exec.Command("cp", downloadedFile, path.Join(d.fsPath, d.fname))
+				cmd = exec.Command("cp", downloadedFile, path.Join(d.path, d.fname))
 			}
 
 			// Create permanent storage folder for this key
-			if err := os.MkdirAll(d.fsPath, 0755); err != nil {
-				core.LogError(err, "dwnload", "    Could not create directory: %s", d.fsPath)
+			if err := os.MkdirAll(d.path, 0755); err != nil {
+				core.LogError(err, "dwnload", "    Could not create directory: %s", d.path)
 				continue
 			}
 
@@ -225,7 +221,7 @@ func (self *DownloadManager) download() {
 				core.LogError(err, "dwnload", "    Error while running handler")
 
 				// Remove the fsPath so this can be retried later
-				os.RemoveAll(d.fsPath)
+				os.RemoveAll(d.path)
 				continue
 			}
 		}

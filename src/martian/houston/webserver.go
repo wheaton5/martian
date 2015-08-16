@@ -128,7 +128,19 @@ func runWebServer(uiport string, martianVersion string, pman *PipestanceManager)
 		pname := p["pname"]
 		psid := p["psid"]
 		fname := p["fname"]
-		data, err := pman.GetPipestanceTopFile(container, pname, psid, fname)
+		data, err := pman.GetPipestanceTopFile(container, pname, psid, "_"+fname)
+		if err != nil {
+			return err.Error()
+		}
+		return data
+	})
+
+	app.Get("/api/get-file/:container/:pname/:psid/:fname", func(p martini.Params) string {
+		container := p["container"]
+		pname := p["pname"]
+		psid := p["psid"]
+		fname := p["fname"]
+		data, err := pman.GetBareFile(container, pname, psid, fname)
 		if err != nil {
 			return err.Error()
 		}

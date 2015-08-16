@@ -34,7 +34,6 @@ Options:
 		{"HOUSTON_DOWNLOAD_PATH", "path/to/houston/downloads"},
 		{"HOUSTON_LOGS_PATH", "path/to/houston/logs"},
 		{"HOUSTON_FILES_PATH", "path/to/houston/files"},
-		{"HOUSTON_PIPESTANCES_PATH", "path/to/houston/pipestances"},
 		{"HOUSTON_EMAIL_HOST", "smtp.server.local"},
 		{"HOUSTON_EMAIL_SENDER", "email@address.com"},
 		{"HOUSTON_EMAIL_RECIPIENT", "email@address.com"},
@@ -46,26 +45,24 @@ Options:
 	instanceName := env["HOUSTON_INSTANCE_NAME"]
 	bucket := env["HOUSTON_BUCKET"]
 	cachePath := env["HOUSTON_CACHE_PATH"]
-	dlPath := env["HOUSTON_DOWNLOAD_PATH"]
-	psPath := env["HOUSTON_PIPESTANCES_PATH"]
-	stPath := env["HOUSTON_FILES_PATH"]
+	downloadPath := env["HOUSTON_DOWNLOAD_PATH"]
+	filesPath := env["HOUSTON_FILES_PATH"]
 	emailHost := env["HOUSTON_EMAIL_HOST"]
 	emailSender := env["HOUSTON_EMAIL_SENDER"]
 	emailRecipient := env["HOUSTON_EMAIL_RECIPIENT"]
 
 	// Mailer
-	mailer := manager.NewMailer(instanceName, emailHost, emailSender,
-		emailRecipient, false)
+	mailer := manager.NewMailer(instanceName, emailHost, emailSender, emailRecipient, false)
 
 	// Downloader
-	dl := NewDownloadManager(bucket, dlPath, stPath, psPath, mailer)
+	dl := NewDownloadManager(bucket, downloadPath, filesPath, mailer)
 	dl.StartDownloadLoop()
 
 	// Runtime
 	rt := core.NewRuntime("local", "disable", "disable", martianVersion)
 
 	// PipestanceManager
-	pman := NewPipestanceManager(rt, psPath, cachePath)
+	pman := NewPipestanceManager(rt, filesPath, cachePath)
 
 	// Run web server.
 	go runWebServer(uiport, martianVersion, pman)
