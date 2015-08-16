@@ -41,18 +41,19 @@ html(ng-app="app")
                     tr(style="cursor: auto")
                         th Date                        
                         th Customer
-                        th(colspan="2") Pipestance
+                        th(colspan="2") Content
                         th Path
                 tbody
                     tr(ng-repeat="ps in pstances" style="cursor: auto")
                         td {{ps.display_date}}
                         td.col-fixed {{ps.domain}}
                         td(ng-if="ps.kind=='pipestance'")
-                            span.minibox(ng-class="ps.state") {{ps.state}}
+                            span.minibox(ng-class="ps.label") {{ps.label}}
                         td.col-fixed(ng-if="ps.kind=='pipestance'")                            
                             a(href="/pipestance/{{ps.domain}}/{{ps.date}}/{{ps.psid}}" style="color: #007dc3") {{ps.psid}}
-                        td(colspan="2" ng-if="ps.kind=='files'")
-                            a(href="/api/get-file/{{ps.domain}}/{{ps.date}}/{{ps.psid}}/{{ps.state}}" style="color: #007dc3") {{ps.state}}
+                        td(colspan="2" ng-if="ps.kind=='files'") {{ps.label}}
+                        td(colspan="2" ng-if="ps.kind=='smallfile'")
+                            a(href="/api/get-file/{{ps.domain}}/{{ps.date}}/{{ps.psid}}/{{ps.label}}" style="color: #007dc3") {{ps.label}}
                         td.col-fixed {{ps.path}}
         
     script(src="/marsoc.js")

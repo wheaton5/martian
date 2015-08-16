@@ -3,10 +3,10 @@ package main
 import (
 	"martian/core"
 	"martian/manager"
-	_ "os"
+	"os"
 	"path"
 	_ "path/filepath"
-	_ "strings"
+	"strconv"
 	"time"
 
 	"github.com/docopt/docopt.go"
@@ -32,6 +32,7 @@ Options:
 		{"HOUSTON_BUCKET", "s3_bucket"},
 		{"HOUSTON_CACHE_PATH", "path/to/houston/cache"},
 		{"HOUSTON_DOWNLOAD_PATH", "path/to/houston/downloads"},
+		{"HOUSTON_DOWNLOAD_MAXMB", "integer_in_megabytes"},
 		{"HOUSTON_LOGS_PATH", "path/to/houston/logs"},
 		{"HOUSTON_FILES_PATH", "path/to/houston/files"},
 		{"HOUSTON_EMAIL_HOST", "smtp.server.local"},
@@ -46,6 +47,11 @@ Options:
 	bucket := env["HOUSTON_BUCKET"]
 	cachePath := env["HOUSTON_CACHE_PATH"]
 	downloadPath := env["HOUSTON_DOWNLOAD_PATH"]
+	downloadMaxMB, err := strconv.Atoi(env["HOUSTON_DOWNLOAD_MAXMB"])
+	if err != nil {
+		core.LogError(err, "Could not parse HOUSTON_DOWNLOAD_MAXMB value %s", env["HOUSTON_DOWNLOAD_MAXMB"])
+		os.Exit(1)
+	}
 	filesPath := env["HOUSTON_FILES_PATH"]
 	emailHost := env["HOUSTON_EMAIL_HOST"]
 	emailSender := env["HOUSTON_EMAIL_SENDER"]
@@ -61,7 +67,7 @@ Options:
 	pman := NewPipestanceManager(rt, filesPath, cachePath)
 
 	// Downloader
-	dl := NewDownloadManager(bucket, downloadPath, filesPath, pman, mailer)
+	dl := NewDownloadManager(bucket, downloadPath, downloadMaxMB, filesPath, pman, mailer)
 	dl.StartDownloadLoop()
 
 	// Run web server.

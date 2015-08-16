@@ -25,8 +25,7 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-const DOWNLOAD_MAXIMUM = 5 * 1000 * 1000 * 1000 // 5GB
-const DOWNLOAD_INTERVAL = 5                     // minutes
+const DOWNLOAD_INTERVAL = 5 // minutes
 
 type Download struct {
 	size   uint64
@@ -61,21 +60,23 @@ func NewDownload(filesPath string, size uint64, year string, month string, day s
 }
 
 type DownloadManager struct {
-	bucket       string
-	downloadPath string
-	filesPath    string
-	keyRE        *regexp.Regexp
-	pman         *PipestanceManager
-	mailer       *manager.Mailer
+	bucket        string
+	downloadPath  string
+	downloadMaxMB int
+	filesPath     string
+	keyRE         *regexp.Regexp
+	pman          *PipestanceManager
+	mailer        *manager.Mailer
 }
 
-func NewDownloadManager(bucket string, downloadPath string, filesPath string, pman *PipestanceManager, mailer *manager.Mailer) *DownloadManager {
+func NewDownloadManager(bucket string, downloadPath string, downloadMaxMB int, filesPath string, pman *PipestanceManager, mailer *manager.Mailer) *DownloadManager {
 	self := &DownloadManager{}
 	self.bucket = bucket
 	self.downloadPath = downloadPath
+	self.downloadMaxMB = downloadMaxMB * 1000 * 1000
 	self.filesPath = filesPath
 	self.pman = pman
-	self.keyRE = regexp.MustCompile("^(\\d{4})-(\\d{2})-(\\d{2})-(.*)@(.*)-([A-Z0-9]{5,6})-(.*)$")
+	self.keyRE = regexp.MustCompile("^(\\d{4})-(\\d{2})-(\\d{2})-(.*)@(.*\\.[^-]+)-([A-Z0-9]+)-(.*)$")
 	self.mailer = mailer
 	return self
 }
@@ -111,7 +112,7 @@ func (self *DownloadManager) download() {
 		key := *object.Key
 		size := uint64(*object.Size)
 
-		if size > DOWNLOAD_MAXIMUM {
+		if size > uint64(self.downloadMaxMB) {
 			core.LogInfo("dwnload", "Too large %s: %s", humanize.Bytes(size), key)
 			continue
 		}
@@ -198,7 +199,6 @@ func (self *DownloadManager) download() {
 				continue
 			}
 			os.Symlink(files[0].Name(), path.Join(d.path, "HEAD"))
-			continue
 		} else {
 
 			if strings.HasPrefix(mimeType, "text/plain") {

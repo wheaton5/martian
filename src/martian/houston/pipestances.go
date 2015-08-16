@@ -20,7 +20,7 @@ type Pipestance struct {
 	Date   string `json:"date"`
 	Psid   string `json:"psid"`
 	Kind   string `json:"kind"`
-	State  string `json:"state"`
+	Label  string `json:"label"`
 	Path   string `json:"path"`
 }
 
@@ -101,23 +101,35 @@ func (self *PipestanceManager) InventoryPipestances() {
 				if _, ok := self.cache[key]; !ok {
 					p := path.Join(self.filesPath, domain, date, psid)
 
-					state := "none"
-					kind := "files"
+					label := "none"
+					kind := "unknown"
+
+					// Check if this is a pipestance by presence of HEAD symlink
 					if fi, err := os.Lstat(path.Join(p, "HEAD")); err == nil && (fi.Mode()&os.ModeSymlink == os.ModeSymlink) {
-						// Check if this is a pipestance by presence of HEAD symlink
-						state = self.GetPipestanceState(domain, date, psid)
 						kind = "pipestance"
 
+						// Cache serializations and state
+						core.LogInfo("pipeman", "    Immortalizing")
+						_, _ = self.GetPipestanceSerialization(domain, date, psid, "finalstate")
+						core.LogInfo("pipeman", "    Finished immortalizing")
+						label = self.GetPipestanceState(domain, date, psid)
+
+						core.LogInfo("pipeman", "Discovered %s %s at %s", label, kind, key)
 					} else {
-						// Otherwise link to first file
+						kind = "files"
+						label = psid
+
+						// Single file < 10MB can be treated differently
 						fileInfos, _ := ioutil.ReadDir(p)
-						if len(fileInfos) > 0 {
-							state = fileInfos[0].Name()
+						if len(fileInfos) == 1 && fileInfos[0].Size() < 10*1000*1000 {
+							kind = "smallfile"
+							label = fileInfos[0].Name()
 						}
+
+						core.LogInfo("pipeman", "Discovered %s %s at %s", kind, label, key)
 					}
 
-					self.cache[key] = &Pipestance{Domain: domain, Date: date, Psid: psid, Kind: kind, State: state, Path: p}
-					core.LogInfo("pipeman", "Discovered new pipestance %s.", key)
+					self.cache[key] = &Pipestance{Domain: domain, Date: date, Psid: psid, Kind: kind, Label: label, Path: p}
 				}
 			}
 		}
@@ -134,7 +146,7 @@ func (self *PipestanceManager) GetBareFile(container string, pname string, psid 
 }
 
 func (self *PipestanceManager) makePipestanceKey(container string, pname string, psid string) string {
-	return container + pname + psid
+	return container + "/" + pname + "/" + psid
 }
 
 func (self *PipestanceManager) makePipestancePath(container string, pname string, psid string) string {
