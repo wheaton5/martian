@@ -13,7 +13,6 @@ import (
 	"os"
 	"path"
 	"sort"
-	"time"
 )
 
 type Pipestance struct {
@@ -79,15 +78,6 @@ func (self *PipestanceManager) loadCache() error {
 	return nil
 }
 
-func (self *PipestanceManager) StartInventoryLoop() {
-	go func() {
-		self.inventoryPipestances()
-
-		// Wait for a bit.
-		time.Sleep(time.Minute * time.Duration(1))
-	}()
-}
-
 func writeJson(fpath string, object interface{}) {
 	bytes, _ := json.MarshalIndent(object, "", "    ")
 	if err := ioutil.WriteFile(fpath, bytes, 0644); err != nil {
@@ -95,7 +85,7 @@ func writeJson(fpath string, object interface{}) {
 	}
 }
 
-func (self *PipestanceManager) inventoryPipestances() {
+func (self *PipestanceManager) InventoryPipestances() {
 	domainInfos, _ := ioutil.ReadDir(self.filesPath)
 	for _, domainInfo := range domainInfos {
 		domain := domainInfo.Name()

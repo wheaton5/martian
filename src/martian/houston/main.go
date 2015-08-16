@@ -54,21 +54,18 @@ Options:
 	// Mailer
 	mailer := manager.NewMailer(instanceName, emailHost, emailSender, emailRecipient, false)
 
-	// Downloader
-	dl := NewDownloadManager(bucket, downloadPath, filesPath, mailer)
-	dl.StartDownloadLoop()
-
 	// Runtime
 	rt := core.NewRuntime("local", "disable", "disable", martianVersion)
 
 	// PipestanceManager
 	pman := NewPipestanceManager(rt, filesPath, cachePath)
 
+	// Downloader
+	dl := NewDownloadManager(bucket, downloadPath, filesPath, pman, mailer)
+	dl.StartDownloadLoop()
+
 	// Run web server.
 	go runWebServer(uiport, martianVersion, pman)
-
-	// Start pipestance manager daemon.
-	pman.StartInventoryLoop()
 
 	// Let daemons take over.
 	done := make(chan bool)

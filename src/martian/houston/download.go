@@ -65,14 +65,16 @@ type DownloadManager struct {
 	downloadPath string
 	filesPath    string
 	keyRE        *regexp.Regexp
+	pman         *PipestanceManager
 	mailer       *manager.Mailer
 }
 
-func NewDownloadManager(bucket string, downloadPath string, filesPath string, mailer *manager.Mailer) *DownloadManager {
+func NewDownloadManager(bucket string, downloadPath string, filesPath string, pman *PipestanceManager, mailer *manager.Mailer) *DownloadManager {
 	self := &DownloadManager{}
 	self.bucket = bucket
 	self.downloadPath = downloadPath
 	self.filesPath = filesPath
+	self.pman = pman
 	self.keyRE = regexp.MustCompile("^(\\d{4})-(\\d{2})-(\\d{2})-(.*)@(.*)-([A-Z0-9]{5,6})-(.*)$")
 	self.mailer = mailer
 	return self
@@ -82,6 +84,7 @@ func (self *DownloadManager) StartDownloadLoop() {
 	go func() {
 		for {
 			self.download()
+			self.pman.InventoryPipestances()
 			time.Sleep(time.Minute * time.Duration(DOWNLOAD_INTERVAL))
 		}
 	}()
