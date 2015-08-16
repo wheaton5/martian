@@ -106,15 +106,14 @@ func (self *PipestanceManager) InventoryPipestances() {
 
 					// Check if this is a pipestance by presence of HEAD symlink
 					if fi, err := os.Lstat(path.Join(p, "HEAD")); err == nil && (fi.Mode()&os.ModeSymlink == os.ModeSymlink) {
-						kind = "pipestance"
-
 						// Cache serializations and state
+						kind = "pipestance"
+						label = self.GetPipestanceState(domain, date, psid)
+						core.LogInfo("pipeman", "Discovered %s %s at %s", label, kind, key)
+
 						core.LogInfo("pipeman", "    Immortalizing")
 						_, _ = self.GetPipestanceSerialization(domain, date, psid, "finalstate")
 						core.LogInfo("pipeman", "    Finished immortalizing")
-						label = self.GetPipestanceState(domain, date, psid)
-
-						core.LogInfo("pipeman", "Discovered %s %s at %s", label, kind, key)
 					} else {
 						kind = "files"
 						label = psid
