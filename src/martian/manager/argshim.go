@@ -47,6 +47,25 @@ func NewArgShim(argshimPath string, envs map[string]string, debug bool) *ArgShim
 	return self
 }
 
+func (self *ArgShim) readAll() ([]byte, error) {
+	// Block until new line or error
+	line, _, err := self.reader.ReadLine()
+	if err != nil {
+		return nil, err
+	}
+
+	// Read rest of the bytes available
+	numBytes := self.reader.Buffered()
+	if numBytes > 0 {
+		buf := make([]byte, numBytes)
+		if _, err := self.reader.Read(buf); err != nil {
+			return nil, err
+		}
+		line = append(line, buf...)
+	}
+	return line, nil
+}
+
 func (self *ArgShim) invoke(function string, arguments []interface{}) (interface{}, error) {
 	input := map[string]interface{}{
 		"function":  function,
@@ -61,7 +80,7 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 	self.writer.Write([]byte(string(bytes) + "\n"))
 	self.writer.Flush()
 
-	line, _, err := self.reader.ReadLine()
+	line, err := self.readAll()
 	self.mutex.Unlock()
 	if err != nil {
 		core.LogInfo("argshim", "Failed to read argshim %s output", self.cmdPath)
