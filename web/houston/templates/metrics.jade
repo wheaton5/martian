@@ -14,6 +14,9 @@ html(ng-app="app")
         script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
         script(src="/js/lodash.min.js")
         script(src="/js/moment.min.js")
+        script(src="/js/humanize.min.js")
+        style
+            | .right { text-align: right }
     body(ng-controller="MartianRunCtrl")
         header.navbar.navbar-fixed-top
             .navbar-header
@@ -44,21 +47,38 @@ html(ng-app="app")
                         th Date                        
                         th Site
                         th User
-                        th Content
-                        th Path
+                        th Sample
+                        th.right Reads
+                        th.right Ins
+                        th.right PCR
+                        th.right DP
+                        th.right GEMs
+                        th.right Mol
+                        th.right LPM
+                        th.right Long
+                        th.right N50
+                        th.right SNPs
+                        th.right Genes
+                        th.right SVs
                 tbody
-                    tr(ng-repeat="sub in subs" style="cursor: auto")
+                    tr(ng-repeat="sub in subs" style="cursor: auto" ng-if="sub.kind=='pipestance'&&sub.state=='complete'")
                         td {{sub.display_date}}
                         td.col-fixed {{sub.display_domain}}
                         td.col-fixed {{sub.display_user}}
-                        td(ng-if="sub.kind=='pipestance'")
+                        td.col-fixed(ng-if="sub.kind=='pipestance'")  
                             span.minibox(ng-class="sub.state") 
-                                a(href="/pipestance/{{sub.source}}/{{sub.date}}/{{sub.name}}") 
-                                    span(ng-if="sub.state=='complete'" style="color: #333") {{sub.name}}
-                                    span(ng-if="sub.state=='failed'" style="color: #eee") {{sub.name}}
-                        td(ng-if="sub.kind=='files'") {{sub.fname}}
-                        td( ng-if="sub.kind=='smallfile'")
-                            a(href="/api/get-file/{{sub.source}}/{{sub.date}}/{{sub.name}}/{{sub.fname}}" style="color: #007dc3") {{sub.fname}}
-                        td.col-fixed {{sub.path}}
-        
+                                a(href="/pipestance/{{sub.source}}/{{sub.date}}/{{sub.name}}" style="color: #333") {{sub.name}}
+                        td.right {{sub.summary.num_reads/1000000 | intComma}}M
+                        td.right {{sub.summary.median_insert_size}}
+                        td.right {{(sub.summary.mean_dup_rate-1)*100 | formatNumber:2}}%
+                        td.right {{sub.summary.mean_depth_deduped | intComma}}X
+                        td.right {{sub.summary.inferred_number_gems/1000 | intComma}}k
+                        td.right {{sub.summary.n90_lw_mean_fragment_length/1000 | intComma}}k
+                        td.right {{sub.summary.n90_n50_reads_per_fragment | intComma}}
+                        td.right {{sub.summary.longest_phase_block/1000000 | intComma}}Mb
+                        td.right {{sub.summary.N50_phase_block/1000 | intComma}}kb
+                        td.right {{sub.summary.fract_snps_phased*100 | formatNumber:1}}%
+                        td.right {{sub.summary.fract_genes_lt_100kb_phased*100 | formatNumber:1}}%
+                        td.right {{sub.summary.sv_num_calls_Q100}}
+
     script(src="/houston.js")

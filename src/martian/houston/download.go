@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"martian/core"
-	"martian/manager"
 	"net/http"
 	"os"
 	"os/exec"
@@ -24,8 +23,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/dustin/go-humanize"
 )
-
-const DOWNLOAD_INTERVAL = 5 // minutes
 
 type Download struct {
 	size   uint64
@@ -42,7 +39,8 @@ type Download struct {
 	path   string
 }
 
-func NewDownload(filesPath string, size uint64, year string, month string, day string, user string, domain string, uid string, fname string) *Download {
+func NewDownload(filesPath string, size uint64, year string, month string,
+	day string, user string, domain string, uid string, fname string) *Download {
 	self := &Download{}
 	self.size = size
 	self.year = year
@@ -55,40 +53,32 @@ func NewDownload(filesPath string, size uint64, year string, month string, day s
 	self.fbase = strings.Split(path.Base(fname), ".")[0]
 	self.ftype = path.Ext(fname)
 	self.fdir = fmt.Sprintf("%s%s", uid, self.ftype)
-	self.path = path.Join(filesPath, fmt.Sprintf("%s@%s", domain, user), fmt.Sprintf("%s-%s-%s-%s", year, month, day, uid), self.fbase)
+	self.path = path.Join(filesPath, fmt.Sprintf("%s@%s", domain, user),
+		fmt.Sprintf("%s-%s-%s-%s", year, month, day, uid), self.fbase)
 	return self
 }
 
 type DownloadManager struct {
-	bucket        string
-	downloadPath  string
-	downloadMaxMB int
-	filesPath     string
-	keyRE         *regexp.Regexp
-	pman          *PipestanceManager
-	mailer        *manager.Mailer
+	bucket              string
+	downloadPath        string
+	downloadIntervalMin int
+	downloadMaxMB       int
+	filesPath           string
+	keyRE               *regexp.Regexp
+	sman                *SubmissionManager
 }
 
-func NewDownloadManager(bucket string, downloadPath string, downloadMaxMB int, filesPath string, pman *PipestanceManager, mailer *manager.Mailer) *DownloadManager {
+func NewDownloadManager(bucket string, downloadPath string, downloadIntervalMin,
+	downloadMaxMB int, filesPath string, sman *SubmissionManager) *DownloadManager {
 	self := &DownloadManager{}
 	self.bucket = bucket
 	self.downloadPath = downloadPath
+	self.downloadIntervalMin = downloadIntervalMin
 	self.downloadMaxMB = downloadMaxMB * 1000 * 1000
 	self.filesPath = filesPath
-	self.pman = pman
+	self.sman = sman
 	self.keyRE = regexp.MustCompile("^(\\d{4})-(\\d{2})-(\\d{2})-(.*)@(.*\\.[^-]+)-([A-Z0-9]+)-(.*)$")
-	self.mailer = mailer
 	return self
-}
-
-func (self *DownloadManager) StartDownloadLoop() {
-	go func() {
-		for {
-			self.download()
-			self.pman.InventoryPipestances()
-			time.Sleep(time.Minute * time.Duration(DOWNLOAD_INTERVAL))
-		}
-	}()
 }
 
 func (self *DownloadManager) download() {
@@ -104,8 +94,6 @@ func (self *DownloadManager) download() {
 		core.LogError(err, "dwnload", "ListObjects failed")
 		return
 	}
-
-	fetchedList := []*Download{}
 
 	// Iterate over all returned objects
 	for _, object := range response.Contents {
@@ -225,21 +213,18 @@ func (self *DownloadManager) download() {
 			}
 		}
 
-		// Success! Remove the temporary downloaded file, and add to fetch list
+		// Success! Remove the temporary downloaded file
 		os.Remove(downloadedFile)
-		fetchedList = append(fetchedList, d)
 	}
 
-	// Send out email enumerating newly downloaded files
-	if len(fetchedList) > 0 {
-		results := []string{}
-		for i, d := range fetchedList {
-			results = append(results, fmt.Sprintf("%d. %s@%s  %s  (%s)", i+1, d.user, d.domain, d.fname, humanize.Bytes(d.size)))
+}
+
+func (self *DownloadManager) StartDownloadLoop() {
+	go func() {
+		for {
+			self.download()
+			self.sman.InventorySubmissions()
+			time.Sleep(time.Minute * time.Duration(self.downloadIntervalMin))
 		}
-		subj := fmt.Sprintf("%d New Customer Uploads", len(fetchedList))
-		body := strings.Join(results, "\n")
-
-		users := []string{}
-		self.mailer.Sendmail(users, subj, body)
-	}
+	}()
 }

@@ -39,14 +39,12 @@ type MetadataForm struct {
 	Name string
 }
 
-func runWebServer(uiport string, martianVersion string, pman *PipestanceManager) {
+func runWebServer(uiport string, martianVersion string, sman *SubmissionManager) {
 	m := martini.New()
 	r := martini.NewRouter()
 	instanceName := "HOUSTON"
 	m.Use(martini.Recovery())
 	m.Use(martini.Static(core.RelPath("../web/houston/client"), martini.StaticOptions{"", true, "index.html", nil}))
-	m.Use(martini.Static(core.RelPath("../web/marsoc/res"), martini.StaticOptions{"", true, "index.html", nil}))
-	m.Use(martini.Static(core.RelPath("../web/marsoc/client"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.Use(martini.Static(core.RelPath("../web/martian/res"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.Use(martini.Static(core.RelPath("../web/martian/client"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.MapTo(r, (*martini.Routes)(nil))
@@ -62,8 +60,16 @@ func runWebServer(uiport string, martianVersion string, pman *PipestanceManager)
 			})
 	})
 
-	app.Get("/api/get-pipestances", func() string {
-		return core.MakeJSON(pman.Enumerate())
+	app.Get("/metrics", func() string {
+		return core.Render("web/houston/templates", "metrics.html",
+			&MainPage{
+				InstanceName:   instanceName,
+				MartianVersion: martianVersion,
+			})
+	})
+
+	app.Get("/api/get-submissions", func() string {
+		return core.MakeJSON(sman.EnumerateSubmissions())
 	})
 
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
@@ -84,10 +90,10 @@ func runWebServer(uiport string, martianVersion string, pman *PipestanceManager)
 		psid := p["psid"]
 		state := map[string]interface{}{}
 		psinfo := map[string]string{}
-		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
+		ser, _ := sman.GetPipestanceSerialization(container, pname, psid, "finalstate")
 		parts := strings.Split(container, "@")
-		psinfo["state"] = pman.GetPipestanceState(container, pname, psid)
-		jobmode, localcores, localmem := pman.GetPipestanceJobMode(container, pname, psid)
+		psinfo["state"] = sman.GetPipestanceState(container, pname, psid)
+		jobmode, localcores, localmem := sman.GetPipestanceJobMode(container, pname, psid)
 		psinfo["jobmode"] = jobmode
 		psinfo["maxcores"] = localcores
 		psinfo["maxmemgb"] = localmem
@@ -96,12 +102,12 @@ func runWebServer(uiport string, martianVersion string, pman *PipestanceManager)
 		psinfo["container"] = container
 		psinfo["pname"] = pname
 		psinfo["psid"] = psid
-		martianVersion, mroVersion, _ := pman.GetPipestanceVersions(container, pname, psid)
+		martianVersion, mroVersion, _ := sman.GetPipestanceVersions(container, pname, psid)
 		psinfo["version"] = martianVersion
 		psinfo["mroversion"] = mroVersion
-		psinfo["invokesrc"], _ = pman.GetPipestanceInvokeSrc(container, pname, psid)
-		psinfo["start"], _ = pman.GetPipestanceTimestamp(container, pname, psid)
-		psinfo["cmdline"], _ = pman.GetPipestanceCommandline(container, pname, psid)
+		psinfo["invokesrc"], _ = sman.GetPipestanceInvokeSrc(container, pname, psid)
+		psinfo["start"], _ = sman.GetPipestanceTimestamp(container, pname, psid)
+		psinfo["cmdline"], _ = sman.GetPipestanceCommandline(container, pname, psid)
 		state["info"] = psinfo
 		state["nodes"] = ser
 		return core.MakeJSON(state)
@@ -116,7 +122,7 @@ func runWebServer(uiport string, martianVersion string, pman *PipestanceManager)
 		container := p["container"]
 		pname := p["pname"]
 		psid := p["psid"]
-		data, err := pman.GetPipestanceMetadata(container, pname, psid, path.Join(body.Path, "_"+body.Name))
+		data, err := sman.GetPipestanceMetadata(container, pname, psid, path.Join(body.Path, "_"+body.Name))
 		if err != nil {
 			return err.Error()
 		}
@@ -128,7 +134,7 @@ func runWebServer(uiport string, martianVersion string, pman *PipestanceManager)
 		pname := p["pname"]
 		psid := p["psid"]
 		fname := p["fname"]
-		data, err := pman.GetPipestanceTopFile(container, pname, psid, "_"+fname)
+		data, err := sman.GetPipestanceTopFile(container, pname, psid, "_"+fname)
 		if err != nil {
 			return err.Error()
 		}
@@ -140,7 +146,7 @@ func runWebServer(uiport string, martianVersion string, pman *PipestanceManager)
 		pname := p["pname"]
 		psid := p["psid"]
 		fname := p["fname"]
-		data, err := pman.GetBareFile(container, pname, psid, fname)
+		data, err := sman.GetBareFile(container, pname, psid, fname)
 		if err != nil {
 			return err.Error()
 		}
@@ -153,7 +159,7 @@ func runWebServer(uiport string, martianVersion string, pman *PipestanceManager)
 		pname := p["pname"]
 		psid := p["psid"]
 		perf := map[string]interface{}{}
-		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "perf")
+		ser, _ := sman.GetPipestanceSerialization(container, pname, psid, "perf")
 		perf["nodes"] = ser
 		js := core.MakeJSON(perf)
 		return js
