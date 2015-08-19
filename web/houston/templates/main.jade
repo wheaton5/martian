@@ -55,9 +55,9 @@ html(ng-app="app")
                             span.minibox(ng-class="sub.state") 
                                 a(href="/pipestance/{{sub.source}}/{{sub.date}}/{{sub.name}}") 
                                     span(ng-if="sub.state=='complete'" style="color: #333") {{sub.name}}
-                                    span(ng-if="sub.state=='failed'" style="color: #eee") {{sub.name}}
-                        td(ng-if="sub.kind=='files'") {{sub.fname}}
-                        td( ng-if="sub.kind=='smallfile'")
+                                    span(ng-if="sub.state!='complete'" style="color: #eee") {{sub.name}}
+                        td(ng-if="sub.kind=='file'") {{sub.fname}}
+                        td(ng-if="sub.kind=='smallfile'")
                             a(href="/api/get-file/{{sub.source}}/{{sub.date}}/{{sub.name}}/{{sub.fname}}" style="color: #007dc3") {{sub.fname}}
                         td.col-fixed {{sub.path}}
         
