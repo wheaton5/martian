@@ -50,9 +50,10 @@ html(ng-app="app")
                         th Sample
                         th.right Reads
                         th.right Ins
-                        th.right PCR
-                        th.right DP
+                        th.right Dupe
+                        th.right DPT
                         th.right GEMs
+                        th.right bp/GEM
                         th.right Mol
                         th.right LPM
                         th.right Long
@@ -73,6 +74,7 @@ html(ng-app="app")
                         td.right {{(sub.summary.mean_dup_rate-1)*100 | formatNumber:2}}%
                         td.right {{sub.summary.mean_depth_deduped | intComma}}X
                         td.right {{sub.summary.inferred_number_gems/1000 | intComma}}k
+                        td.right {{sub.summary.mean_bp_per_bc | intComma}}
                         td.right {{sub.summary.n90_lw_mean_fragment_length/1000 | intComma}}k
                         td.right {{sub.summary.n90_n50_reads_per_fragment | intComma}}
                         td.right {{sub.summary.longest_phase_block/1000000 | intComma}}Mb
