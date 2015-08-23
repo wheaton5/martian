@@ -74,6 +74,18 @@ func runWebServer(uiport string, martianVersion string, sman *SubmissionManager)
 		return core.MakeJSON(sman.EnumerateSubmissions())
 	})
 
+	app.Get("/file/:container/:pname/:psid/:fname", func(p martini.Params) string {
+		container := p["container"]
+		pname := p["pname"]
+		psid := p["psid"]
+		fname := p["fname"]
+		data, err := sman.GetBareFile(container, pname, psid, fname)
+		if err != nil {
+			return err.Error()
+		}
+		return data
+	})
+
 	app.Get("/pipestance/:container/:pname/:psid", func(p martini.Params) string {
 		return core.Render("web/martian/templates", "graph.html", &GraphPage{
 			InstanceName: instanceName,
@@ -137,18 +149,6 @@ func runWebServer(uiport string, martianVersion string, sman *SubmissionManager)
 		psid := p["psid"]
 		fname := p["fname"]
 		data, err := sman.GetPipestanceTopFile(container, pname, psid, "_"+fname)
-		if err != nil {
-			return err.Error()
-		}
-		return data
-	})
-
-	app.Get("/api/get-file/:container/:pname/:psid/:fname", func(p martini.Params) string {
-		container := p["container"]
-		pname := p["pname"]
-		psid := p["psid"]
-		fname := p["fname"]
-		data, err := sman.GetBareFile(container, pname, psid, fname)
 		if err != nil {
 			return err.Error()
 		}

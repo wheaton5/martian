@@ -44,6 +44,7 @@ func (a ByDate) Less(i, j int) bool {
 }
 
 type SubmissionManager struct {
+	hostname               string
 	instanceName           string
 	filesPath              string
 	cachePath              string
@@ -53,7 +54,7 @@ type SubmissionManager struct {
 	mailer                 *manager.Mailer
 }
 
-func NewSubmissionManager(instanceName string, filesPath string,
+func NewSubmissionManager(hostname string, instanceName string, filesPath string,
 	cachePath string, pipestanceSummaryPaths []string, rt *core.Runtime,
 	mailer *manager.Mailer) *SubmissionManager {
 	self := &SubmissionManager{}
@@ -65,6 +66,7 @@ func NewSubmissionManager(instanceName string, filesPath string,
 	self.rt = rt
 	self.mailer = mailer
 	self.loadCache()
+	self.hostname = hostname
 	return self
 }
 
@@ -197,11 +199,14 @@ func (self *SubmissionManager) InventorySubmissions() {
 			}
 			line := ""
 			if s.Kind == "pipestance" {
-				line = fmt.Sprintf("%d. %s %s %s from %s@%s\n    http://houston.fuzzplex.com/pipestance/%s/%s/%s\n",
-					i+1, s.State, s.Kind, s.Name, user, domain, s.Source, s.Date, s.Name)
+				line = fmt.Sprintf("%d. %s %s %s from %s@%s\n    http://%s/pipestance/%s/%s/%s\n",
+					i+1, strings.ToUpper(s.State), s.Kind, s.Name, user, domain, self.hostname, s.Source, s.Date, s.Name)
+			} else if s.Kind == "smallfile" {
+				line = fmt.Sprintf("%d. %s from %s@%s\n    http://%s/file/%s/%s/%s/%s\n",
+					i+1, s.Fname, user, domain, self.hostname, s.Source, s.Date, s.Name, s.Fname)
 			} else {
-				line = fmt.Sprintf("%d. %s %s from %s@%s\n    %s\n",
-					i+1, s.Kind, s.Fname, user, domain, s.Path)
+				line = fmt.Sprintf("%d. %s from %s@%s\n    %s\n",
+					i+1, s.Fname, user, domain, s.Path)
 			}
 			lines = append(lines, line)
 		}

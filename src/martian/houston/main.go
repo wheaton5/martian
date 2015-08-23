@@ -29,6 +29,7 @@ Options:
 	env := core.EnvRequire([][]string{
 		{"HOUSTON_PORT", ">2000"},
 		{"HOUSTON_INSTANCE_NAME", "displayed_in_ui"},
+		{"HOUSTON_HOSTNAME", "fqdn_plus_port_optionally"},
 		{"HOUSTON_BUCKET", "s3_bucket"},
 		{"HOUSTON_CACHE_PATH", "path/to/houston/cache"},
 		{"HOUSTON_DOWNLOAD_INTERVALMIN", "integer_in_minutes"},
@@ -46,6 +47,7 @@ Options:
 		time.Now().Format("20060102150405")+".log"))
 
 	uiport := env["HOUSTON_PORT"]
+	hostname := env["HOUSTON_HOSTNAME"]
 	instanceName := env["HOUSTON_INSTANCE_NAME"]
 	bucket := env["HOUSTON_BUCKET"]
 	cachePath := env["HOUSTON_CACHE_PATH"]
@@ -76,13 +78,15 @@ Options:
 	rt := core.NewRuntime("local", "disable", "disable", martianVersion)
 
 	// SubmissionManager
-	sman := NewSubmissionManager(instanceName, filesPath, cachePath,
+	sman := NewSubmissionManager(hostname, instanceName, filesPath, cachePath,
 		pipestanceSummaryPaths, rt, mailer)
 
 	// Downloader
-	dl := NewDownloadManager(bucket, downloadPath, downloadIntervalMin,
+	s3dls := NewAmazonS3DownloadSource(bucket)
+	dman := NewDownloadManager(downloadPath, downloadIntervalMin,
 		downloadMaxMB, filesPath, sman)
-	dl.StartDownloadLoop()
+	dman.AddDownloadSource(s3dls)
+	dman.StartDownloadLoop()
 
 	// Run web server.
 	go runWebServer(uiport, martianVersion, sman)

@@ -58,7 +58,7 @@ html(ng-app="app")
                                     span(ng-if="sub.state!='complete'" style="color: #eee") {{sub.name}}
                         td(ng-if="sub.kind=='file'") {{sub.fname}}
                         td(ng-if="sub.kind=='smallfile'")
-                            a(href="/api/get-file/{{sub.source}}/{{sub.date}}/{{sub.name}}/{{sub.fname}}" style="color: #007dc3") {{sub.fname}}
+                            a(href="/file/{{sub.source}}/{{sub.date}}/{{sub.name}}/{{sub.fname}}" style="color: #007dc3") {{sub.fname}}
                         td.col-fixed {{sub.path}}
         
     script(src="/houston.js")
