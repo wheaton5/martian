@@ -48,7 +48,7 @@ html(ng-app="app")
                         th Path
                 tbody
                     tr(ng-repeat="sub in subs" style="cursor: auto")
-                        td {{sub.display_date}}
+                        td(style="white-space: nowrap") {{sub.display_date}}
                         td.col-fixed {{sub.display_domain}}
                         td.col-fixed {{sub.display_user}}
                         td(ng-if="sub.kind=='pipestance'")
@@ -59,6 +59,6 @@ html(ng-app="app")
                         td(ng-if="sub.kind=='file'") {{sub.fname}}
                         td(ng-if="sub.kind=='smallfile'")
                             a(href="/file/{{sub.source}}/{{sub.date}}/{{sub.name}}/{{sub.fname}}" style="color: #007dc3") {{sub.fname}}
-                        td.col-fixed {{sub.path}}
+                        td.col-fixed(style="white-space: nowrap") {{sub.path}}
         
     script(src="/houston.js")
