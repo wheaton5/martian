@@ -21,49 +21,10 @@ import (
 	"time"
 )
 
-type Oligo struct {
-	Id    int    `json:"id"`
-	State string `json:"state"`
-	Name  string `json:"name"`
-	Seq   string `json:"seq"`
-}
-
-type Genome struct {
-	Id     int     `json:"id"`
-	Name   string  `json:"name"`
-	A_freq float32 `json:"a_freq"`
-	C_freq float32 `json:"c_freq"`
-	G_freq float32 `json:"g_freq"`
-	T_freq float32 `json:"t_freq"`
-}
-
-type TargetSet struct {
-	Id     int     `json:"id"`
-	State  int     `json:"state"`
-	Name   string  `json:"name"`
-	Genome int     `json:"genome"`
-	A_freq float32 `json:"a_freq"`
-	C_freq float32 `json:"c_freq"`
-	G_freq float32 `json:"g_freq"`
-	T_freq float32 `json:"t_freq"`
-}
-
-type BarcodeSet struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
 type SequencingRun struct {
-	Id                    int      `json:"id"`
-	State                 string   `json:"state"`
 	Name                  string   `json:"name"`
-	Date                  string   `json:"date"`
-	Loading_concentration float32  `json:"loading_concentration"`
-	Failure_reason        string   `json:"failure_reason"`
 	Read1_length          int      `json:"read1_length"`
 	Read2_length          int      `json:"read2_length"`
-	Barcode_length        int      `json:"barcode_length"`
-	Samples               []string `json:"samples"`
 	Psstate               string   `json:"psstate"`
 }
 
@@ -73,41 +34,15 @@ type User struct {
 	Email    string `json:"email"`
 }
 
-type CellLine struct {
-	Name string `json:"name"`
-	Sex  string `json:"sex"`
-}
-
 type SampleDef struct {
 	Sequencing_run   *SequencingRun `json:"sequencing_run"`
-	Sequencer        string         `json:"sequencer"`
-	Sample_indexes   []*Oligo       `json:"sample_indexes"`
-	Sample_index_set []int          `json:"sample_index_set"`
-	Lane             string         `json:"lane"`
-	Gem_group        int            `json:"gem_group"`
-}
-
-type MetasamplePrereq struct {
-	Fcid  string `json:"fcid"`
-	State string `json:"state"`
 }
 
 type Sample struct {
 	Id                       int          `json:"id"`
 	Description              string       `json:"description"`
-	Name                     string       `json:"name"`
-	State                    string       `json:"state"`
-	Genome                   *Genome      `json:"genome"`
-	Target_set               *TargetSet   `json:"target_set"`
-	Primers                  []*Oligo     `json:"primers"`
-	Degenerate_primer_length int          `json:"degenerate_primer_length"`
-	Barcode_set              *BarcodeSet  `json:"barcode_set"`
-	Template_input_mass      float32      `json:"template_input_mass"`
 	User                     *User        `json:"user"`
-	Cell_line                *CellLine    `json:"cell_line"`
-	Pipeline                 string       `json:"pipeline"`
 	Product                  string       `json:"product"`
-	Exclude_non_bc_reads     bool         `json:"exclude_non_bc_reads"`
 	Sample_defs              []*SampleDef `json:"sample_defs"`
 	Pname                    string       `json:"pname"`
 	Pscontainer              string       `json:"pscontainer"`
