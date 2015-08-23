@@ -87,7 +87,9 @@ func (self *PackageManager) CheckDirtyPackages() bool {
 // Argshim functions
 func (self *PackageManager) GetPipelineForSample(sample *Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
-		return p.Argshim.GetPipelineForTest("lena", strconv.Itoa(sample.Id), sample)
+		sampleId := strconv.Itoa(sample.Id)
+		sampleBag := self.lena.GetSampleBagWithId(sampleId)
+		return p.Argshim.GetPipelineForTest("lena", sampleId, sampleBag)
 	}
 	return ""
 }
