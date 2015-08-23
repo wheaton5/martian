@@ -36,4 +36,4 @@
 	url = git@github.com:vaughan0/go-ini.git
 [submodule "src/github.com/10XDev/zego"]
 	path = src/github.com/10XDev/zego
-	url = https://github.com/10XDev/zego.git
+	url = git@github.com:10XDev/zego.git
