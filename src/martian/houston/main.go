@@ -30,7 +30,10 @@ Options:
 		{"HOUSTON_PORT", ">2000"},
 		{"HOUSTON_INSTANCE_NAME", "displayed_in_ui"},
 		{"HOUSTON_HOSTNAME", "fqdn_plus_port_optionally"},
-		{"HOUSTON_BUCKET", "s3_bucket"},
+		{"HOUSTON_AMAZONS3_BUCKET", "s3_bucket"},
+		{"HOUSTON_ZENDESK_DOMAIN", "zendesk_domain"},
+		{"HOUSTON_ZENDESK_USER", "zendesk_user"},
+		{"HOUSTON_ZENDESK_APITOKEN", "zendesk_api_token"},
 		{"HOUSTON_CACHE_PATH", "path/to/houston/cache"},
 		{"HOUSTON_DOWNLOAD_INTERVALMIN", "integer_in_minutes"},
 		{"HOUSTON_DOWNLOAD_PATH", "path/to/houston/downloads"},
@@ -49,7 +52,10 @@ Options:
 	uiport := env["HOUSTON_PORT"]
 	hostname := env["HOUSTON_HOSTNAME"]
 	instanceName := env["HOUSTON_INSTANCE_NAME"]
-	bucket := env["HOUSTON_BUCKET"]
+	amazonS3Bucket := env["HOUSTON_AMAZONS3_BUCKET"]
+	zendeskDomain := env["HOUSTON_ZENDESK_DOMAIN"]
+	zendeskUser := env["HOUSTON_ZENDESK_USER"]
+	zendeskApiToken := env["HOUSTON_ZENDESK_APITOKEN"]
 	cachePath := env["HOUSTON_CACHE_PATH"]
 	downloadPath := env["HOUSTON_DOWNLOAD_PATH"]
 	downloadIntervalMin, err := strconv.Atoi(env["HOUSTON_DOWNLOAD_INTERVALMIN"])
@@ -82,10 +88,10 @@ Options:
 		pipestanceSummaryPaths, rt, mailer)
 
 	// Downloader
-	s3dls := NewAmazonS3DownloadSource(bucket)
 	dman := NewDownloadManager(downloadPath, downloadIntervalMin,
 		downloadMaxMB, filesPath, sman)
-	dman.AddDownloadSource(s3dls)
+	dman.AddDownloadSource(NewZendeskDownloadSource(zendeskDomain, zendeskUser, zendeskApiToken))
+	dman.AddDownloadSource(NewAmazonS3DownloadSource(amazonS3Bucket))
 	dman.StartDownloadLoop()
 
 	// Run web server.

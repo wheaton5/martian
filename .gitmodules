@@ -34,6 +34,6 @@
 [submodule "src/github.com/vaughan0/go-ini"]
 	path = src/github.com/vaughan0/go-ini
 	url = git@github.com:vaughan0/go-ini.git
-[submodule "src/github.com/adamar/ZeGo"]
-	path = src/github.com/adamar/ZeGo
-	url = https://github.com/adamar/ZeGo.git
+[submodule "src/github.com/10XDev/zego"]
+	path = src/github.com/10XDev/zego
+	url = https://github.com/10XDev/zego.git
