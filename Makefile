@@ -84,5 +84,8 @@ sake-martian-strip:
 	rm -rf web/sere
 
 sake-martian-cs-strip:
+	# Remove mrv template.
+	rm web/martian/templates/mrv.html
+	
 	# Remove pd job templates.
 	rm -f jobmanagers/*.template
