@@ -259,9 +259,12 @@ func (self *PipestanceManager) loadPipestance(pkey string) {
 	readOnly := false
 	pipestance, err := self.ReattachToPipestance(container, pipeline, psid, psPath, readOnly)
 	if err != nil {
-		// If we could not reattach, it's because _invocation was
-		// missing, or will no longer parse due to changes in MRO
-		// definitions. Consider the pipestance failed.
+		// If we could not reattach, it may because:
+		// 1. _invocation was missing
+		// 2. _invocation will no longer parse due to changes in MRO definitions.
+		// 3. Runtime exited uncleanly and pipestances have _lock files which need to be removed.
+		// Consider the pipestance failed.
+		core.LogError(err, "pipeman", "Failed to reattach to pipestance %s", pkey)
 		self.mutex.Lock()
 		self.failed[pkey] = true
 		self.mutex.Unlock()
