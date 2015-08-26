@@ -964,6 +964,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	psPath := self.makePipestancePath(container, pipeline, psid)
 	pipestance, err := self.ReattachToPipestance(container, pipeline, psid, psPath, readOnly)
 	if err != nil {
+		core.LogError(err, "pipeman", "Failed to reattach to pipestance %s", pkey)
 		return nil, false
 	}
 
