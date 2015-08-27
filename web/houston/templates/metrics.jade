@@ -64,7 +64,7 @@ html(ng-app="app")
                         th.right Genes
                         th.right SVs
                 tbody
-                    tr(ng-repeat="sub in subs" style="cursor: auto" ng-if="sub.kind=='pipestance'&&sub.state=='complete'")
+                    tr(ng-repeat="sub in subs" style="cursor: auto" ng-if="sub.kind=='pipestance'&&sub.state=='complete'&&sub.summary.num_reads>0")
                         td {{sub.display_date}}
                         td.col-fixed {{sub.display_domain}}
                         td.col-fixed {{sub.display_user}}
