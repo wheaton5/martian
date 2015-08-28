@@ -2,5 +2,5 @@
 #
 # marsoc startup script
 #
-marsoc 2>&1 $MARSOC_LOG_PATH/go-`date "+%Y%m%d%H%M"`.log &
+marsoc &>$MARSOC_LOG_PATH/go-`date "+%Y%m%d%H%M"`.log &
 disown
