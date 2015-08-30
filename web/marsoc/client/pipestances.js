@@ -30,6 +30,7 @@
   };
 
   app.controller('PipestancesCtrl', function($scope, $http, $interval) {
+    var prop, _i, _len, _ref;
     $scope.admin = admin;
     $scope.state = state;
     $scope.urlprefix = admin ? '/admin' : '';
@@ -37,17 +38,40 @@
       button: true,
       state: false
     };
+    $scope.props = ['name', 'fcid', 'pipeline', 'psid', 'state'];
     $scope.showbutton = true;
     $scope.name = null;
     $scope.fcid = null;
     $scope.pipeline = null;
     $scope.psid = null;
+    $scope.fpipestances = [];
+    $scope.pipestances = [];
+    $scope.pmax = 50;
+    $scope.pavailable = 3;
+    $scope.pindex = 0;
+    $scope.ptotal = 0;
+    $scope.previousPage = function() {
+      if ($scope.pindex > 0) {
+        return $scope.pindex--;
+      }
+    };
+    $scope.setPage = function(pindex) {
+      if (0 <= pindex && pindex <= $scope.ptotal.length - 1) {
+        return $scope.pindex = pindex;
+      }
+    };
+    $scope.nextPage = function() {
+      if ($scope.pindex < $scope.ptotal.length - 1) {
+        return $scope.pindex++;
+      }
+    };
     $scope.refreshPipestances = function() {
       $http.get('/api/get-pipestances').success(function(data) {
         var fcids, names, p, pipelines, psids, _i, _len, _ref;
         $scope.pipestances = _.sortBy(data, function(p) {
           return [p.fcid, p.pipeline, p.psid, p.state];
         });
+        $scope.filterPipestances();
         names = {};
         fcids = {};
         pipelines = {};
@@ -71,15 +95,38 @@
         return $scope.autoinvoke.button = true;
       });
     };
-    $scope.refreshPipestances();
-    $scope.filterPipestance = function(p) {
-      var prop, _i, _len, _ref;
-      _ref = ['name', 'fcid', 'pipeline', 'psid', 'state'];
+    $scope.filterPipestances = function() {
+      var filter, p, prop, _i, _j, _len, _len1, _ref, _ref1;
+      $scope.fpipestances = [];
+      _ref = $scope.pipestances;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        prop = _ref[_i];
-        if ($scope[prop] && $scope[prop] !== p[prop]) {
-          return false;
+        p = _ref[_i];
+        filter = true;
+        _ref1 = $scope.props;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          prop = _ref1[_j];
+          if ($scope[prop] && $scope[prop] !== p[prop]) {
+            filter = false;
+          }
         }
+        if (filter) {
+          $scope.fpipestances.push(p);
+        }
+      }
+      return $scope.ptotal = _.range(Math.floor(($scope.fpipestances.length + $scope.pmax - 1) / $scope.pmax));
+    };
+    $scope.refreshPipestances();
+    _ref = $scope.props;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      prop = _ref[_i];
+      $scope.$watch(prop, function() {
+        $scope.pindex = 0;
+        return $scope.filterPipestances();
+      });
+    }
+    $scope.filterPage = function(pindex) {
+      if (pindex < $scope.pindex * $scope.pmax || ($scope.pindex + 1) * $scope.pmax <= pindex) {
+        return false;
       }
       return true;
     };

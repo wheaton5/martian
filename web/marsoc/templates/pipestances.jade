@@ -103,7 +103,7 @@ html(ng-app="app")
                         th State
                         th(ng-if="admin") Actions
                 tbody
-                    tr(ng-repeat="p in pipestances" ng-if="filterPipestance(p)")
+                    tr(ng-repeat="p in fpipestances" ng-if="filterPage($index)")
                         td.col-date(style="padding-left: 20px") {{p.name}}
                         td {{p.fcid}}
                         td {{p.pipeline}}
@@ -117,6 +117,19 @@ html(ng-app="app")
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="unfailPipestance(p)") Unfail
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="wipePipestance(p)") Wipe
                             button.btn.btn-default(ng-if="p.state == 'running' && admin && showbutton" ng-click="killPipestance(p)") Kill
+                tfoot
+                    td(colspan="6")
+                        ul.pagination.pull-right
+                            li
+                                a(href ng-class="{disabled: pindex == 0}" ng-click="previousPage()") << Prev
+                            li(ng-if="pindex > pavailable")
+                                a.disabled(href) ...
+                            li(ng-repeat="p in ptotal" ng-if="pindex - pavailable <= p && p <= pindex + pavailable")
+                                a(href ng-class="{active: pindex == $index}" ng-click="setPage($index)") {{$index + 1}}
+                            li(ng-if="pindex < ptotal.length - pavailable")
+                                a.disabled(href) ...
+                            li
+                                a(href ng-class="{disabled: pindex == ptotal.length - 1}" ng-click="nextPage()") Next >>
     script
         | admin = [[.Admin]]
         | state = '[[.State]]';

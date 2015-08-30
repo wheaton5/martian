@@ -27,6 +27,7 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
     $scope.state = state
     $scope.urlprefix = if admin then '/admin' else ''
     $scope.autoinvoke = { button: true, state: false }
+    $scope.props = ['name', 'fcid', 'pipeline', 'psid', 'state']
 
     $scope.showbutton = true
     $scope.name = null
@@ -34,11 +35,31 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
     $scope.pipeline = null
     $scope.psid = null
 
+    $scope.fpipestances = []
+    $scope.pipestances = []
+    $scope.pmax = 50
+    $scope.pavailable = 3
+    $scope.pindex = 0
+    $scope.ptotal = 0
+
+    $scope.previousPage = () ->
+        if $scope.pindex > 0
+            $scope.pindex--
+
+    $scope.setPage = (pindex) ->
+        if 0 <= pindex && pindex <= $scope.ptotal.length - 1
+            $scope.pindex = pindex
+
+    $scope.nextPage = () ->
+        if $scope.pindex < $scope.ptotal.length - 1
+            $scope.pindex++	
+
     $scope.refreshPipestances = () ->
         $http.get('/api/get-pipestances').success((data) ->
             $scope.pipestances = _.sortBy(data, (p) ->
                 [p.fcid, p.pipeline, p.psid, p.state]
             )
+            $scope.filterPipestances()
             names = {}
             fcids = {}
             pipelines = {}
@@ -59,12 +80,28 @@ app.controller('PipestancesCtrl', ($scope, $http, $interval) ->
             $scope.autoinvoke.button = true
         )
 
+    $scope.filterPipestances = () ->
+        $scope.fpipestances = []
+        for p in $scope.pipestances
+            filter = true
+            for prop in $scope.props
+                if $scope[prop] && $scope[prop] != p[prop]
+                    filter = false
+            if filter
+                $scope.fpipestances.push(p)
+         $scope.ptotal = _.range(($scope.fpipestances.length + $scope.pmax - 1) // $scope.pmax)
+
     $scope.refreshPipestances()
 
-    $scope.filterPipestance = (p) ->
-        for prop in ['name', 'fcid', 'pipeline', 'psid', 'state']
-            if $scope[prop] && $scope[prop] != p[prop]
-                return false
+    for prop in $scope.props
+        $scope.$watch(prop, () ->
+            $scope.pindex = 0
+            $scope.filterPipestances()
+        )
+
+    $scope.filterPage = (pindex) ->
+        if pindex < $scope.pindex*$scope.pmax || ($scope.pindex+1)*$scope.pmax <= pindex
+            return false
         return true
 
     $scope.invokePipestance = (p) ->
