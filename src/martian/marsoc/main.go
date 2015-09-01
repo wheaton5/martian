@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -176,6 +177,8 @@ Usage:
     marsoc -h | --help | --version
 
 Options:
+    --maxprocs=<num>     Set number of processes used by MARSOC.
+                           Defaults to 1.
     --jobmode=<name>     Run jobs on custom or local job manager.
                            Valid job managers are local, sge, lsf or .template file
                            Defaults to sge.
@@ -235,6 +238,14 @@ Options:
 	autoInvoke := opts["--autoinvoke"].(bool)
 	debug := opts["--debug"].(bool)
 
+	maxProcs := 1
+	if value := opts["maxprocs"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			maxProcs = value
+			core.LogInfo("options", "--maxprocs=%d", maxProcs)
+		}
+	}
+
 	reqCores := -1
 	if value := opts["--localcores"]; value != nil {
 		if value, err := strconv.Atoi(value.(string)); err == nil {
@@ -286,6 +297,9 @@ Options:
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	stepSecs := 5
+
+	// Setup Go runtime
+	runtime.GOMAXPROCS(maxProcs)
 
 	//=========================================================================
 	// Setup Martian Runtime with pipelines path.

@@ -7,6 +7,7 @@ package manager
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"martian/core"
@@ -49,7 +50,7 @@ func NewArgShim(argshimPath string, envs map[string]string, debug bool) *ArgShim
 
 func (self *ArgShim) readAll() ([]byte, error) {
 	// Block until new line or error
-	line, _, err := self.reader.ReadLine()
+	line, err := self.reader.ReadBytes('\n')
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +64,10 @@ func (self *ArgShim) readAll() ([]byte, error) {
 		}
 		line = append(line, buf...)
 	}
+
+	// Trim new lines from end of string
+	line = bytes.TrimRight(line, "\n")
+
 	return line, nil
 }
 
