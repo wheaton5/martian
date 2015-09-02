@@ -239,7 +239,7 @@ Options:
 	debug := opts["--debug"].(bool)
 
 	maxProcs := 1
-	if value := opts["maxprocs"]; value != nil {
+	if value := opts["--maxprocs"]; value != nil {
 		if value, err := strconv.Atoi(value.(string)); err == nil {
 			maxProcs = value
 			core.LogInfo("options", "--maxprocs=%d", maxProcs)
