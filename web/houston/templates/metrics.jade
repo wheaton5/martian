@@ -1,0 +1,90 @@
+//- 
+    Copyright (c) 2014 10X Genomics, Inc. All rights reserved.
+    
+    Main UI for Houston
+
+doctype html
+html(ng-app="app")
+    head
+        title [[.InstanceName]] / Sequencer Runs
+        link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/marsoc.css")
+        link(rel="stylesheet" href="/css/main.css")
+        script(src="/js/angular.min.js")
+        script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="/js/lodash.min.js")
+        script(src="/js/moment.min.js")
+        script(src="/js/humanize.min.js")
+        style
+            | .right { text-align: right }
+    body(ng-controller="MartianRunCtrl")
+        header.navbar.navbar-fixed-top
+            .navbar-header
+                .navbar-brand
+                    .logo_container
+                        img.logo(src="/images/10X_Logo_Reversed.png")
+                    .navbar-upper [[.InstanceName]]
+                    .navbar-lower
+                        a(href="/") HOME
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="/metrics") METRICS
+                        | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
+                        a(href="http://marsoc.fuzzplex.com/razor") RAZOR
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://marsoc.fuzzplex.com") MARSOC
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://sere.fuzzplex.com") SERE
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://compute2.fuzzplex.com:9090") MRV
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://lena.fuzzplex.com") LENA
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="https://10xtech.atlassian.net/issues/?filter=11200") CUSTOMER BUGS
+        #runs.detail
+            table.table.table-striped#run-table
+                thead
+                    tr(style="cursor: auto")
+                        th Date                        
+                        th Site
+                        th User
+                        th Sample
+                        th.right Reads
+                        th.right Ins
+                        th.right Dupe
+                        th.right DPT
+                        th.right GEMs
+                        th.right bp/GEM
+                        th.right WhBC
+                        th.right BCQ
+                        th.right Mol
+                        th.right LPM
+                        th.right Long
+                        th.right N50
+                        th.right SNPs
+                        th.right Genes
+                        th.right SVs
+                tbody
+                    tr(ng-repeat="sub in subs" style="cursor: auto" ng-if="sub.kind=='pipestance'&&sub.state=='complete'&&sub.summary.num_reads>0")
+                        td {{sub.display_date}}
+                        td.col-fixed {{sub.display_domain}}
+                        td.col-fixed {{sub.display_user}}
+                        td.col-fixed(ng-if="sub.kind=='pipestance'")  
+                            span.minibox(ng-class="sub.state") 
+                                a(href="/pipestance/{{sub.source}}/{{sub.date}}/{{sub.name}}" style="color: #333") {{sub.name}}
+                        td.right {{sub.summary.num_reads/1000000 | intComma}}M
+                        td.right {{sub.summary.median_insert_size}}
+                        td.right {{(sub.summary.mean_dup_rate-1)*100 | formatNumber:2}}%
+                        td.right {{sub.summary.mean_depth_deduped | intComma}}X
+                        td.right {{sub.summary.inferred_number_gems/1000 | intComma}}k
+                        td.right {{sub.summary.mean_bp_per_bc | intComma}}
+                        td.right {{sub.summary.correct_bc_rate*100 | intComma}}%
+                        td.right {{sub.summary.mean_bc_qual | intComma}}
+                        td.right {{sub.summary.n90_lw_mean_fragment_length/1000 | intComma}}k
+                        td.right {{sub.summary.n90_n50_reads_per_fragment | intComma}}
+                        td.right {{sub.summary.longest_phase_block/1000000 | intComma}}Mb
+                        td.right {{sub.summary.N50_phase_block/1000 | intComma}}kb
+                        td.right {{sub.summary.fract_snps_phased*100 | formatNumber:1}}%
+                        td.right {{sub.summary.fract_genes_lt_100kb_phased*100 | formatNumber:1}}%
+                        td.right {{sub.summary.sv_num_calls_Q100}}
+
+    script(src="/houston.js")

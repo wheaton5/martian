@@ -60,7 +60,7 @@
       total = _.reduce(reads, function(sum, read) {
         return sum + read.NumCycles;
       }, 0);
-      return "" + readLens + " (" + total + ")";
+      return readLens + " (" + total + ")";
     };
   }).filter('runDuration', function() {
     return function(run) {
@@ -71,7 +71,7 @@
       }
       dpred = predictedSeconds(run);
       pctg = Math.round(dact / dpred * 100.0);
-      return "" + (dact.hours() + 24 * dact.days()) + "h " + (dact.minutes()) + "m (" + pctg + "%)";
+      return (dact.hours() + 24 * dact.days()) + "h " + (dact.minutes()) + "m (" + pctg + "%)";
     };
   }).filter('runPrediction', function() {
     return function(run) {
@@ -79,7 +79,7 @@
       dact = actualSeconds(run);
       dpred = predictedSeconds(run);
       eta = moment(run.startTime).add(dpred).format("ddd MMM D, h:mm a");
-      return "" + (dpred.hours() + 24 * dpred.days()) + "h " + (dpred.minutes()) + "m (" + eta + ")";
+      return (dpred.hours() + 24 * dpred.days()) + "h " + (dpred.minutes()) + "m (" + eta + ")";
     };
   });
 
@@ -127,14 +127,14 @@
     });
     $scope.refreshRuns = function() {
       $http.get('/api/get-runs').success(function(runs) {
-        var run, _i, _len, _ref;
-        for (_i = 0, _len = runs.length; _i < _len; _i++) {
-          run = runs[_i];
+        var i, len, ref, run;
+        for (i = 0, len = runs.length; i < len; i++) {
+          run = runs[i];
           $scope.runTable[run.fcid].preprocess = run.preprocess;
           $scope.runTable[run.fcid].state = run.state;
         }
         return $http.post('/api/get-samples', {
-          fcid: (_ref = $scope.selrun) != null ? _ref.fcid : void 0
+          fcid: (ref = $scope.selrun) != null ? ref.fcid : void 0
         }).success(function(data) {
           $scope.samples = data;
           return $scope.showbutton = true;
@@ -146,25 +146,25 @@
       });
     };
     $scope.selectRun = function(run) {
-      var r, _i, _len, _ref, _ref1, _ref2;
+      var i, len, r, ref, ref1, ref2;
       $scope.samples = null;
-      _ref = $scope.runs;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        r = _ref[_i];
+      ref = $scope.runs;
+      for (i = 0, len = ref.length; i < len; i++) {
+        r = ref[i];
         r.selected = false;
       }
       $scope.selrun = run;
       $scope.selrun.selected = true;
       $http.post('/api/get-samples', {
-        fcid: (_ref1 = $scope.selrun) != null ? _ref1.fcid : void 0
+        fcid: (ref1 = $scope.selrun) != null ? ref1.fcid : void 0
       }).success(function(data) {
         return $scope.samples = data;
       });
       return $http.post('/api/get-callsrc', {
-        fcid: (_ref2 = $scope.selrun) != null ? _ref2.fcid : void 0
+        fcid: (ref2 = $scope.selrun) != null ? ref2.fcid : void 0
       }).success(function(data) {
-        var _ref2;
-        return (_ref2 = $scope.selrun) != null ? _ref2.callsrc = data : void 0;
+        var ref2;
+        return (ref2 = $scope.selrun) != null ? ref2.callsrc = data : void 0;
       });
     };
     $scope.invokePreprocess = function() {

@@ -4,7 +4,7 @@
 # Build a Go package with git version embedding.
 #
 
-GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere
+GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston
 GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
@@ -33,6 +33,7 @@ web:
 	cd web/marsoc; npm install; gulp; cd $(GOPATH)
 	cd web/kepler; npm install; gulp; cd $(GOPATH)
 	cd web/sere; npm install; gulp; cd $(GOPATH)
+	cd web/houston; npm install; gulp; cd $(GOPATH)
 
 $(GOTESTS): test-%:
 	go test -v martian/$*
@@ -82,6 +83,7 @@ sake-martian-strip:
 	rm -rf web/marsoc
 	rm -rf web/kepler
 	rm -rf web/sere
+	rm -rf web/houston
 
 sake-martian-cs-strip:
 	# Remove mrv template.
