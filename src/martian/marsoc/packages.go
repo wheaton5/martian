@@ -107,6 +107,15 @@ func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag inte
 	return ""
 }
 
+func (self *PackageManager) BuildWebViewForSample(sample *Sample, files map[string]interface{}) interface{} {
+	if p, ok := self.packages[sample.Product]; ok {
+		sampleId := strconv.Itoa(sample.Id)
+		sampleBag := self.lena.GetSampleBagWithId(sampleId)
+		return p.Argshim.BuildWebViewForTest("lena", sampleId, sampleBag, files)
+	}
+	return ""
+}
+
 // Pipestance manager functions
 func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, map[string]string, error) {
 	if pipeline == "BCL_PROCESSOR_PD" {
