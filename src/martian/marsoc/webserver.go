@@ -67,6 +67,10 @@ type PipestanceForm struct {
 	Psid     string
 }
 
+type WebshimForm struct {
+	Files map[string]interface{}
+}
+
 // For a given sample, update the following fields:
 // Pname    The analysis pipeline to be run on it, according to argshim
 // Psstate  Current state of the sample's pipestance, if any
@@ -807,6 +811,17 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 			"sample_bag":      lena.GetSampleBagWithId(sid),
 			"fastq_paths":     updateSampleState(sample, rt, lena, packages, pman),
 		})
+	})
+
+	app.Post("/api/webshim/:sid", binding.Json(WebshimForm{}), func(body WebshimForm, params martini.Params) string {
+		sid := params["sid"]
+		files := body.Files
+		sample := lena.GetSampleWithId(sid)
+		if sample == nil {
+			return fmt.Sprintf("Sample %s not found in Lena.", sid)
+		}
+		view := packages.BuildWebViewForSample(sample, files)
+		return core.MakeJSON(view)
 	})
 
 	//=========================================================================
