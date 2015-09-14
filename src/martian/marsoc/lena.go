@@ -22,10 +22,10 @@ import (
 )
 
 type SequencingRun struct {
-	Name                  string   `json:"name"`
-	Read1_length          int      `json:"read1_length"`
-	Read2_length          int      `json:"read2_length"`
-	Psstate               string   `json:"psstate"`
+	Name         string `json:"name"`
+	Read1_length int    `json:"read1_length"`
+	Read2_length int    `json:"read2_length"`
+	Psstate      string `json:"psstate"`
 }
 
 type User struct {
@@ -35,20 +35,20 @@ type User struct {
 }
 
 type SampleDef struct {
-	Sequencing_run   *SequencingRun `json:"sequencing_run"`
+	Sequencing_run *SequencingRun `json:"sequencing_run"`
 }
 
 type Sample struct {
-	Id                       int          `json:"id"`
-	Description              string       `json:"description"`
-	User                     *User        `json:"user"`
-	Product                  string       `json:"product"`
-	Sample_defs              []*SampleDef `json:"sample_defs"`
-	Pname                    string       `json:"pname"`
-	Pscontainer              string       `json:"pscontainer"`
-	Psstate                  string       `json:"psstate"`
-	Ready_to_invoke          bool         `json:"ready_to_invoke"`
-	Callsrc                  string       `json:"callsrc"`
+	Id              int          `json:"id"`
+	Description     string       `json:"description"`
+	User            *User        `json:"user"`
+	Product         string       `json:"product"`
+	Sample_defs     []*SampleDef `json:"sample_defs"`
+	Pname           string       `json:"pname"`
+	Pscontainer     string       `json:"pscontainer"`
+	Psstate         string       `json:"psstate"`
+	Ready_to_invoke bool         `json:"ready_to_invoke"`
+	Callsrc         string       `json:"callsrc"`
 }
 
 type BySampleId []*Sample
@@ -207,7 +207,7 @@ func (self *Lena) GoDownloadLoop() {
 					ioutil.WriteFile(self.dbPath, data, 0644)
 					//core.LogInfo("lenaapi", "Database ingested and saved to %s.", self.dbPath)
 				} else {
-					core.LogError(err, "lenaapi", "Could not parse JSON from downloaded data.")
+					core.LogError(err, "lenaapi", "Could not parse JSON from downloaded data: %s", string(data))
 				}
 			}
 
