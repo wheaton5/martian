@@ -14,7 +14,7 @@ import (
 )
 
 type PackageManager interface {
-	GetPipestanceEnvironment(string, string, string) (string, string, map[string]string, error)
+	GetPipestanceEnvironment(string, string, string) (string, string, string, map[string]string, error)
 }
 
 type Package struct {
