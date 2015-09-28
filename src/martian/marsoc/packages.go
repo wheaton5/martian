@@ -107,10 +107,10 @@ func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag inte
 	return ""
 }
 
-func (self *PackageManager) BuildWebViewForSample(sample *Sample, sbag interface{}, files map[string]interface{}) interface{} {
+func (self *PackageManager) GetWebshimResponseForSample(sample *Sample, function string, sbag interface{}, files map[string]interface{}) interface{} {
 	if p, ok := self.packages[sample.Product]; ok {
 		sampleId := strconv.Itoa(sample.Id)
-		return p.Argshim.BuildWebViewForTest("lena", sampleId, sbag, files)
+		return p.Argshim.GetWebshimResponseForTest("lena", function, sampleId, sbag, files)
 	}
 	return ""
 }

@@ -68,8 +68,9 @@ type PipestanceForm struct {
 }
 
 type WebshimForm struct {
-	Sample map[string]interface{}
-	Files  map[string]interface{}
+	Sample   map[string]interface{}
+	Files    map[string]interface{}
+	Function string
 }
 
 // For a given sample, update the following fields:
@@ -818,13 +819,14 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		sid := params["sid"]
 		sampleBag := body.Sample
 		files := body.Files
+		function := body.Function
 
 		sample := lena.GetSampleWithId(sid)
 		if sample == nil {
 			return fmt.Sprintf("Sample %s not found in Lena.", sid)
 		}
 
-		view := packages.BuildWebViewForSample(sample, sampleBag, files)
+		view := packages.GetWebshimResponseForSample(sample, function, sampleBag, files)
 		return core.MakeJSON(view)
 	})
 
