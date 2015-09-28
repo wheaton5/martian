@@ -171,11 +171,9 @@ func (self *ArgShim) BuildCallSourceForTest(rt *core.Runtime, category string, i
 }
 
 func (self *ArgShim) GetWebshimResponseForTest(category string, function string, id string, sbag interface{},
-	files interface{}) map[string]interface{} {
+	files interface{}) interface{} {
 	if v, err := self.invoke(function, []interface{}{category, id, sbag, files}); err == nil {
-		if tv, ok := v.(map[string]interface{}); ok {
-			return tv
-		}
+		return v
 	}
 	return map[string]interface{}{}
 }
