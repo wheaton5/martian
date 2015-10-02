@@ -114,6 +114,11 @@ func New4kSeqSequencer(pool *SequencerPool, name string) *Sequencer {
 	return NewSequencer(pool, name, "^(\\d{6})_([\\w-]+)_(\\d+)_[AB]*([A-Z0-9]{9})$")
 }
 
+func NewXTSeqSequencer(pool *SequencerPool, name string) *Sequencer {
+	return NewSequencer(pool, name, "^(\\d{6})_([\\w-]+)_(\\d+)_[AB]*([A-Z0-9]{9})$")
+}
+
+
 // Parse the folder name into info fields and get various file mod times.
 func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, error) {
 	// Parse folder name for basic info.
@@ -358,6 +363,9 @@ func (self *SequencerPool) Add(name string) {
 	} else if strings.HasPrefix(name, "4kseq") {
 		self.seqcers = append(self.seqcers, New4kSeqSequencer(self, name))
 		core.LogInfo("seqpool", "Add HiSeq4000 %s.", name)
+	} else if strings.HasPrefix(name, "xtseq") {
+		self.seqcers = append(self.seqcers, NewXTSeqSequencer(self, name))
+		core.LogInfo("seqpool", "Add HiSeqXTen %s.", name)
 	}
 }
 
