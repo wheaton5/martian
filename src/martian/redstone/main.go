@@ -35,6 +35,30 @@ type AWSResponse struct {
 	Credentials       *Credentials      `json:"Credentials"`
 }
 
+type FileTracker struct {
+	f *os.File
+}
+
+func FTOpen(name string) (*FileTracker, error) {
+	f, err := os.Open(name)
+	return &FileTracker{f: f}, err
+}
+
+func (self *FileTracker) Seek(offset int64, whence int) (int64, error) {
+	fmt.Println("seek", offset, whence)
+	return self.f.Seek(offset, whence)
+}
+
+func (self *FileTracker) Read(p []byte) (int, error) {
+	n, err := self.f.Read(p)
+	fmt.Println("read", n)
+	return n, err
+}
+
+func (self *FileTracker) Close() error {
+	return self.f.Close()
+}
+
 func main() {
 	doc := `Martian Redstone Uploader.
 
@@ -50,7 +74,7 @@ Options:
 
 	fname := opts["<file>"].(string)
 
-	file, err := os.Open(fname)
+	file, err := FTOpen(fname)
 	if err != nil {
 		fmt.Println("Failed opening file", fname, err)
 		return
@@ -84,8 +108,8 @@ Options:
 		awsresp.Credentials.Session_token)
 
 	uploader := s3manager.NewUploader(&s3manager.UploadOptions{
-		PartSize:          5 * 1024 * 1024,
-		Concurrency:       10,
+		PartSize:          0, //5 * 1024 * 1024,
+		Concurrency:       0, //10,
 		LeavePartsOnError: false,
 		S3:                nil,
 	})
