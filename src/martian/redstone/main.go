@@ -17,6 +17,8 @@ import (
 	"martian/core"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 )
 
 type ResponseMetadata struct {
@@ -37,11 +39,12 @@ type AWSResponse struct {
 
 type FileTracker struct {
 	f *os.File
+	m *Monitor
 }
 
-func FTOpen(name string) (*FileTracker, error) {
+func FTOpen(name string, m *Monitor) (*FileTracker, error) {
 	f, err := os.Open(name)
-	return &FileTracker{f: f}, err
+	return &FileTracker{f: f, m: m}, err
 }
 
 func (self *FileTracker) Seek(offset int64, whence int) (int64, error) {
@@ -51,12 +54,31 @@ func (self *FileTracker) Seek(offset int64, whence int) (int64, error) {
 
 func (self *FileTracker) Read(p []byte) (int, error) {
 	n, err := self.f.Read(p)
-	fmt.Println("read", n)
+	self.m.m.Lock()
+	self.m.cursor += int64(n)
+	self.m.m.Unlock()
 	return n, err
 }
 
 func (self *FileTracker) Close() error {
 	return self.f.Close()
+}
+
+type Monitor struct {
+	total  int64
+	cursor int64
+	m      *sync.Mutex
+}
+
+func monitor(m *Monitor) {
+	go func() {
+		for {
+			m.m.Lock()
+			fmt.Println("monitor: ", m.cursor, m.total)
+			m.m.Unlock()
+			time.Sleep(time.Second * time.Duration(5))
+		}
+	}()
 }
 
 func main() {
@@ -74,7 +96,15 @@ Options:
 
 	fname := opts["<file>"].(string)
 
-	file, err := FTOpen(fname)
+	m := &Monitor{
+		total:  0,
+		cursor: 0,
+		m:      &sync.Mutex{},
+	}
+
+	monitor(m)
+
+	file, err := FTOpen(fname, m)
 	if err != nil {
 		fmt.Println("Failed opening file", fname, err)
 		return
