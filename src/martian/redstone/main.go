@@ -18,7 +18,6 @@ import (
 	"github.com/docopt/docopt.go"
 	"github.com/dustin/go-humanize"
 	"io/ioutil"
-	"martian/core"
 	"math"
 	"net/http"
 	"net/url"
@@ -31,6 +30,9 @@ import (
 	"time"
 )
 
+//
+// Structs for parsing AWS STS response JSON
+//
 type ResponseMetadata struct {
 	Request_id string `json:"RequestId"`
 }
@@ -47,6 +49,9 @@ type AWSResponse struct {
 	Credentials       *Credentials      `json:"Credentials"`
 }
 
+//
+// Struct for parsing Miramar's Redstone API response JSON
+//
 type RedstoneResponse struct {
 	Error  string       `json:"error"`
 	Region string       `json:"region"`
@@ -55,6 +60,10 @@ type RedstoneResponse struct {
 	Sts    *AWSResponse `json:"sts"`
 }
 
+//
+// Wrapper for os.File that tracks sequential read calls and outputs
+// a wget-style progress bar to console.
+//
 type InstrumentedFile struct {
 	file   *os.File
 	bcount int64
@@ -169,7 +178,13 @@ func (self *InstrumentedFile) Close() error {
 	return err
 }
 
+//
+// Encryption routines for Miramar's Redstone API
+//
 func decrypt(encodedpayload []byte) []byte {
+	// AES-128 (128 bit/16 byte block size and IV length)
+	// IV is assumed to preceded payload
+	// Ciphertext is assumed to be PKCS padded and base64 encoded
 	key := []byte{0xfe, 0xfa, 0xf0, 0xfc, 0xef, 0xaf, 0x0f, 0xcf, 0xfe, 0xfa, 0xf0, 0xfc, 0xef, 0xaf, 0x0f, 0xcf}
 	algo, _ := aes.NewCipher(key)
 
@@ -196,6 +211,11 @@ func pkcsUnpad(data []byte, blocklen int) []byte {
 	return data[:len(data)-padlen]
 }
 
+//
+// Main routine
+//
+var GET_UPLOAD_INFO_FAIL_MSG = "Could not contact http://software.10xgenomics.com (%s)\n  Please make sure you have Internet connectivity and try again,\n  or contact software@10xgenomics.com for help.\n"
+
 func main() {
 	doc := `Martian Redstone Uploader.
 
@@ -206,44 +226,54 @@ Usage:
 Options:
     -h --help     Show this message.
     --version     Show version.`
-	martianVersion := core.GetVersion()
-	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
-
+	version := "1.1.1"
+	opts, _ := docopt.Parse(doc, nil, true, version, false)
 	email := opts["<your_email>"].(string)
 	fpath := opts["<file>"].(string)
 
+	// Prep runtime values to pass to Miramar.
 	parameters := url.Values{}
 	parameters.Add("email", email)
 	parameters.Add("fname", path.Base(fpath))
+	parameters.Add("version", version)
 	parameters.Encode()
 
-	response, err := http.Get("http://localhost:3000/redstone.json?" + parameters.Encode())
+	// Call Miramar Redstone API.
+	response, err := http.Get("http://software.10xgenomics.com/redstone.json?" + parameters.Encode())
+	defer response.Body.Close()
 	if err != nil {
-		fmt.Println("HTTP GET failed", err)
+		fmt.Printf(GET_UPLOAD_INFO_FAIL_MSG, err)
 		return
 	}
-	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		fmt.Printf(GET_UPLOAD_INFO_FAIL_MSG, response.Status)
+		return
+	}
 
+	// Decrypt and parse response.
 	var rr *RedstoneResponse
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
+		fmt.Printf(GET_UPLOAD_INFO_FAIL_MSG, err)
 		return
 	}
 	if err := json.Unmarshal(decrypt(body), &rr); err != nil {
-		fmt.Println("Could not parse aws response", err)
+		fmt.Printf(GET_UPLOAD_INFO_FAIL_MSG, err)
 		return
 	}
 	if len(rr.Error) > 0 {
-		fmt.Println(rr.Error)
+		fmt.Println("Error: " + rr.Error)
 		return
 	}
 
+	// Set S3 credentials based on Miramar response.
 	defaults.DefaultConfig.Region = aws.String(rr.Region)
 	defaults.DefaultConfig.Credentials = credentials.NewStaticCredentials(
 		rr.Sts.Credentials.Access_key_id,
 		rr.Sts.Credentials.Secret_access_key,
 		rr.Sts.Credentials.Session_token)
 
+	// Create multi-stream uploader with default options.
 	uploader := s3manager.NewUploader(&s3manager.UploadOptions{
 		PartSize:          0,
 		Concurrency:       0,
@@ -251,6 +281,7 @@ Options:
 		S3:                nil,
 	})
 
+	// Open the wrapped file.
 	f, err := InstrumentedOpen(fpath)
 	if err != nil {
 		fmt.Println("Error opening file:\n", err)
@@ -258,14 +289,21 @@ Options:
 	}
 	defer f.Close()
 
+	// Start the progress monitoring.
 	f.StartMonitor()
+
+	// Initiate the multi-stream upload.
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: &rr.Bucket,
 		Key:    &rr.Key,
 		Body:   f,
 	})
+
+	// If the upload died (not due to CTRL-C or kill), then report the error.
 	if err != nil && f.cancel == false {
 		fmt.Println("\n\nUpload failed with error:\n", err)
 	}
+
+	// Give time for the monitor goroutine to report final status.
 	time.Sleep(time.Second * time.Duration(3))
 }
