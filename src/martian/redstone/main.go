@@ -218,14 +218,15 @@ func pkcsUnpad(data []byte, blocklen int) []byte {
 var GET_UPLOAD_INFO_FAIL_MSG = "Could not contact http://software.10xgenomics.com (%s)\n  Please make sure you have Internet connectivity and try again,\n  or contact software@10xgenomics.com for help.\n"
 
 func main() {
-	doc := `Martian Redstone Uploader.
+	doc := `Martian Redstone cloud uploader.
 
 Usage:
     redstone <your_email> <file> [options]
     redstone -h | --help | --version
 
 Options:
-    --concurrency=<num>     Number of concurrent upload streams. 
+    --concurrency=<num>     Number of concurrent upload streams.
+                              Defaults to 10. 
 
     -h --help               Show this message.
     --version               Show version.`
