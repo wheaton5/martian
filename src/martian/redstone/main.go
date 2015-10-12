@@ -170,7 +170,7 @@ func (self *InstrumentedFile) Close() error {
 }
 
 func decrypt(encodedpayload []byte) []byte {
-	key := make([]byte, 16)
+	key := []byte{0xfe, 0xfa, 0xf0, 0xfc, 0xef, 0xaf, 0x0f, 0xcf, 0xfe, 0xfa, 0xf0, 0xfc, 0xef, 0xaf, 0x0f, 0xcf}
 	algo, _ := aes.NewCipher(key)
 
 	payload, _ := base64.StdEncoding.DecodeString(string(encodedpayload))
