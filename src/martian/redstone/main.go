@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -138,7 +139,7 @@ func (self *InstrumentedFile) StartMonitor() {
 
 			// Messages indicating completion or interruption.
 			if pctg == 100 {
-				fmt.Println("\r\nUpload complete!")
+				fmt.Println("\r\nUpload complete! Cleaning up...")
 				break
 			}
 			if self.cancel {
@@ -220,16 +221,26 @@ func main() {
 	doc := `Martian Redstone Uploader.
 
 Usage:
-    redstone <your_email> <file> 
+    redstone <your_email> <file> [options]
     redstone -h | --help | --version
 
 Options:
-    -h --help     Show this message.
-    --version     Show version.`
+    --concurrency=<num>     Number of concurrent upload streams. 
+
+    -h --help               Show this message.
+    --version               Show version.`
 	version := "1.1.1"
 	opts, _ := docopt.Parse(doc, nil, true, version, false)
 	email := opts["<your_email>"].(string)
 	fpath := opts["<file>"].(string)
+	concurrency := 0
+	if value := opts["--concurrency"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			if value > 0 {
+				concurrency = value
+			}
+		}
+	}
 
 	// Prep runtime values to pass to Miramar.
 	parameters := url.Values{}
@@ -276,7 +287,7 @@ Options:
 	// Create multi-stream uploader with default options.
 	uploader := s3manager.NewUploader(&s3manager.UploadOptions{
 		PartSize:          0,
-		Concurrency:       0,
+		Concurrency:       concurrency,
 		LeavePartsOnError: false,
 		S3:                nil,
 	})
