@@ -184,7 +184,7 @@ func (self *InstrumentedFile) Close() error {
 //
 func decrypt(encodedpayload []byte) []byte {
 	// AES-128 (128 bit/16 byte block size and IV length)
-	// IV is assumed to preceded payload
+	// IV is assumed to precede payload
 	// Ciphertext is assumed to be PKCS padded and base64 encoded
 	key := []byte{0xfe, 0xfa, 0xf0, 0xfc, 0xef, 0xaf, 0x0f, 0xcf, 0xfe, 0xfa, 0xf0, 0xfc, 0xef, 0xaf, 0x0f, 0xcf}
 	algo, _ := aes.NewCipher(key)
