@@ -30,7 +30,7 @@
   };
 
   app.controller('PipestancesCtrl', function($scope, $http, $interval) {
-    var i, len, prop, ref;
+    var prop, _i, _len, _ref;
     $scope.admin = admin;
     $scope.state = state;
     $scope.urlprefix = admin ? '/admin' : '';
@@ -67,7 +67,7 @@
     };
     $scope.refreshPipestances = function() {
       $http.get('/api/get-pipestances').success(function(data) {
-        var fcids, i, len, names, p, pipelines, psids, ref;
+        var fcids, names, p, pipelines, psids, _i, _len, _ref;
         $scope.pipestances = _.sortBy(data, function(p) {
           return [p.fcid, p.pipeline, p.psid, p.state];
         });
@@ -76,9 +76,9 @@
         fcids = {};
         pipelines = {};
         psids = {};
-        ref = $scope.pipestances;
-        for (i = 0, len = ref.length; i < len; i++) {
-          p = ref[i];
+        _ref = $scope.pipestances;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          p = _ref[_i];
           names[p.name] = true;
           fcids[p.fcid] = true;
           pipelines[p.pipeline] = true;
@@ -96,15 +96,15 @@
       });
     };
     $scope.filterPipestances = function() {
-      var filter, i, j, len, len1, p, prop, ref, ref1;
+      var filter, p, prop, _i, _j, _len, _len1, _ref, _ref1;
       $scope.fpipestances = [];
-      ref = $scope.pipestances;
-      for (i = 0, len = ref.length; i < len; i++) {
-        p = ref[i];
+      _ref = $scope.pipestances;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        p = _ref[_i];
         filter = true;
-        ref1 = $scope.props;
-        for (j = 0, len1 = ref1.length; j < len1; j++) {
-          prop = ref1[j];
+        _ref1 = $scope.props;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          prop = _ref1[_j];
           if ($scope[prop] && $scope[prop] !== p[prop]) {
             filter = false;
           }
@@ -116,9 +116,9 @@
       return $scope.ptotal = _.range(Math.floor(($scope.fpipestances.length + $scope.pmax - 1) / $scope.pmax));
     };
     $scope.refreshPipestances();
-    ref = $scope.props;
-    for (i = 0, len = ref.length; i < len; i++) {
-      prop = ref[i];
+    _ref = $scope.props;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      prop = _ref[_i];
       $scope.$watch(prop, function() {
         $scope.pindex = 0;
         return $scope.filterPipestances();

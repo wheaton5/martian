@@ -1,0 +1,142 @@
+//- 
+    Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+    
+    Main UI for Martian Redstone
+
+doctype html
+html(ng-app="app" ng-cloak)
+    head
+        title [[.InstanceName]] / Razor
+        link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/marsoc.css")
+        link(rel="stylesheet" href="/css/main.css")
+        script(src="/js/angular.min.js")
+        script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="/js/lodash.min.js")
+        script(src="/js/moment.min.js")
+        style
+            | #add-sample-tab {
+            |   border-top: 0px;
+            |   border-radius: 0px 0px 10px 10px;
+            |   padding: 5px 20px;
+            |   outline: none;
+            |   background: #eee;
+            |   border-color: #ccc;
+            | }
+            | #sample-table tr:first-child td {
+            |   padding-top: 15px;
+            | }
+            | #sample-table td {
+            |   padding-top: 5px;
+            |   padding-bottom: 5px;
+            |   border: 0px;
+            | }
+            | #sample-table tr:last-child td {
+            |   padding-top: 10px;
+            |   border-top: 1px solid #ccc;
+            | }
+            | .btn-default.active {
+            |   color: #fff;
+            |   background-color: #007dc3;
+            |   border-color: #005da3;
+            | }
+    body(ng-controller="RedstoneCtrl")
+        header.navbar.navbar-fixed-top
+            .navbar-header
+                .navbar-brand
+                    .logo_container
+                        img.logo(src="/images/10X_Logo_Reversed.png")
+                    .navbar-upper(ng-class="{admin: admin}") Razor Cluster Status
+                        span(ng-if="admin")
+                            | &nbsp;(
+                            a.admin-exit(href="/") exit admin mode
+                            | )
+                    .navbar-lower
+                        a(ng-if="admin" href="/admin") HOME
+                        a(ng-if="!admin" href="/") HOME
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(ng-if="admin" href="/admin/metasamples") METASAMPLES
+                        a(ng-if="!admin" href="/metasamples") METASAMPLES
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(ng-if="admin" href="/admin/pipestances") PIPESTANCES
+                        a(ng-if="!admin" href="/pipestances") PIPESTANCES
+                        | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
+                        a(href="/razor") RAZOR
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="/") MARSOC
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://sere.fuzzplex.com") SERE
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://compute2.fuzzplex.com:9090") MRV
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://lena.fuzzplex.com") LENA
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="https://10xtech.atlassian.net/issues/?filter=11200") CUSTOMER BUGS
+        div(style="padding-top: 110px")
+            .row
+                .col-sm-8(style="width: 55%")
+                    form
+                        table#sample-table.table.table-hover
+                            thead
+                                tr
+                                    th #
+                                    th LENA ID
+                                    th Version
+                                    th Published Name
+                                    th Output Files
+                                    th
+                            tbody
+                                tr(ng-repeat="sample in samples")
+                                    td.form-group
+                                        span(style="vertical-align: middle")
+                                            b {{$index+1}}
+                                    td.form-group.col-sm-1(style="width: 100px")
+                                        input.form-control(type="text"
+                                            ng-model="sample.lenaid" required)
+                                    td.form-group.col-sm-1(style="width: 125px")
+                                        input.form-control(type="text"
+                                            ng-model="sample.version" required)
+                                    td.form-group.col-sm-3
+                                        input.form-control(type="text"
+                                            ng-model="sample.name" required)
+                                    td.form-group
+                                        .btn-group.btn-group-sm(style="margin-top: 2px")
+                                            button.btn.btn-default(type="button" btn-checkbox
+                                                ng-model="sample.files[f]"
+                                                ng-repeat="f in FILES") {{ FILELABELS[f] }}
+                                    td.form-group
+                                        button.close(type="button"
+                                            ng-click="samples.splice($index, 1)") &times;
+                                tr
+                                    td(colspan="6" style="height: 0px")
+                                tr
+                                    td.form-group(colspan="6" align="center" style="border-top: 1px solid #ccc; padding-top: 0px; background: none !important")
+                                        button#add-sample-tab.btn.btn-default.btn-md(type="button"
+                                            ng-click="addSample()")
+                                            | &nbsp;Add Sample&nbsp;
+                                            br
+                                            span.glyphicon.glyphicon-plus-sign(style="opacity: 0.75")
+                .col-sm-5(style="margin-top: 8px")
+                    form.form-horizontal
+                        .form-group
+                            label.control-label.col-sm-3 LENA User
+                            .col-sm-4
+                                input.form-control(type="text" ng-model="from" required)
+                        .form-group
+                            label.control-label.col-sm-3 Recipient Email
+                            .col-sm-6
+                                input.form-control(type="text" ng-model="to" required)
+                        .form-group
+                            label.control-label.col-sm-3 Description
+                            .col-sm-9
+                                input.form-control(type="text" ng-model="desc" required)
+                        .form-group
+                            label.control-label.col-sm-3 Days to Live
+                            .col-sm-2
+                                input.form-control(type="text" ng-model="dtl" integer required)
+                        .form-group
+                            label.control-label.col-sm-3
+                            .col-sm-4
+                                button.btn.btn-default(type="button" ng-click="validate()") Validate
+                        pre {{ output }}
+    script(src="/redstone.js")

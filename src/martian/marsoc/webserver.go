@@ -800,6 +800,21 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	})
 
 	//=========================================================================
+	// Redstone API
+	//=========================================================================
+	// Render: main qstat UI.
+	app.Get("/redstone", func() string {
+		return core.Render("web/marsoc/templates", "redstone.html",
+			&MainPage{
+				InstanceName:     instanceName,
+				Admin:            false,
+				MarsocVersion:    martianVersion,
+				PipelinesVersion: packages.GetMroVersion(),
+				PipestanceCount:  pman.CountRunningPipestances(),
+			})
+	})
+
+	//=========================================================================
 	// Shimulator API.
 	//=========================================================================
 	app.Get("/api/shimulate/:sid", func(p martini.Params) string {
