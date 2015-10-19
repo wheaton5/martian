@@ -93,6 +93,7 @@ app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
         desc = desc.replace(///\s+///g, '_')
         desc = desc.replace(///[^\d\w]+///g, '')
         request = {
+            date:       moment().format(),
             from:       $scope.redstone.from,
             to:         $scope.redstone.to,
             desc:       desc,
