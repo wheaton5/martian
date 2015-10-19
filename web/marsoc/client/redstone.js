@@ -55,6 +55,7 @@
         }
       }
       return {
+        container: data.container,
         lenaid: data.bag.id,
         versions: data.versions.reverse(),
         version: 'HEAD',
@@ -94,7 +95,7 @@
             sfiles.push(f);
           }
         }
-        reqsamps.push([s.lenaid, s.version, s.name, sfiles.join('|')].join(','));
+        reqsamps.push([s.lenaid, s.container, s.version, s.name, sfiles.join('|')].join(','));
       }
       $scope.redstone.totalsize = Humanize.fileSize(totalsize);
       $scope.redstone.totalcost = '$' + Humanize.formatNumber(totalcost, 2);

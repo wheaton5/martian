@@ -74,8 +74,9 @@ type WebshimForm struct {
 }
 
 type RedstoneFile struct {
-	Path string `json:"path"`
-	Size int64  `json:"size"`
+	Container string `json:"container"`
+	Path      string `json:"path"`
+	Size      int64  `json:"size"`
 }
 
 type RedstoneForm struct {
@@ -847,10 +848,11 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				}
 			}
 			return core.MakeJSON(map[string]interface{}{
-				"versions": vers,
-				"bag":      bag,
-				"path":     p,
-				"fileinfo": fileinfo,
+				"container": sample.Pscontainer,
+				"versions":  vers,
+				"bag":       bag,
+				"path":      p,
+				"fileinfo":  fileinfo,
 			})
 		} else {
 			return fmt.Sprintf("Sample %s not found in Lena.", sid)
