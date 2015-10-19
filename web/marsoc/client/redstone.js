@@ -31,6 +31,8 @@
       to: '',
       desc: '',
       dtl: 14,
+      cost_est: 0,
+      size_est: 0,
       audience: 10,
       samples: []
     };
@@ -94,14 +96,16 @@
         }
         reqsamps.push([s.lenaid, s.version, s.name, sfiles.join('|')].join(','));
       }
-      $scope.totalcost = Humanize.formatNumber(totalcost, 2);
-      $scope.totalsize = Humanize.fileSize(totalsize);
+      $scope.redstone.totalsize = Humanize.fileSize(totalsize);
+      $scope.redstone.totalcost = '$' + Humanize.formatNumber(totalcost, 2);
       request = {
         from: $scope.redstone.from,
         to: $scope.redstone.to,
         desc: $scope.redstone.desc,
         dtl: $scope.redstone.dtl,
         audience: $scope.redstone.audience,
+        totalsize: $scope.redstone.totalsize,
+        totalcost: $scope.redstone.totalcost,
         samples: reqsamps
       };
       return $scope.output = angular.toJson(request, 4);

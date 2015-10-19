@@ -98,8 +98,8 @@ html(ng-app="app" ng-cloak)
                             .col-sm-2
                                 input.form-control(type="text" ng-model="redstone.audience" integer ng-change="validate()")
                 .col-sm-6
-                    | Copy and paste the JSON data below into an email.
-                    pre {{ output }}
+                    | Copy and paste the JSON data below into an email:
+                    pre(style="font-size: 6px") {{ output }}
             .row
                 .col-sm-12
                     form
@@ -118,9 +118,9 @@ html(ng-app="app" ng-cloak)
                                 tr
                                     td(colspan="5" style="height: 55px")
                                     td 
-                                        b {{ totalsize }}
+                                        b {{ redstone.totalsize }}
                                     td 
-                                        b ${{ totalcost }}
+                                        b {{ redstone.totalcost }}
                                     td
                                 tr(ng-repeat="sample in redstone.samples")
                                     td.form-group
