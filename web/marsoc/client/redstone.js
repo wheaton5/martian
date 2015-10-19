@@ -67,7 +67,7 @@
       };
     };
     $scope.validate = function() {
-      var download_cost, f, gb, reqsamps, request, s, samps, sfiles, storage_cost, totalcost, totalsize, _i, _j, _k, _len, _len1, _len2;
+      var desc, download_cost, f, gb, reqsamps, request, s, samps, sfiles, storage_cost, totalcost, totalsize, _i, _j, _k, _len, _len1, _len2;
       reqsamps = [];
       samps = $scope.redstone.samples;
       totalsize = 0.0;
@@ -99,10 +99,13 @@
       }
       $scope.redstone.totalsize = Humanize.fileSize(totalsize);
       $scope.redstone.totalcost = '$' + Humanize.formatNumber(totalcost, 2);
+      desc = $scope.redstone.desc;
+      desc = desc.replace(/\s+/g, '_');
+      desc = desc.replace(/[^\d\w]+/g, '');
       request = {
         from: $scope.redstone.from,
         to: $scope.redstone.to,
-        desc: $scope.redstone.desc,
+        desc: desc,
         dtl: $scope.redstone.dtl,
         audience: $scope.redstone.audience,
         totalsize: $scope.redstone.totalsize,

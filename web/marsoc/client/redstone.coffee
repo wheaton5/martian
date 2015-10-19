@@ -89,10 +89,13 @@ app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
             reqsamps.push([ s.lenaid, s.container, s.version, s.name, sfiles.join('|') ].join(','))
         $scope.redstone.totalsize = Humanize.fileSize(totalsize)
         $scope.redstone.totalcost = '$' + Humanize.formatNumber(totalcost, 2)
+        desc = $scope.redstone.desc
+        desc = desc.replace(///\s+///g, '_')
+        desc = desc.replace(///[^\d\w]+///g, '')
         request = {
             from:       $scope.redstone.from,
             to:         $scope.redstone.to,
-            desc:       $scope.redstone.desc,
+            desc:       desc,
             dtl:        $scope.redstone.dtl,
             audience:   $scope.redstone.audience,
             totalsize:  $scope.redstone.totalsize,
