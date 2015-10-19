@@ -113,6 +113,10 @@ app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
             $scope.validate()
         )
         $scope.newid = '' + (parseInt($scope.newid) + 1)
+
+    $scope.close = (i) ->
+        $scope.redstone.samples.splice(i, 1)
+        $scope.validate()
 )
 
 # Form validation for integers. 

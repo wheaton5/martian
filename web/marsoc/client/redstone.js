@@ -106,7 +106,7 @@
       };
       return $scope.output = angular.toJson(request, 4);
     };
-    return $scope.addSample = function() {
+    $scope.addSample = function() {
       var params;
       params = {
         sid: $scope.newid,
@@ -126,6 +126,10 @@
         return $scope.validate();
       });
       return $scope.newid = '' + (parseInt($scope.newid) + 1);
+    };
+    return $scope.close = function(i) {
+      $scope.redstone.samples.splice(i, 1);
+      return $scope.validate();
     };
   });
 
