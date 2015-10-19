@@ -73,6 +73,16 @@ type WebshimForm struct {
 	Function string
 }
 
+type RedstoneFile struct {
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+}
+
+type RedstoneForm struct {
+	Sid    string            `json:"sid"`
+	Fpaths map[string]string `json:"fpaths"`
+}
+
 // For a given sample, update the following fields:
 // Pname    The analysis pipeline to be run on it, according to argshim
 // Psstate  Current state of the sample's pipestance, if any
@@ -812,6 +822,39 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
+	})
+	app.Post("/api/redstone", binding.Json(RedstoneForm{}), func(req RedstoneForm, params martini.Params) string {
+		sid := req.Sid
+		if bag := lena.GetSampleBagWithId(sid); bag != nil {
+			sample := lena.GetSampleWithId(sid)
+			p, vers := pman.EnumerateVersions(sample.Pscontainer, "PHASER_SVCALLER_PD", sid)
+			fileinfo := map[string]*RedstoneFile{}
+			for ftype, fpath := range req.Fpaths {
+				fullpath := path.Join(p, "HEAD", fpath)
+				var size int64
+				size = -1
+				if f, err := os.Open(fullpath); err == nil {
+					defer f.Close()
+					if stat, err := f.Stat(); err != nil {
+						continue
+					} else {
+						size = stat.Size()
+					}
+				}
+				fileinfo[ftype] = &RedstoneFile{
+					Path: fullpath,
+					Size: size,
+				}
+			}
+			return core.MakeJSON(map[string]interface{}{
+				"versions": vers,
+				"bag":      bag,
+				"path":     p,
+				"fileinfo": fileinfo,
+			})
+		} else {
+			return fmt.Sprintf("Sample %s not found in Lena.", sid)
+		}
 	})
 
 	//=========================================================================

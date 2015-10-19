@@ -22,7 +22,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
+	
 	"github.com/dustin/go-humanize"
 )
 
@@ -417,6 +417,16 @@ func (self *PipestanceManager) goCleanLoop() {
 
 func (self *PipestanceManager) makePipestancePath(container string, pipeline string, psid string) string {
 	return path.Join(self.aggregatePath, container, pipeline, psid, "HEAD")
+}
+
+func (self *PipestanceManager) EnumerateVersions(container string, pipeline string, psid string) (string, []string) {
+	p := path.Join(/*self.aggregatePath*/"/mnt/analysis/marsoc/pipestances", container, pipeline, psid)
+	var vers []string
+	files, _ := ioutil.ReadDir(p)
+	for _, f := range files {
+		vers = append(vers, f.Name())
+	}
+	return p, vers
 }
 
 func (self *PipestanceManager) copyPipestance(pkey string) {
