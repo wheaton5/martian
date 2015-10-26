@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"martian/core"
 	"martian/manager"
 	"net/http"
@@ -74,14 +75,18 @@ type WebshimForm struct {
 }
 
 type RedstoneFile struct {
-	Container string `json:"container"`
-	Path      string `json:"path"`
-	Size      int64  `json:"size"`
+	Path    string `json:"path"`
+	Size    int64  `json:"size"`
+	Include bool   `json:"include"`
 }
 
 type RedstoneForm struct {
-	Sid    string            `json:"sid"`
-	Fpaths map[string]string `json:"fpaths"`
+	Source string            `json:"source"`
+	Type   string            `json:"type"`
+	Id     string            `json:"id"`
+	Idtype string            `json:"idtype"`
+	Pname  string            `json:"pname"`
+	Paths  map[string]string `json:"paths"`
 }
 
 // For a given sample, update the following fields:
@@ -244,7 +249,7 @@ func callPreprocessAPI(body FcidForm, pipestanceFunc manager.PipestanceFunc) str
 
 func runWebServer(uiport string, instanceName string, martianVersion string, rt *core.Runtime,
 	pool *SequencerPool, pman *manager.PipestanceManager, lena *Lena,
-	packages *PackageManager, sge *SGE, info map[string]string) {
+	packages *PackageManager, sge *SGE, info map[string]string, redstoneConfigPath string) {
 
 	//=========================================================================
 	// Configure server.
@@ -824,16 +829,41 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				PipestanceCount:  pman.CountRunningPipestances(),
 			})
 	})
-	app.Post("/api/redstone", binding.Json(RedstoneForm{}), func(req RedstoneForm, params martini.Params) string {
-		sid := req.Sid
-		if bag := lena.GetSampleBagWithId(sid); bag != nil {
-			sample := lena.GetSampleWithId(sid)
-			p, vers := pman.EnumerateVersions(sample.Pscontainer, "PHASER_SVCALLER_PD", sid)
-			fileinfo := map[string]*RedstoneFile{}
-			for ftype, fpath := range req.Fpaths {
-				fullpath := path.Join(p, "HEAD", fpath)
+	app.Get("/api/redstone/config", func(params martini.Params) string {
+		if b, err := ioutil.ReadFile(redstoneConfigPath); err != nil {
+			return redstoneConfigPath + err.Error()
+		} else {
+			return string(b)
+		}
+	})
+	app.Post("/api/redstone/validate", binding.Json(RedstoneForm{}), func(req RedstoneForm, params martini.Params) string {
+		sid := req.Id
+
+		// Assume the id is an absolute path
+		p := sid
+		vers := []string{}
+		var bag interface{}
+		bag = map[string]string{}
+		container := ""
+		fileinfo := map[string]*RedstoneFile{}
+
+		if req.Type == "pipestance" {
+			// If it is a LENA id, build path and get versions
+			if req.Idtype == "lena" {
+				bag = lena.GetSampleBagWithId(sid)
+				if bag == nil {
+					return fmt.Sprintf("Sample %s not found in Lena.", sid)
+				}
+				container = lena.GetSampleWithId(sid).Pscontainer
+				p, vers = pman.EnumerateVersions(container, req.Pname, sid)
+				p = path.Join(p, "HEAD")
+			}
+
+			// Generate full paths to pipestance files
+			for ftype, fpath := range req.Paths {
+				fullpath := path.Join(p, fpath)
 				var size int64
-				size = -1
+				size = 0
 				if f, err := os.Open(fullpath); err == nil {
 					defer f.Close()
 					if stat, err := f.Stat(); err != nil {
@@ -843,20 +873,45 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 					}
 				}
 				fileinfo[ftype] = &RedstoneFile{
-					Path: fullpath,
-					Size: size,
+					Path:    fullpath,
+					Size:    size,
+					Include: false,
 				}
 			}
-			return core.MakeJSON(map[string]interface{}{
-				"container": sample.Pscontainer,
-				"versions":  vers,
-				"bag":       bag,
-				"path":      p,
-				"fileinfo":  fileinfo,
-			})
-		} else {
-			return fmt.Sprintf("Sample %s not found in Lena.", sid)
+
+		} else if req.Type == "folder" {
+			// Iterate through files in the folder
+			files, _ := ioutil.ReadDir(p)
+			for _, f := range files {
+				fullpath := path.Join(p, f.Name())
+				var size int64
+				size = 0
+				if f, err := os.Open(fullpath); err == nil {
+					defer f.Close()
+					if stat, err := f.Stat(); err != nil {
+						continue
+					} else {
+						size = stat.Size()
+					}
+				}
+				fileinfo[f.Name()] = &RedstoneFile{
+					Path:    fullpath,
+					Size:    size,
+					Include: true,
+				}
+			}
 		}
+
+		return core.MakeJSON(map[string]interface{}{
+			"source":    req.Source,
+			"id":        req.Id,
+			"idtype":    req.Idtype,
+			"container": container,
+			"versions":  vers,
+			"bag":       bag,
+			"path":      p,
+			"fileinfo":  fileinfo,
+		})
 	})
 
 	//=========================================================================

@@ -6,7 +6,7 @@
 doctype html
 html(ng-app="app" ng-cloak)
     head
-        title [[.InstanceName]] / Redstone
+        title [[.InstanceName]] / Redstone Outbound
         link(rel="stylesheet" href="/css/bootstrap.min.css")
         link(rel="stylesheet" href="/css/marsoc.css")
         link(rel="stylesheet" href="/css/main.css")
@@ -47,7 +47,7 @@ html(ng-app="app" ng-cloak)
                 .navbar-brand
                     .logo_container
                         img.logo(src="/images/10X_Logo_Reversed.png")
-                    .navbar-upper(ng-class="{admin: admin}") Redstone
+                    .navbar-upper(ng-class="{admin: admin}") Redstone Outbound
                         span(ng-if="admin")
                             | &nbsp;(
                             a.admin-exit(href="/") exit admin mode
@@ -92,14 +92,14 @@ html(ng-app="app" ng-cloak)
                         .form-group
                             label.control-label.col-sm-3 Days to Live
                             .col-sm-2
-                                input.form-control(type="text" ng-model="redstone.dtl" integer ng-change="validate()")
+                                input.form-control(type="text" ng-model="redstone.dtl" integer ng-change="validate()" readonly)
                         .form-group
-                            label.control-label.col-sm-3 Audience
+                            label.control-label.col-sm-3 Max Downloads
                             .col-sm-2
-                                input.form-control(type="text" ng-model="redstone.audience" integer ng-change="validate()")
+                                input.form-control(type="text" ng-model="redstone.dlmax" integer ng-change="validate()" readonly)
                 .col-sm-6
                     | Copy and paste the JSON data below into an email:
-                    pre(style="font-size: 6px") {{ output }}
+                    pre(style="font-size: 8px") {{ output }}
             .row
                 .col-sm-12
                     form
@@ -107,49 +107,50 @@ html(ng-app="app" ng-cloak)
                             thead
                                 tr
                                     th #
-                                    th LENA ID
+                                    th ID
                                     th Version
                                     th Published Name
                                     th Files
-                                    th Size
-                                    th Cost
+                                    th(style="text-align: right") Size
+                                    th(style="text-align: right") Cost
                                     th
                             tbody
-                                tr
-                                    td(colspan="5" style="height: 55px")
-                                    td 
-                                        b {{ redstone.totalsize }}
-                                    td 
-                                        b {{ redstone.totalcost }}
-                                    td
-                                tr(ng-repeat="sample in redstone.samples")
+                                tr(ng-repeat="s in redstone.samples")
                                     td.form-group
                                         span(style="vertical-align: middle")
                                             b {{$index+1}}
-                                    td.form-group.col-sm-1(style="width: 100px")
-                                        a(target="_blank" href="https://lena.fuzzplex.com/seq_results/sample/{{sample.lenaid}}/trim/10/") {{ sample.lenaid }}
-                                    td.form-group.col-sm-1(style="width: 125px")
-                                        select.form-control(ng-model="sample.version" ng-change="validate()")
-                                            option(ng-repeat="v in sample.versions") {{ v }}
+                                    td.form-group.col-sm-1(ng-if="s.idtype=='lena'" style="width: 100px")
+                                        a(target="_blank" href="https://lena.fuzzplex.com/seq_results/sample/{{s.id}}/trim/10/") {{ s.id }}
+                                    td.form-group.col-sm-1(ng-if="s.idtype=='lena'" style="width: 125px")
+                                        select.form-control(ng-model="s.version" ng-change="validate()")
+                                            option(ng-repeat="v in s.versions") {{ v }}
+                                    td.form-group.col-sm-2(colspan="2" ng-if="s.idtype=='path'" style="width: 225px") {{ s.id|limitTo:30 }}...
                                     td.form-group.col-sm-2
-                                        input.form-control(type="text" ng-model="sample.name" ng-change="validate()")
+                                        input.form-control(type="text" ng-model="s.name" ng-change="validate()")
                                     td.form-group.col-sm-5
-                                        .btn-group.btn-group-sm(style="margin-top: 2px")
+                                        .btn-group.btn-group-sm(ng-if="s.sourcename!='folder'" style="margin-top: 2px")
                                             button.btn.btn-default(type="button" btn-checkbox
                                                 ng-change="validate()"
-                                                ng-model="sample.files[f].include"
-                                                ng-repeat="f in FILES") {{ FILELABELS[f] }}
-                                    td {{ sample.hsize }} 
-                                    td ${{ sample.cost }}
+                                                ng-model="s.files[f].include"
+                                                ng-repeat="f in s.source.order") {{ s.source.labels[f] }}
+                                    td(style="text-align: right") {{ s.hsize }} 
+                                    td(style="text-align: right") ${{ s.cost }}
                                     td.form-group
                                         button.close(type="button" ng-click="close($index)") &times;
                                 tr
-                                    td(colspan="8" style="height: 0px")
+                                    td(colspan="8" style="height: 10px")
                                 tr
-                                    td.form-group(colspan="8" align="center" style="border-top: 1px solid #ccc; padding-top: 0px; background: none !important")
-                                        #add-sample-tab(style="width: 275px; height: 50px")
-                                            input.form-control(type="text" ng-model="newid" required style="margin-right: 10px; width: 100px; display: inline-block")
+                                    td.form-group(colspan="5" align="center" style="border-top: 1px solid #ccc; padding-top: 0px; background: none !important")
+                                        #add-sample-tab(style="width: 750px; height: 50px")
+                                            select.form-control(ng-model="addsource" style="width: 100px; display: inline-block; margin-right: 10px")
+                                                option(ng-repeat="k in CFG.sourcekeys") {{ k }}
+                                            input.form-control(type="text" ng-model="addid" required placeholder="lena id or path" style="margin-right: 10px; width: 500px; display: inline-block")
                                             button.btn.btn-default.btn-md(type="button" ng-click="addSample()")
                                                 span.glyphicon.glyphicon-plus-sign(style="opacity: 0.75")
-                                                | &nbsp;Add Sample&nbsp;
+                                                | &nbsp;Add&nbsp;
+                                    td(style="text-align: right; background: none !important")
+                                        b {{ redstone.totalsize }}
+                                    td(style="text-align: right; background: none !important")
+                                        b {{ redstone.totalcost }}
+                                    td(style="text-align: right; background: none !important")
     script(src="/redstone.js")

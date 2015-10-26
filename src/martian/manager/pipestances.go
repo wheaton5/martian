@@ -22,7 +22,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	
+
 	"github.com/dustin/go-humanize"
 )
 
@@ -420,11 +420,13 @@ func (self *PipestanceManager) makePipestancePath(container string, pipeline str
 }
 
 func (self *PipestanceManager) EnumerateVersions(container string, pipeline string, psid string) (string, []string) {
-	p := path.Join(/*self.aggregatePath*/"/mnt/analysis/marsoc/pipestances", container, pipeline, psid)
+	p := path.Join( /*self.aggregatePath*/ "/mnt/analysis/marsoc/pipestances", container, pipeline, psid)
 	var vers []string
 	files, _ := ioutil.ReadDir(p)
 	for _, f := range files {
-		vers = append(vers, f.Name())
+		if f.Name() != "HEAD" {
+			vers = append(vers, f.Name())
+		}
 	}
 	return p, vers
 }

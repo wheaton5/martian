@@ -223,6 +223,7 @@ Options:
 		{"MARSOC_EMAIL_HOST", "smtp.server.local"},
 		{"MARSOC_EMAIL_SENDER", "email@address.com"},
 		{"MARSOC_EMAIL_RECIPIENT", "email@address.com"},
+		{"MARSOC_REDSTONE_CONFIG", "path/to/redstone/config"},
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
@@ -296,6 +297,7 @@ Options:
 	emailHost := env["MARSOC_EMAIL_HOST"]
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
+	redstoneConfigPath := env["MARSOC_REDSTONE_CONFIG"]
 	stepSecs := 5
 
 	// Setup Go runtime
@@ -402,7 +404,7 @@ Options:
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	runWebServer(uiport, instanceName, martianVersion, rt, pool, pman, lena, packages, sge, info)
+	runWebServer(uiport, instanceName, martianVersion, rt, pool, pman, lena, packages, sge, info, redstoneConfigPath)
 
 	// Let daemons take over.
 	done := make(chan bool)
