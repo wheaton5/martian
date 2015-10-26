@@ -80,23 +80,23 @@ html(ng-app="app" ng-cloak)
                         .form-group
                             label.control-label.col-sm-3 LENA User
                             .col-sm-4
-                                input.form-control(type="text" ng-model="redstone.from" ng-change="validate()")
+                                input.form-control(type="text" ng-model="redstone.from" ng-change="refresh()")
                         .form-group
                             label.control-label.col-sm-3 Recipient Email
                             .col-sm-6
-                                input.form-control(type="text" ng-model="redstone.to" ng-change="validate()")
+                                input.form-control(type="text" ng-model="redstone.to" ng-change="refresh()")
                         .form-group
                             label.control-label.col-sm-3 Description
                             .col-sm-9
-                                input.form-control(type="text" ng-model="redstone.desc" ng-change="validate()")
+                                input.form-control(type="text" ng-model="redstone.desc" ng-change="refresh()")
                         .form-group
                             label.control-label.col-sm-3 Days to Live
                             .col-sm-2
-                                input.form-control(type="text" ng-model="redstone.dtl" integer ng-change="validate()" readonly)
+                                input.form-control(type="text" ng-model="redstone.dtl" integer ng-change="refresh()" readonly)
                         .form-group
                             label.control-label.col-sm-3 Max Downloads
                             .col-sm-2
-                                input.form-control(type="text" ng-model="redstone.dlmax" integer ng-change="validate()" readonly)
+                                input.form-control(type="text" ng-model="redstone.dlmax" integer ng-change="refresh()" readonly)
                 .col-sm-6
                     | Copy and paste the JSON data below into an email:
                     pre(style="font-size: 8px") {{ output }}
@@ -115,26 +115,28 @@ html(ng-app="app" ng-cloak)
                                     th(style="text-align: right") Cost
                                     th
                             tbody
-                                tr(ng-repeat="s in redstone.samples")
+                                tr(ng-repeat="b in redstone.bundles")
                                     td.form-group
                                         span(style="vertical-align: middle")
                                             b {{$index+1}}
-                                    td.form-group.col-sm-1(ng-if="s.idtype=='lena'" style="width: 100px")
-                                        a(target="_blank" href="https://lena.fuzzplex.com/seq_results/sample/{{s.id}}/trim/10/") {{ s.id }}
-                                    td.form-group.col-sm-1(ng-if="s.idtype=='lena'" style="width: 125px")
-                                        select.form-control(ng-model="s.version" ng-change="validate()")
-                                            option(ng-repeat="v in s.versions") {{ v }}
-                                    td.form-group.col-sm-2(colspan="2" ng-if="s.idtype=='path'" style="width: 225px") {{ s.id|limitTo:30 }}...
+                                    td.form-group.col-sm-1(ng-if="b.itype=='lena'" style="width: 100px")
+                                        a(target="_blank" href="https://lena.fuzzplex.com/seq_results/sample/{{b.id}}/trim/10/") {{ b.id }}
+                                    td.form-group.col-sm-1(ng-if="b.itype=='lena'" style="width: 125px")
+                                        select.form-control(ng-model="b.version" ng-change="refresh()")
+                                            option(ng-repeat="v in b.versions") {{ v }}
+                                    td.form-group.col-sm-2(colspan="2" ng-if="b.itype=='path'" style="width: 225px") {{ b.id|limitTo:30 }}...
+                                    //td.form-group.col-sm-3(colspan="2" ng-if="b.stype=='folder'") {{ b.id|limitTo:40 }}...
                                     td.form-group.col-sm-2
-                                        input.form-control(type="text" ng-model="s.name" ng-change="validate()")
+                                        input.form-control(type="text" ng-model="b.name" ng-change="refresh()")
                                     td.form-group.col-sm-5
-                                        .btn-group.btn-group-sm(ng-if="s.sourcename!='folder'" style="margin-top: 2px")
+                                        span(ng-if="b.stype=='folder'") {{ b.fcount }} files
+                                        .btn-group.btn-group-sm(ng-if="b.stype!='folder'" style="margin-top: 2px")
                                             button.btn.btn-default(type="button" btn-checkbox
-                                                ng-change="validate()"
-                                                ng-model="s.files[f].include"
-                                                ng-repeat="f in s.source.order") {{ s.source.labels[f] }}
-                                    td(style="text-align: right") {{ s.hsize }} 
-                                    td(style="text-align: right") ${{ s.cost }}
+                                                ng-change="refresh()"
+                                                ng-model="b.files[f].include"
+                                                ng-repeat="f in b.source.order") {{ b.source.labels[f] }}
+                                    td(style="text-align: right; width: 100px") {{ b.hsize }} 
+                                    td(style="text-align: right; width: 100px") ${{ b.cost }}
                                     td.form-group
                                         button.close(type="button" ng-click="close($index)") &times;
                                 tr
@@ -145,7 +147,7 @@ html(ng-app="app" ng-cloak)
                                             select.form-control(ng-model="addsource" style="width: 100px; display: inline-block; margin-right: 10px")
                                                 option(ng-repeat="k in CFG.sourcekeys") {{ k }}
                                             input.form-control(type="text" ng-model="addid" required placeholder="lena id or path" style="margin-right: 10px; width: 500px; display: inline-block")
-                                            button.btn.btn-default.btn-md(type="button" ng-click="addSample()")
+                                            button.btn.btn-default.btn-md(type="button" ng-click="addBundle()")
                                                 span.glyphicon.glyphicon-plus-sign(style="opacity: 0.75")
                                                 | &nbsp;Add&nbsp;
                                     td(style="text-align: right; background: none !important")

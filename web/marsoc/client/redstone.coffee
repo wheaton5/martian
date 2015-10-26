@@ -7,6 +7,7 @@
 app = angular.module('app', ['ui.bootstrap'])
 
 app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
+    # Fetch configuration from the server
     $scope.CFG = CFG = null
     $http.get('/api/redstone/config').success((data) ->
         if typeof(data) == "string"
@@ -14,8 +15,9 @@ app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
             return
         $scope.CFG = CFG = data
         CFG.sourcekeys = _.keys(CFG.sources)
-        $scope.addsource = 'longranger'
 
+        # Set up initial state
+        $scope.addsource = 'longranger'
         $scope.redstone = {
             from:       '',
             to:         '',
@@ -24,71 +26,122 @@ app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
             dlmax:      CFG.defaults.dlmax,
             cost_est:   0,
             size_est:   0,
-            samples: []
+            bundles:    []
         }
     )
 
-    $scope.newSample = (data) ->
-        files = {}
-        source = CFG.sources[data.source]
-        for f in _.keys(data.fileinfo)
-            files[f] = {
-                include: data.fileinfo[f].include,
-                path: data.fileinfo[f].path,
-                size: data.fileinfo[f].size,
-            }
-        if data.source != "folder"
-            if $scope.redstone.samples.length > 0
-                lastSample = $scope.redstone.samples[$scope.redstone.samples.length-1]
-                for f in _.keys(files)
-                    if lastSample.files[f]?
-                        files[f].include = lastSample.files[f].include
+    # Handle user request to add a bundle
+    $scope.addBundle = () ->
+        # Get source and identifier to be added from the UI
+        sname = $scope.addsource
+        id = $scope.addid
 
-        # Translate spaces to underscores, and remove non-alphanum
-        if data.idtype == 'lena'
-            name = data.bag.description
-        else if data.idtype == 'path'
+        # Look up the source data
+        source = CFG.sources[sname]
+        stype = source.type
+
+        # Detect type of id
+        if stype == 'folder'
+            itype = 'path'
+        else
+            itype = if id[0] == '/' then 'path' else 'lena'
+
+        params = {
+            sname: sname,
+            stype: stype,
+            id:    id,
+            itype: itype,
+            pname: source.pname,
+            paths: source.paths,
+        }
+        $http.post('/api/redstone/validate', params).success((data) ->
+            if typeof(data) == "string"
+                window.alert(data)
+                return
+            console.log(data)
+            $scope.makeBundle(data)
+            $scope.refresh()
+
+            # Auto-increment if LENA id
+            if itype == 'lena'
+                $scope.addid = '' + (parseInt($scope.addid) + 1)
+            else
+                $scope.addid = ''
+        )
+
+    $scope.makeBundle = (data) ->
+        stype = data.stype
+
+        if stype == 'folder'
+            # Name is just last path element
+            # Translate spaces to underscores, and remove non-alphanum
             name = data.id.split("/").reverse()[0]
-        name = name.replace(///\s+///g, '_').replace(///[^\d\w]+///g, '')
-        
-        $scope.redstone.samples.push({
-            source:     source,
-            sourcename: data.source,
-            container:  data.container,
-            id:         data.id,
-            idtype:     data.idtype,
-            versions:   data.versions.reverse(),
-            version:    data.versions[0],
-            name:       name,
-            files:      files,
-            sizetotal:  0,
-            hsize:      '',
-            cost:       '',
-        })
+            name = name.replace(///\s+///g, '_').replace(///[^\d\w]+///g, '')
+            $scope.redstone.bundles.push({
+                stype:  stype,
+                id:     data.id,
+                itype:  'path',
+                name:   name,
+                files:  data.files,
+                fcount: _.keys(data.files).length,
+            })
 
-    $scope.validate = () ->
-        reqsamps = []
-        samps = $scope.redstone.samples
+        else if stype == 'pipestance'
+            source = CFG.sources[data.sname]
+
+            # Copy file selections from previous bundle
+            if $scope.redstone.bundles.length > 0
+                lastBundle = $scope.redstone.bundles[$scope.redstone.bundles.length-1]
+                for f in _.keys(data.files)
+                    if lastBundle.files[f]?
+                        data.files[f].include = lastBundle.files[f].include
+
+            # Translate spaces to underscores, and remove non-alphanum
+            if data.itype == 'lena'
+                name = data.bag.description
+            else if data.itype == 'path'
+                name = data.id.split("/").reverse()[0]
+            name = name.replace(///\s+///g, '_').replace(///[^\d\w]+///g, '')
+        
+            $scope.redstone.bundles.push({
+                stype:      stype,
+                source:     source,
+                container:  data.container,
+                id:         data.id,
+                itype:      data.itype,
+                versions:   data.versions.reverse(),
+                version:    data.versions[0],
+                name:       name,
+                files:      data.files,
+            })
+
+    $scope.refresh = () ->
+        bundledeets = []
         totalsize = 0.0
         totalcost = 0.0
-        for s in samps
-            s.sizetotal = 0
-            for f in _.keys(s.files)
-                if s.files[f].include
-                    s.sizetotal += s.files[f].size
-            totalsize += s.sizetotal
-            s.hsize = Humanize.fileSize(s.sizetotal)
-            gb = s.sizetotal / (1024 * 1024 * 1024)
+        for b in $scope.redstone.bundles
+            # Add up the size and cost of all the files for the bundle
+            b.bsize = 0
+            for f in _.keys(b.files)
+                if b.files[f].include
+                    b.bsize += b.files[f].size
+            totalsize += b.bsize
+            b.hsize = Humanize.fileSize(b.bsize)
+            gb = b.bsize / (1024 * 1024 * 1024)
             storage_cost = gb * CFG.prices.s3_storage_per_gbmo * ($scope.redstone.dtl / 30)
             download_cost = gb * CFG.prices.s3_download_per_gb * $scope.redstone.dlmax
             totalcost += storage_cost + download_cost
-            s.cost = Humanize.formatNumber(storage_cost + download_cost, 2)
-            sfiles = []
-            if s.sourcename != "folder"
-                for f in s.source.order
-                    if s.files[f].include
-                        sfiles.push(f)
-            reqsamps.push([ s.idtype, s.id, s.container, s.version, s.name, sfiles.join('|') ].join(','))
+            b.cost = Humanize.formatNumber(storage_cost + download_cost, 2)
+            bfiles = []
+
+            # For pipestances, add the encoded file names
+            if b.stype == "pipestance"
+                for f in b.source.order
+                    if b.files[f].include
+                        bfiles.push(f)
+
+            bundledeets.push([ b.stype, b.itype, b.id, b.container, b.version, b.name, bfiles.join('|') ].join(','))
+
         $scope.redstone.totalsize = Humanize.fileSize(totalsize)
         $scope.redstone.totalcost = '$' + Humanize.formatNumber(totalcost, 2)
         desc = $scope.redstone.desc
@@ -103,37 +156,13 @@ app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
             dlmax:      $scope.redstone.dlmax,
             totalsize:  $scope.redstone.totalsize,
             totalcost:  $scope.redstone.totalcost,
-            samples:    reqsamps,
+            bundles:    bundledeets,
         }
         $scope.output = angular.toJson(request, 4)
 
-    $scope.addSample = () ->
-        source = CFG.sources[$scope.addsource]
-        idtype = if $scope.addid[0] == '/' then 'path' else 'lena'
-        params = {
-            source: $scope.addsource,
-            type: source.type,
-            id: $scope.addid,
-            idtype: idtype,
-            pname: source.pname,
-            paths: source.paths,
-        }
-        $http.post('/api/redstone/validate', params).success((data) ->
-            if typeof(data) == "string"
-                window.alert(data)
-                return
-            $scope.newSample(data)
-            $scope.validate()
-        )
-        # Auto-increment if LENA id
-        if idtype == 'lena'
-            $scope.addid = '' + (parseInt($scope.addid) + 1)
-        else
-            $scope.addid = ''
-
     $scope.close = (i) ->
-        $scope.redstone.samples.splice(i, 1)
-        $scope.validate()
+        $scope.redstone.bundles.splice(i, 1)
+        $scope.refresh()
 )
 
 # Form validation for integers. 

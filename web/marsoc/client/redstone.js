@@ -22,89 +22,122 @@
         dlmax: CFG.defaults.dlmax,
         cost_est: 0,
         size_est: 0,
-        samples: []
+        bundles: []
       };
     });
-    $scope.newSample = function(data) {
-      var f, files, lastSample, name, source, _i, _j, _len, _len1, _ref, _ref1;
-      files = {};
-      source = CFG.sources[data.source];
-      _ref = _.keys(data.fileinfo);
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        f = _ref[_i];
-        files[f] = {
-          include: data.fileinfo[f].include,
-          path: data.fileinfo[f].path,
-          size: data.fileinfo[f].size
-        };
+    $scope.addBundle = function() {
+      var id, itype, params, sname, source, stype;
+      sname = $scope.addsource;
+      id = $scope.addid;
+      source = CFG.sources[sname];
+      stype = source.type;
+      if (stype === 'folder') {
+        itype = 'path';
+      } else {
+        itype = id[0] === '/' ? 'path' : 'lena';
       }
-      if (data.source !== "folder") {
-        if ($scope.redstone.samples.length > 0) {
-          lastSample = $scope.redstone.samples[$scope.redstone.samples.length - 1];
-          _ref1 = _.keys(files);
-          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-            f = _ref1[_j];
-            if (lastSample.files[f] != null) {
-              files[f].include = lastSample.files[f].include;
+      params = {
+        sname: sname,
+        stype: stype,
+        id: id,
+        itype: itype,
+        pname: source.pname,
+        paths: source.paths
+      };
+      return $http.post('/api/redstone/validate', params).success(function(data) {
+        if (typeof data === "string") {
+          window.alert(data);
+          return;
+        }
+        console.log(data);
+        $scope.makeBundle(data);
+        $scope.refresh();
+        if (itype === 'lena') {
+          return $scope.addid = '' + (parseInt($scope.addid) + 1);
+        } else {
+          return $scope.addid = '';
+        }
+      });
+    };
+    $scope.makeBundle = function(data) {
+      var f, lastBundle, name, source, stype, _i, _len, _ref;
+      stype = data.stype;
+      if (stype === 'folder') {
+        name = data.id.split("/").reverse()[0];
+        name = name.replace(/\s+/g, '_').replace(/[^\d\w]+/g, '');
+        return $scope.redstone.bundles.push({
+          stype: stype,
+          id: data.id,
+          itype: 'path',
+          name: name,
+          files: data.files,
+          fcount: _.keys(data.files).length
+        });
+      } else if (stype === 'pipestance') {
+        source = CFG.sources[data.sname];
+        if ($scope.redstone.bundles.length > 0) {
+          lastBundle = $scope.redstone.bundles[$scope.redstone.bundles.length - 1];
+          _ref = _.keys(data.files);
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            f = _ref[_i];
+            if (lastBundle.files[f] != null) {
+              data.files[f].include = lastBundle.files[f].include;
             }
           }
         }
+        if (data.itype === 'lena') {
+          name = data.bag.description;
+        } else if (data.itype === 'path') {
+          name = data.id.split("/").reverse()[0];
+        }
+        name = name.replace(/\s+/g, '_').replace(/[^\d\w]+/g, '');
+        return $scope.redstone.bundles.push({
+          stype: stype,
+          source: source,
+          container: data.container,
+          id: data.id,
+          itype: data.itype,
+          versions: data.versions.reverse(),
+          version: data.versions[0],
+          name: name,
+          files: data.files
+        });
       }
-      if (data.idtype === 'lena') {
-        name = data.bag.description;
-      } else if (data.idtype === 'path') {
-        name = data.id.split("/").reverse()[0];
-      }
-      name = name.replace(/\s+/g, '_').replace(/[^\d\w]+/g, '');
-      return $scope.redstone.samples.push({
-        source: source,
-        sourcename: data.source,
-        container: data.container,
-        id: data.id,
-        idtype: data.idtype,
-        versions: data.versions.reverse(),
-        version: data.versions[0],
-        name: name,
-        files: files,
-        sizetotal: 0,
-        hsize: '',
-        cost: ''
-      });
     };
-    $scope.validate = function() {
-      var desc, download_cost, f, gb, reqsamps, request, s, samps, sfiles, storage_cost, totalcost, totalsize, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
-      reqsamps = [];
-      samps = $scope.redstone.samples;
+    $scope.refresh = function() {
+      var b, bfiles, bundledeets, desc, download_cost, f, gb, request, storage_cost, totalcost, totalsize, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+      bundledeets = [];
       totalsize = 0.0;
       totalcost = 0.0;
-      for (_i = 0, _len = samps.length; _i < _len; _i++) {
-        s = samps[_i];
-        s.sizetotal = 0;
-        _ref = _.keys(s.files);
-        for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-          f = _ref[_j];
-          if (s.files[f].include) {
-            s.sizetotal += s.files[f].size;
+      _ref = $scope.redstone.bundles;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        b = _ref[_i];
+        b.bsize = 0;
+        _ref1 = _.keys(b.files);
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          f = _ref1[_j];
+          if (b.files[f].include) {
+            b.bsize += b.files[f].size;
           }
         }
-        totalsize += s.sizetotal;
-        s.hsize = Humanize.fileSize(s.sizetotal);
-        gb = s.sizetotal / (1024 * 1024 * 1024);
+        totalsize += b.bsize;
+        b.hsize = Humanize.fileSize(b.bsize);
+        gb = b.bsize / (1024 * 1024 * 1024);
         storage_cost = gb * CFG.prices.s3_storage_per_gbmo * ($scope.redstone.dtl / 30);
         download_cost = gb * CFG.prices.s3_download_per_gb * $scope.redstone.dlmax;
         totalcost += storage_cost + download_cost;
-        s.cost = Humanize.formatNumber(storage_cost + download_cost, 2);
-        sfiles = [];
-        if (s.sourcename !== "folder") {
-          _ref1 = s.source.order;
-          for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
-            f = _ref1[_k];
-            if (s.files[f].include) {
-              sfiles.push(f);
+        b.cost = Humanize.formatNumber(storage_cost + download_cost, 2);
+        bfiles = [];
+        if (b.stype === "pipestance") {
+          _ref2 = b.source.order;
+          for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+            f = _ref2[_k];
+            if (b.files[f].include) {
+              bfiles.push(f);
             }
           }
         }
-        reqsamps.push([s.idtype, s.id, s.container, s.version, s.name, sfiles.join('|')].join(','));
+        bundledeets.push([b.stype, b.itype, b.id, b.container, b.version, b.name, bfiles.join('|')].join(','));
       }
       $scope.redstone.totalsize = Humanize.fileSize(totalsize);
       $scope.redstone.totalcost = '$' + Humanize.formatNumber(totalcost, 2);
@@ -120,39 +153,13 @@
         dlmax: $scope.redstone.dlmax,
         totalsize: $scope.redstone.totalsize,
         totalcost: $scope.redstone.totalcost,
-        samples: reqsamps
+        bundles: bundledeets
       };
       return $scope.output = angular.toJson(request, 4);
     };
-    $scope.addSample = function() {
-      var idtype, params, source;
-      source = CFG.sources[$scope.addsource];
-      idtype = $scope.addid[0] === '/' ? 'path' : 'lena';
-      params = {
-        source: $scope.addsource,
-        type: source.type,
-        id: $scope.addid,
-        idtype: idtype,
-        pname: source.pname,
-        paths: source.paths
-      };
-      $http.post('/api/redstone/validate', params).success(function(data) {
-        if (typeof data === "string") {
-          window.alert(data);
-          return;
-        }
-        $scope.newSample(data);
-        return $scope.validate();
-      });
-      if (idtype === 'lena') {
-        return $scope.addid = '' + (parseInt($scope.addid) + 1);
-      } else {
-        return $scope.addid = '';
-      }
-    };
     return $scope.close = function(i) {
-      $scope.redstone.samples.splice(i, 1);
-      return $scope.validate();
+      $scope.redstone.bundles.splice(i, 1);
+      return $scope.refresh();
     };
   });
 

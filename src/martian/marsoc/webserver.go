@@ -81,12 +81,12 @@ type RedstoneFile struct {
 }
 
 type RedstoneForm struct {
-	Source string            `json:"source"`
-	Type   string            `json:"type"`
-	Id     string            `json:"id"`
-	Idtype string            `json:"idtype"`
-	Pname  string            `json:"pname"`
-	Paths  map[string]string `json:"paths"`
+	Sname string            `json:"sname"`
+	Stype string            `json:"stype"`
+	Id    string            `json:"id"`
+	Itype string            `json:"itype"`
+	Pname string            `json:"pname"`
+	Paths map[string]string `json:"paths"`
 }
 
 // For a given sample, update the following fields:
@@ -837,34 +837,34 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		}
 	})
 	app.Post("/api/redstone/validate", binding.Json(RedstoneForm{}), func(req RedstoneForm, params martini.Params) string {
-		sid := req.Id
-
-		// Assume the id is an absolute path
-		p := sid
-		vers := []string{}
-		var bag interface{}
-		bag = map[string]string{}
-		container := ""
 		fileinfo := map[string]*RedstoneFile{}
 
-		if req.Type == "pipestance" {
+		if req.Stype == "pipestance" {
+			pspath := ""
+			vers := []string{}
+			var bag interface{}
+			bag = map[string]string{}
+			container := ""
+
 			// If it is a LENA id, build path and get versions
-			if req.Idtype == "lena" {
-				bag = lena.GetSampleBagWithId(sid)
+			if req.Itype == "path" {
+				pspath = req.Id
+			} else if req.Itype == "lena" {
+				bag = lena.GetSampleBagWithId(req.Id)
 				if bag == nil {
-					return fmt.Sprintf("Sample %s not found in Lena.", sid)
+					return fmt.Sprintf("Sample %s not found in Lena.", req.Id)
 				}
-				container = lena.GetSampleWithId(sid).Pscontainer
-				p, vers = pman.EnumerateVersions(container, req.Pname, sid)
-				p = path.Join(p, "HEAD")
+				container = lena.GetSampleWithId(req.Id).Pscontainer
+				pspath, vers = pman.EnumerateVersions(container, req.Pname, req.Id)
+				pspath = path.Join(pspath, "HEAD")
 			}
 
 			// Generate full paths to pipestance files
 			for ftype, fpath := range req.Paths {
-				fullpath := path.Join(p, fpath)
+				abspath := path.Join(pspath, fpath)
 				var size int64
 				size = 0
-				if f, err := os.Open(fullpath); err == nil {
+				if f, err := os.Open(abspath); err == nil {
 					defer f.Close()
 					if stat, err := f.Stat(); err != nil {
 						continue
@@ -873,20 +873,30 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 					}
 				}
 				fileinfo[ftype] = &RedstoneFile{
-					Path:    fullpath,
+					Path:    abspath,
 					Size:    size,
 					Include: false,
 				}
 			}
 
-		} else if req.Type == "folder" {
+			return core.MakeJSON(map[string]interface{}{
+				"stype":     req.Stype,
+				"sname":     req.Sname,
+				"itype":     req.Itype,
+				"id":        req.Id,
+				"container": container,
+				"versions":  vers,
+				"bag":       bag,
+				"files":     fileinfo,
+			})
+		} else if req.Stype == "folder" {
 			// Iterate through files in the folder
-			files, _ := ioutil.ReadDir(p)
+			files, _ := ioutil.ReadDir(req.Id)
 			for _, f := range files {
-				fullpath := path.Join(p, f.Name())
+				abspath := path.Join(req.Id, f.Name())
 				var size int64
 				size = 0
-				if f, err := os.Open(fullpath); err == nil {
+				if f, err := os.Open(abspath); err == nil {
 					defer f.Close()
 					if stat, err := f.Stat(); err != nil {
 						continue
@@ -895,23 +905,18 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 					}
 				}
 				fileinfo[f.Name()] = &RedstoneFile{
-					Path:    fullpath,
+					Path:    abspath,
 					Size:    size,
 					Include: true,
 				}
 			}
+			return core.MakeJSON(map[string]interface{}{
+				"stype": req.Stype,
+				"id":    req.Id,
+				"files": fileinfo,
+			})
 		}
-
-		return core.MakeJSON(map[string]interface{}{
-			"source":    req.Source,
-			"id":        req.Id,
-			"idtype":    req.Idtype,
-			"container": container,
-			"versions":  vers,
-			"bag":       bag,
-			"path":      p,
-			"fileinfo":  fileinfo,
-		})
+		return fmt.Sprintf("Unrecognized source type %s", req.Stype)
 	})
 
 	//=========================================================================
