@@ -703,7 +703,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		self.mutex.Unlock()
 		return err
 	}
-	mroPath, mroVersion, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid)
+	mroPath, mroVersion, argshimPath, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid)
 	if err != nil {
 		self.mutex.Unlock()
 		return err
@@ -735,7 +735,7 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 		os.Symlink(psPath, aggregatePsPath)
 	}
 
-	pipestance, err := self.rt.InvokePipeline(src, "./argshim", psid, aggregatePsPath, mroPath, mroVersion, envs, tags)
+	pipestance, err := self.rt.InvokePipeline(src, argshimPath, psid, aggregatePsPath, mroPath, mroVersion, envs, tags)
 	if err != nil {
 		self.removePendingPipestance(pkey, false)
 		return err
@@ -977,7 +977,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 }
 
 func (self *PipestanceManager) ReattachToPipestance(container string, pipeline string, psid string, psPath string, readOnly bool) (*core.Pipestance, error) {
-	mroPath, mroVersion, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid)
+	mroPath, mroVersion, _, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid)
 	if err != nil {
 		return nil, err
 	}
@@ -1028,6 +1028,6 @@ func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline stri
 	return map[string]interface{}{}
 }
 
-func (self *PipestanceManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, map[string]string, error) {
+func (self *PipestanceManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, string, map[string]string, error) {
 	return self.packages.GetPipestanceEnvironment(container, pipeline, psid)
 }

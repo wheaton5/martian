@@ -107,42 +107,41 @@ func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag inte
 	return ""
 }
 
-func (self *PackageManager) BuildWebViewForSample(sample *Sample, files map[string]interface{}) interface{} {
+func (self *PackageManager) GetWebshimResponseForSample(sample *Sample, function string, sbag interface{}, files map[string]interface{}) interface{} {
 	if p, ok := self.packages[sample.Product]; ok {
 		sampleId := strconv.Itoa(sample.Id)
-		sampleBag := self.lena.GetSampleBagWithId(sampleId)
-		return p.Argshim.BuildWebViewForTest("lena", sampleId, sampleBag, files)
+		return p.Argshim.GetWebshimResponseForTest("lena", function, sampleId, sbag, files)
 	}
 	return ""
 }
 
 // Pipestance manager functions
-func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, map[string]string, error) {
+func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, string, map[string]string, error) {
 	if pipeline == "BCL_PROCESSOR_PD" {
 		return self.getDefaultPipestanceEnvironment()
 	}
 	return self.getPipestanceEnvironment(psid)
 }
 
-func (self *PackageManager) getPipestanceEnvironment(psid string) (string, string, map[string]string, error) {
+func (self *PackageManager) getPipestanceEnvironment(psid string) (string, string, string, map[string]string, error) {
 	if sample := self.lena.GetSampleWithId(psid); sample != nil {
 		if p, ok := self.packages[sample.Product]; ok {
 			self.mutex.Lock()
 			defer self.mutex.Unlock()
 
-			return p.MroPath, p.MroVersion, p.Envs, nil
+			return p.MroPath, p.MroVersion, p.ArgshimPath, p.Envs, nil
 		}
 	}
-	return "", "", nil, &core.MartianError{fmt.Sprintf("PackageManagerError: Failed to get environment for pipestance '%s'.", psid)}
+	return "", "", "", nil, &core.MartianError{fmt.Sprintf("PackageManagerError: Failed to get environment for pipestance '%s'.", psid)}
 }
 
-func (self *PackageManager) getDefaultPipestanceEnvironment() (string, string, map[string]string, error) {
+func (self *PackageManager) getDefaultPipestanceEnvironment() (string, string, string, map[string]string, error) {
 	p := self.packages[self.defaultPackage]
 
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 
-	return p.MroPath, p.MroVersion, p.Envs, nil
+	return p.MroPath, p.MroVersion, p.ArgshimPath, p.Envs, nil
 }
 
 // Version functions

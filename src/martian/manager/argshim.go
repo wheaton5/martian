@@ -170,12 +170,10 @@ func (self *ArgShim) BuildCallSourceForTest(rt *core.Runtime, category string, i
 	return self.buildCallSource(rt, self.buildArgsForTest(category, id, sbag, fastqPaths), mroPath)
 }
 
-func (self *ArgShim) BuildWebViewForTest(category string, id string, sbag interface{},
-	files interface{}) map[string]interface{} {
-	if v, err := self.invoke("buildWebViewForTest", []interface{}{category, id, sbag, files}); err == nil {
-		if tv, ok := v.(map[string]interface{}); ok {
-			return tv
-		}
+func (self *ArgShim) GetWebshimResponseForTest(category string, function string, id string, sbag interface{},
+	files interface{}) interface{} {
+	if v, err := self.invoke(function, []interface{}{category, id, sbag, files}); err == nil {
+		return v
 	}
 	return map[string]interface{}{}
 }
