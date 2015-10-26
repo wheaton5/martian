@@ -1,0 +1,158 @@
+//- 
+    Copyright (c) 2015 10X Genomics, Inc. All rights reserved.
+    
+    Main UI for Martian Redstone
+
+doctype html
+html(ng-app="app" ng-cloak)
+    head
+        title [[.InstanceName]] / Redstone Outbound
+        link(rel="stylesheet" href="/css/bootstrap.min.css")
+        link(rel="stylesheet" href="/css/marsoc.css")
+        link(rel="stylesheet" href="/css/main.css")
+        script(src="/js/angular.min.js")
+        script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
+        script(src="/js/lodash.min.js")
+        script(src="/js/moment.min.js")
+        script(src="/js/humanize.min.js")
+        style
+            | #add-sample-tab {
+            |   border-top: 0px;
+            |   border-radius: 0px 0px 10px 10px;
+            |   padding: 5px 20px;
+            |   outline: none;
+            |   background: #eee;
+            |   border-color: #ccc;
+            | }
+            | #sample-table tr:first-child td {
+            |   padding-top: 15px;
+            | }
+            | #sample-table td {
+            |   padding-top: 5px;
+            |   padding-bottom: 5px;
+            |   border: 0px;
+            | }
+            | #sample-table tr:last-child td {
+            |   padding-top: 10px;
+            |   border-top: 1px solid #ccc;
+            | }
+            | .btn-default.active {
+            |   color: #fff;
+            |   background-color: #007dc3;
+            |   border-color: #005da3;
+            | }
+    body(ng-controller="RedstoneCtrl")
+        header.navbar.navbar-fixed-top
+            .navbar-header
+                .navbar-brand
+                    .logo_container
+                        img.logo(src="/images/10X_Logo_Reversed.png")
+                    .navbar-upper(ng-class="{admin: admin}") Redstone Outbound
+                        span(ng-if="admin")
+                            | &nbsp;(
+                            a.admin-exit(href="/") exit admin mode
+                            | )
+                    .navbar-lower
+                        a(ng-if="admin" href="/admin") HOME
+                        a(ng-if="!admin" href="/") HOME
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(ng-if="admin" href="/admin/metasamples") METASAMPLES
+                        a(ng-if="!admin" href="/metasamples") METASAMPLES
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(ng-if="admin" href="/admin/pipestances") PIPESTANCES
+                        a(ng-if="!admin" href="/pipestances") PIPESTANCES
+                        | &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
+                        a(href="/razor") RAZOR
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="/") MARSOC
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://sere.fuzzplex.com") SERE
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://compute2.fuzzplex.com:9090") MRV
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="http://lena.fuzzplex.com") LENA
+                        | &nbsp;&nbsp;&nbsp;&nbsp;
+                        a(href="https://10xtech.atlassian.net/issues/?filter=11200") CUSTOMER BUGS
+        div(style="padding-top: 110px")
+            .row
+                .col-sm-5(style="margin-top: 8px")
+                    form.form-horizontal
+                        .form-group
+                            label.control-label.col-sm-3 LENA User
+                            .col-sm-4
+                                input.form-control(type="text" ng-model="redstone.from" ng-change="refresh()")
+                        .form-group
+                            label.control-label.col-sm-3 Recipient Email
+                            .col-sm-6
+                                input.form-control(type="text" ng-model="redstone.to" ng-change="refresh()")
+                        .form-group
+                            label.control-label.col-sm-3 Description
+                            .col-sm-9
+                                input.form-control(type="text" ng-model="redstone.desc" ng-change="refresh()")
+                        .form-group
+                            label.control-label.col-sm-3 Days to Live
+                            .col-sm-2
+                                input.form-control(type="text" ng-model="redstone.dtl" integer ng-change="refresh()" readonly)
+                        .form-group
+                            label.control-label.col-sm-3 Max Downloads
+                            .col-sm-2
+                                input.form-control(type="text" ng-model="redstone.dlmax" integer ng-change="refresh()" readonly)
+                .col-sm-6
+                    | Copy and paste the JSON data below into an email:
+                    pre(style="font-size: 8px") {{ output }}
+            .row
+                .col-sm-12
+                    form
+                        table#sample-table.table.table-hover
+                            thead
+                                tr
+                                    th #
+                                    th ID
+                                    th Version
+                                    th Published Name
+                                    th Files
+                                    th(style="text-align: right") Size
+                                    th(style="text-align: right") Cost
+                                    th
+                            tbody
+                                tr(ng-repeat="b in redstone.bundles")
+                                    td.form-group
+                                        span(style="vertical-align: middle")
+                                            b {{$index+1}}
+                                    td.form-group.col-sm-1(ng-if="b.itype=='lena'" style="width: 100px")
+                                        a(target="_blank" href="https://lena.fuzzplex.com/seq_results/sample/{{b.id}}/trim/10/") {{ b.id }}
+                                    td.form-group.col-sm-1(ng-if="b.itype=='lena'" style="width: 125px")
+                                        select.form-control(ng-model="b.version" ng-change="refresh()")
+                                            option(ng-repeat="v in b.versions") {{ v }}
+                                    td.form-group.col-sm-2(colspan="2" ng-if="b.itype=='path'" style="width: 225px") {{ b.id|limitTo:30 }}...
+                                    //td.form-group.col-sm-3(colspan="2" ng-if="b.stype=='folder'") {{ b.id|limitTo:40 }}...
+                                    td.form-group.col-sm-2
+                                        input.form-control(type="text" ng-model="b.name" ng-change="refresh()")
+                                    td.form-group.col-sm-5
+                                        span(ng-if="b.stype=='folder'") {{ b.fcount }} files
+                                        .btn-group.btn-group-sm(ng-if="b.stype!='folder'" style="margin-top: 2px")
+                                            button.btn.btn-default(type="button" btn-checkbox
+                                                ng-change="refresh()"
+                                                ng-model="b.files[f].include"
+                                                ng-repeat="f in b.source.order") {{ b.source.labels[f] }}
+                                    td(style="text-align: right; width: 100px") {{ b.hsize }} 
+                                    td(style="text-align: right; width: 100px") ${{ b.cost }}
+                                    td.form-group
+                                        button.close(type="button" ng-click="close($index)") &times;
+                                tr
+                                    td(colspan="8" style="height: 10px")
+                                tr
+                                    td.form-group(colspan="5" align="center" style="border-top: 1px solid #ccc; padding-top: 0px; background: none !important")
+                                        #add-sample-tab(style="width: 750px; height: 50px")
+                                            select.form-control(ng-model="addsource" style="width: 100px; display: inline-block; margin-right: 10px")
+                                                option(ng-repeat="k in CFG.sourcekeys") {{ k }}
+                                            input.form-control(type="text" ng-model="addid" required placeholder="lena id or path" style="margin-right: 10px; width: 500px; display: inline-block")
+                                            button.btn.btn-default.btn-md(type="button" ng-click="addBundle()")
+                                                span.glyphicon.glyphicon-plus-sign(style="opacity: 0.75")
+                                                | &nbsp;Add&nbsp;
+                                    td(style="text-align: right; background: none !important")
+                                        b {{ redstone.totalsize }}
+                                    td(style="text-align: right; background: none !important")
+                                        b {{ redstone.totalcost }}
+                                    td(style="text-align: right; background: none !important")
+    script(src="/redstone.js")

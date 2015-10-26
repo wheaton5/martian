@@ -419,6 +419,18 @@ func (self *PipestanceManager) makePipestancePath(container string, pipeline str
 	return path.Join(self.aggregatePath, container, pipeline, psid, "HEAD")
 }
 
+func (self *PipestanceManager) EnumerateVersions(container string, pipeline string, psid string) (string, []string) {
+	p := path.Join( /*self.aggregatePath*/ "/mnt/analysis/marsoc/pipestances", container, pipeline, psid)
+	var vers []string
+	files, _ := ioutil.ReadDir(p)
+	for _, f := range files {
+		if f.Name() != "HEAD" {
+			vers = append(vers, f.Name())
+		}
+	}
+	return p, vers
+}
+
 func (self *PipestanceManager) copyPipestance(pkey string) {
 	container, pname, psid := parsePipestanceKey(pkey)
 
