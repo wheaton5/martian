@@ -99,7 +99,7 @@ func (self *PackageManager) BuildPackage(name string, target string) error {
 	sakeDir := path.Join(self.packagePath, name, target)
 	sakePath := path.Join(sakeDir, core.GetFilenameWithSuffix(sakeDir, packageBase))
 	os.RemoveAll(sakePath)
-	os.MkdirAll(sakePath, 0755)
+	os.MkdirAll(sakePath, 0777)
 
 	core.LogInfo("package", "Package %s-%s building in %s.", name, target, sakePath)
 	cmd.Dir = sakePath
