@@ -478,7 +478,7 @@ func (self *PipestanceManager) copyPipestance(pkey string) {
 				newPath := path.Join(newPsPath, relPath)
 
 				if fileinfo.Mode().IsDir() {
-					err = os.Mkdir(newPath, 0755)
+					err = os.Mkdir(newPath, 0777)
 				}
 
 				if fileinfo.Mode().IsRegular() {
@@ -646,12 +646,12 @@ func (self *PipestanceManager) writePipestanceToFailCoop(pkey string, stage stri
 	now := time.Now()
 	currentDatePath := path.Join(self.failCoopPath, now.Format("2006-01-02"))
 	if _, err := os.Stat(currentDatePath); err != nil {
-		os.MkdirAll(currentDatePath, 0755)
+		os.MkdirAll(currentDatePath, 0777)
 	}
 
 	filename := getFilenameWithSuffix(currentDatePath, fmt.Sprintf("%s-%s", self.mailer.InstanceName, pkey))
 	psPath := path.Join(currentDatePath, filename)
-	os.Mkdir(psPath, 0755)
+	os.Mkdir(psPath, 0777)
 
 	// Create failure summary JSON.
 	summaryJson := map[string]interface{}{
@@ -737,13 +737,13 @@ func (self *PipestanceManager) Invoke(container string, pipeline string, psid st
 	os.RemoveAll(scratchPsPath)
 
 	// Create symlink from permanent storage version path -> scratch path
-	os.MkdirAll(scratchPsPath, 0755)
-	os.MkdirAll(path.Dir(psPath), 0755)
+	os.MkdirAll(scratchPsPath, 0777)
+	os.MkdirAll(path.Dir(psPath), 0777)
 	os.Symlink(scratchPsPath, psPath)
 
 	if aggregatePsPath != psPath {
 		// Create symlink from aggregate version path -> permanent storage version path
-		os.MkdirAll(path.Dir(aggregatePsPath), 0755)
+		os.MkdirAll(path.Dir(aggregatePsPath), 0777)
 		os.Symlink(psPath, aggregatePsPath)
 	}
 

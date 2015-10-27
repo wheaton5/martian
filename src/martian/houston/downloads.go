@@ -150,7 +150,7 @@ func (self *DownloadManager) download() {
 				core.LogInfo("dwnload", "    Pipestance, untaring")
 
 				// Create pipestance folder
-				if err := os.MkdirAll(d.path, 0755); err != nil {
+				if err := os.MkdirAll(d.path, 0777); err != nil {
 					core.LogError(err, "dwnload", "    Could not create directory: %s", d.path)
 					continue
 				}
@@ -182,7 +182,7 @@ func (self *DownloadManager) download() {
 				}
 
 				// Create permanent storage folder for this key
-				if err := os.MkdirAll(d.path, 0755); err != nil {
+				if err := os.MkdirAll(d.path, 0777); err != nil {
 					core.LogError(err, "dwnload", "    Could not create directory: %s", d.path)
 					continue
 				}
