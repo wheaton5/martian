@@ -26,7 +26,7 @@ grammar:
 	go tool yacc -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
 
 $(GOBINS):
-	go install -ldflags "-X martian/core.__VERSION__ $(VERSION) -X martian/core.__RELEASE__ $(RELEASE)" martian/$@
+	go install -ldflags "-X martian/core.__VERSION__ '$(VERSION)' -X martian/core.__RELEASE__ '$(RELEASE)'" martian/$@
 
 web:
 	cd web/martian; npm install; gulp; cd $(GOPATH)
