@@ -182,7 +182,11 @@ func (self *DownloadManager) download() {
 				}
 
 				// Create permanent storage folder for this key
+<<<<<<< HEAD
 				if err := os.MkdirAll(d.path, 0777); err != nil {
+=======
+				if err := os.MkdirAll(d.path, 0755); err != nil {
+>>>>>>> alex/houston
 					core.LogError(err, "dwnload", "    Could not create directory: %s", d.path)
 					continue
 				}

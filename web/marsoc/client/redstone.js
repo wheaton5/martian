@@ -60,7 +60,7 @@
       });
     };
     $scope.makeBundle = function(data) {
-      var f, lastBundle, name, source, stype, _i, _len, _ref;
+      var f, j, lastBundle, len, name, ref, source, stype;
       stype = data.stype;
       if (stype === 'folder') {
         name = data.id.split("/").reverse()[0];
@@ -77,9 +77,9 @@
         source = CFG.sources[data.sname];
         if ($scope.redstone.bundles.length > 0) {
           lastBundle = $scope.redstone.bundles[$scope.redstone.bundles.length - 1];
-          _ref = _.keys(data.files);
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            f = _ref[_i];
+          ref = _.keys(data.files);
+          for (j = 0, len = ref.length; j < len; j++) {
+            f = ref[j];
             if (lastBundle.files[f] != null) {
               data.files[f].include = lastBundle.files[f].include;
             }
@@ -105,17 +105,17 @@
       }
     };
     $scope.refresh = function() {
-      var b, bfiles, bundledeets, desc, download_cost, f, gb, request, storage_cost, totalcost, totalsize, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+      var b, bfiles, bundledeets, desc, download_cost, f, gb, j, k, l, len, len1, len2, ref, ref1, ref2, request, storage_cost, totalcost, totalsize;
       bundledeets = [];
       totalsize = 0.0;
       totalcost = 0.0;
-      _ref = $scope.redstone.bundles;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        b = _ref[_i];
+      ref = $scope.redstone.bundles;
+      for (j = 0, len = ref.length; j < len; j++) {
+        b = ref[j];
         b.bsize = 0;
-        _ref1 = _.keys(b.files);
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          f = _ref1[_j];
+        ref1 = _.keys(b.files);
+        for (k = 0, len1 = ref1.length; k < len1; k++) {
+          f = ref1[k];
           if (b.files[f].include) {
             b.bsize += b.files[f].size;
           }
@@ -129,9 +129,9 @@
         b.cost = Humanize.formatNumber(storage_cost + download_cost, 2);
         bfiles = [];
         if (b.stype === "pipestance") {
-          _ref2 = b.source.order;
-          for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-            f = _ref2[_k];
+          ref2 = b.source.order;
+          for (l = 0, len2 = ref2.length; l < len2; l++) {
+            f = ref2[l];
             if (b.files[f].include) {
               bfiles.push(f);
             }
