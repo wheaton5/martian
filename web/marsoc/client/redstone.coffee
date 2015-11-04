@@ -105,13 +105,14 @@ app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
         
             $scope.redstone.bundles.push({
                 stype:      stype,
+                sname:      data.sname,
                 source:     source,
                 container:  data.container,
                 id:         data.id,
                 itype:      data.itype,
                 versions:   data.versions.reverse(),
                 version:    data.versions[0],
-                name:       name,
+                name:       "FILL THIS IN",
                 files:      data.files,
             })
 
@@ -140,7 +141,8 @@ app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
                     if b.files[f].include
                         bfiles.push(f)
 
-            bundledeets.push([ b.stype, b.itype, b.id, b.container, b.version, b.name, bfiles.join('|') ].join(','))
+            b.name = b.name.replace(///\s+///g, '_').replace(///[^\d\w]+///g, '')
+            bundledeets.push([ b.stype, b.sname, b.itype, b.id, b.container, b.version, b.name, bfiles.join('|') ].join(','))
 
         $scope.redstone.totalsize = Humanize.fileSize(totalsize)
         $scope.redstone.totalcost = '$' + Humanize.formatNumber(totalcost, 2)
