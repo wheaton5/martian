@@ -176,7 +176,15 @@ Usage:
     marsoc -h | --help | --version
 
 Options:
+    --jobmode=<name>     Run jobs on custom or local job manager.
+                           Valid job managers are local, sge, lsf or .template file
+                           Defaults to sge.
+    --localcores=<num>   Set max cores the pipeline may request at one time.
+                           (Only applies in local jobmode)
+    --localmem=<num>     Set max GB the pipeline may request at one time.
+                           (Only applies in local jobmode)
     --mempercore=<num>   Set max GB each job may use at one time.
+                           (Only applies in non-local jobmodes)
     --vdrmode=<name>     Enables Volatile Data Removal.
                            Valid options are rolling, post and disable.
                            Defaults to rolling.
@@ -227,6 +235,20 @@ Options:
 	autoInvoke := opts["--autoinvoke"].(bool)
 	debug := opts["--debug"].(bool)
 
+	reqCores := -1
+	if value := opts["--localcores"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			reqCores = value
+			core.LogInfo("options", "--localcores=%d", reqCores)
+		}
+	}
+	reqMem := -1
+	if value := opts["--localmem"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			reqMem = value
+			core.LogInfo("options", "--localmem=%d", reqMem)
+		}
+	}
 	reqMemPerCore := -1
 	if value := opts["--mempercore"]; value != nil {
 		if value, err := strconv.Atoi(value.(string)); err == nil {
@@ -240,6 +262,12 @@ Options:
 		vdrMode = value.(string)
 	}
 	core.VerifyVDRMode(vdrMode)
+
+	jobMode := "sge"
+	if value := opts["--jobmode"]; value != nil {
+		jobMode = value.(string)
+	}
+	core.LogInfo("options", "--jobmode=%s", jobMode)
 
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
@@ -262,7 +290,6 @@ Options:
 	//=========================================================================
 	// Setup Martian Runtime with pipelines path.
 	//=========================================================================
-	jobMode := "sge"
 	profileMode := "cpu"
 	stackVars := true
 	zip := true
@@ -270,7 +297,7 @@ Options:
 	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, reqMemPerCore, stackVars, zip, skipPreflight, enableMonitor,
+		reqCores, reqMem, reqMemPerCore, stackVars, zip, skipPreflight, enableMonitor,
 		debug, false)
 
 	//=========================================================================
