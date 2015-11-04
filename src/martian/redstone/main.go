@@ -11,12 +11,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/docopt/docopt.go"
-	"github.com/dustin/go-humanize"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -29,6 +23,13 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/docopt/docopt.go"
+	"github.com/dustin/go-humanize"
 )
 
 //
@@ -230,7 +231,7 @@ Options:
 
     -h --help               Show this message.
     --version               Show version.`
-	version := "1.1.1"
+	version := "2.0.1"
 	opts, _ := docopt.Parse(doc, nil, true, version, false)
 	email := opts["<your_email>"].(string)
 	fpath := opts["<file>"].(string)
