@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/docopt/docopt.go"
 	"github.com/dustin/go-humanize"
@@ -279,20 +279,35 @@ Options:
 	}
 
 	// Set S3 credentials based on Miramar response.
-	defaults.DefaultConfig.Region = aws.String(rr.Region)
-	defaults.DefaultConfig.Credentials = credentials.NewStaticCredentials(
-		rr.Sts.Credentials.Access_key_id,
-		rr.Sts.Credentials.Secret_access_key,
-		rr.Sts.Credentials.Session_token)
+	sess := session.New(&aws.Config{
+		Region: aws.String(rr.Region),
+		Credentials: credentials.NewStaticCredentials(
+			rr.Sts.Credentials.Access_key_id,
+			rr.Sts.Credentials.Secret_access_key,
+			rr.Sts.Credentials.Session_token),
+	})
+	/*
+		defaults.DefaultConfig.Region = aws.String(rr.Region)
+		defaults.DefaultConfig.Credentials = credentials.NewStaticCredentials(
+			rr.Sts.Credentials.Access_key_id,
+			rr.Sts.Credentials.Secret_access_key,
+			rr.Sts.Credentials.Session_token)
+	*/
 
 	// Create multi-stream uploader with default options.
-	uploader := s3manager.NewUploader(&s3manager.UploadOptions{
-		PartSize:          0,
-		Concurrency:       concurrency,
-		LeavePartsOnError: false,
-		S3:                nil,
+	uploader := s3manager.NewUploader(sess, func(u *s3manager.Uploader) {
+		u.PartSize = 0
+		u.Concurrency = concurrency
+		u.LeavePartsOnError = false
 	})
-
+	/*`
+	  &s3manager.UploadOptions{
+	  		PartSize:          0,
+	  		Concurrency:       concurrency,
+	  		LeavePartsOnError: false,
+	  		S3:                nil,
+	  	})
+	*/
 	// Open the wrapped file.
 	f, err := InstrumentedOpen(fpath)
 	if err != nil {

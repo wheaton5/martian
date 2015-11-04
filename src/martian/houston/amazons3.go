@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/dustin/go-humanize"
@@ -19,6 +20,7 @@ import (
 type AmazonS3Downloadable struct {
 	bucket string
 	object *s3.Object
+	sess   *session.Session
 }
 
 func (self *AmazonS3Downloadable) Size() uint64 {
@@ -39,7 +41,7 @@ func (self *AmazonS3Downloadable) Download(dstPath string) {
 	defer fd.Close()
 
 	// Download file from S3
-	numBytes, err := s3manager.NewDownloader(nil).Download(fd,
+	numBytes, err := s3manager.NewDownloader(self.sess).Download(fd,
 		&s3.GetObjectInput{Bucket: &self.bucket, Key: self.object.Key})
 	if err != nil {
 		core.LogError(err, "amzons3", "    Download failed")
@@ -51,17 +53,19 @@ func (self *AmazonS3Downloadable) Download(dstPath string) {
 
 type AmazonS3DownloadSource struct {
 	bucket string
+	sess   *session.Session
 }
 
 func NewAmazonS3DownloadSource(bucket string) *AmazonS3DownloadSource {
 	self := &AmazonS3DownloadSource{}
 	self.bucket = bucket
+	self.sess = session.New()
 	return self
 }
 
 func (self *AmazonS3DownloadSource) Enumerate() []Downloadable {
 	// ListObjects in our bucket that start with "2" - XXX FIXME: Y3K bug
-	response, err := s3.New(nil).ListObjects(&s3.ListObjectsInput{
+	response, err := s3.New(self.sess).ListObjects(&s3.ListObjectsInput{
 		Bucket: aws.String(self.bucket),
 		Prefix: aws.String("2"),
 	})
@@ -74,7 +78,11 @@ func (self *AmazonS3DownloadSource) Enumerate() []Downloadable {
 	// Iterate over all returned objects
 	downloadables := []Downloadable{}
 	for _, object := range response.Contents {
-		downloadables = append(downloadables, &AmazonS3Downloadable{bucket: self.bucket, object: object})
+		downloadables = append(downloadables, &AmazonS3Downloadable{
+			bucket: self.bucket,
+			object: object,
+			sess:   self.sess,
+		})
 	}
 	return downloadables
 }

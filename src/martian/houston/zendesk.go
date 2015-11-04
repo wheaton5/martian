@@ -77,21 +77,8 @@ func NewZendeskDownloadSource(domain string, user string, apitoken string) *Zend
 func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 	auth := zego.Auth{self.user + "/token", self.apitoken, self.domain}
 
-	// Build id/user map
-	usermap := map[uint32]zego.User{}
-	resource, err := auth.ListUsers()
-	if err != nil {
-		core.LogError(err, "zendesk", "ListUsers failed")
-		return []Downloadable{}
-	}
-	users := &zego.UserArray{}
-	json.Unmarshal([]byte(resource.Raw), users)
-	for _, user := range users.Users {
-		usermap[user.Id] = user
-	}
-
 	// Search for tickets with attachments
-	resource, err = auth.Search("type:ticket+has_attachment:true")
+	resource, err := auth.Search("type:ticket+has_attachment:true")
 	if err != nil {
 		core.LogError(err, "zendesk", "Search failed")
 		return []Downloadable{}
@@ -106,8 +93,14 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 	for _, t := range results.Results {
 		ticket_id := strconv.FormatUint(t.Id, 10)
 
-		// Parse email
-		email := usermap[t.RequesterId].Email
+		// Get user info for this ticket's requester ID
+        user, err := auth.ShowUser(fmt.Sprint(t.RequesterId))
+        if err != nil {
+			core.LogError(err, "zendesk", "Failed to find user %s", t.RequesterId)
+        }
+
+        // Extract email; skip tickets initiated by us
+        email := user.User.Email
 		if strings.HasSuffix(email, "10xgenomics.com") {
 			continue
 		}
