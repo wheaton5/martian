@@ -287,13 +287,6 @@ Options:
 			rr.Sts.Credentials.Secret_access_key,
 			rr.Sts.Credentials.Session_token),
 	})
-	/*
-		defaults.DefaultConfig.Region = aws.String(rr.Region)
-		defaults.DefaultConfig.Credentials = credentials.NewStaticCredentials(
-			rr.Sts.Credentials.Access_key_id,
-			rr.Sts.Credentials.Secret_access_key,
-			rr.Sts.Credentials.Session_token)
-	*/
 
 	// Create multi-stream uploader with default options.
 	uploader := s3manager.NewUploader(sess, func(u *s3manager.Uploader) {
@@ -301,14 +294,7 @@ Options:
 		u.Concurrency = concurrency
 		u.LeavePartsOnError = false
 	})
-	/*`
-	  &s3manager.UploadOptions{
-	  		PartSize:          0,
-	  		Concurrency:       concurrency,
-	  		LeavePartsOnError: false,
-	  		S3:                nil,
-	  	})
-	*/
+
 	// Open the wrapped file.
 	f, err := InstrumentedOpen(fpath)
 	if err != nil {
