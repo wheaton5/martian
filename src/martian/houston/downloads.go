@@ -146,7 +146,8 @@ func (self *DownloadManager) download() {
 
 			// Handling of downloaded file depends on type
 			var cmd *exec.Cmd
-			if strings.HasPrefix(mimeType, "application/x-gzip") && strings.HasSuffix(d.fname, "debug.tgz") {
+			if strings.HasPrefix(mimeType, "application/x-gzip") &&
+				(strings.HasSuffix(d.fname, "debug.tgz") || strings.HasSuffix(d.fname, "mrlog.tgz")) {
 				core.LogInfo("dwnload", "    Pipestance, untaring")
 
 				// Create pipestance folder
