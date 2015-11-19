@@ -105,6 +105,8 @@ func VerifyPackage(packagePath string) (string, string, string, string, string, 
 			} else if prefix := os.Getenv(key); len(prefix) > 0 {
 				value = value + ":" + prefix
 			}
+		case "setaside":
+			envs["_TENX_"+key] = os.Getenv(key)
 		case "string":
 			break
 		default:
