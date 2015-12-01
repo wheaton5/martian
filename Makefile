@@ -51,7 +51,7 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-martian: mrc mre mrf mrg mrp mrs sake-strip sake-martian-strip
+sake-martian: mrc mre mrf mrg mrp mrs redstone sake-strip sake-martian-strip
 
 sake-test-martian: test
 
