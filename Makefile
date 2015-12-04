@@ -51,7 +51,7 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-martian: mrc mre mrf mrg mrp mrs sake-strip sake-martian-strip
+sake-martian: mrc mre mrf mrg mrp mrs redstone sake-strip sake-martian-strip
 
 sake-test-martian: test
 
@@ -86,7 +86,8 @@ sake-martian-strip:
 	rm -rf web/houston
 
 sake-martian-cs-strip:
-	# Remove mrv template.
+	# Remove mrv assets.
+	rm web/martian/client/mrv.js
 	rm web/martian/templates/mrv.html
 	
 	# Remove pd job templates.
