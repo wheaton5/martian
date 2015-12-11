@@ -10,8 +10,11 @@ import (
 	"martian/core"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 )
+
+const versionParts = 3
 
 type PackageManager interface {
 	GetPipestanceEnvironment(string, string, string) (string, string, string, map[string]string, error)
@@ -53,7 +56,20 @@ func NewPackage(packagePath string, debug bool) *Package {
 }
 
 func (self *Package) IsDirty() bool {
-	return strings.Contains(self.MroVersion, "dirty")
+	mroVersion := strings.TrimPrefix(self.MroVersion, self.Name+"-")
+	parts := strings.Split(mroVersion, ".")
+
+	if len(parts) != versionParts {
+		return true
+	}
+
+	for _, part := range parts {
+		if _, err := strconv.Atoi(part); err != nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 func VerifyPackage(packagePath string) (string, string, string, string, string, map[string]string, error) {
