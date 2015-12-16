@@ -68,12 +68,6 @@ type PipestanceForm struct {
 	Psid     string
 }
 
-type WebshimForm struct {
-	Sample   map[string]interface{}
-	Files    map[string]interface{}
-	Function string
-}
-
 type RedstoneFile struct {
 	Path    string `json:"path"`
 	Size    int64  `json:"size"`
@@ -933,21 +927,6 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 			"sample_bag":      lena.GetSampleBagWithId(sid),
 			"fastq_paths":     updateSampleState(sample, rt, lena, packages, pman),
 		})
-	})
-
-	app.Post("/api/webshim/:sid", binding.Json(WebshimForm{}), func(body WebshimForm, params martini.Params) string {
-		sid := params["sid"]
-		sampleBag := body.Sample
-		files := body.Files
-		function := body.Function
-
-		sample := lena.GetSampleWithId(sid)
-		if sample == nil {
-			return fmt.Sprintf("Sample %s not found in Lena.", sid)
-		}
-
-		view := packages.GetWebshimResponseForSample(sample, function, sampleBag, files)
-		return core.MakeJSON(view)
 	})
 
 	//=========================================================================

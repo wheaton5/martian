@@ -4,7 +4,7 @@
 # Build a Go package with git version embedding.
 #
 
-GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone
+GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone websoc
 GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
@@ -89,6 +89,6 @@ sake-martian-cs-strip:
 	# Remove mrv assets.
 	rm web/martian/client/mrv.js
 	rm web/martian/templates/mrv.html
-	
+
 	# Remove pd job templates.
 	rm -f jobmanagers/*.template
