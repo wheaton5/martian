@@ -96,7 +96,8 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 		// Get user info for this ticket's requester ID
         user, err := auth.ShowUser(fmt.Sprint(t.RequesterId))
         if err != nil {
-			core.LogError(err, "zendesk", "Failed to find user %s", t.RequesterId)
+			core.LogError(err, "zendesk", "Failed to find user %d", t.RequesterId)
+			continue
         }
 
         // Extract email; skip tickets initiated by us
