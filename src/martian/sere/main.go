@@ -80,6 +80,8 @@ Usage:
 Options:
     --mempercore=<num>       Set max GB each job may use at one time.
     --maxparalleljobs=<num>  Set maximum number of concurrent jobs at one time.
+    --jobinterval=<num>      Set the rate at which jobs are sent to the cluster, in milliseconds.
+                               (Only applies in non-local jobmodes)
     --debug                  Enable debug printing for package argshims.
     -h --help                Show this message.
     --version                Show version.`
@@ -127,6 +129,15 @@ Options:
 			core.LogInfo("options", "--maxparalleljobs=%d", maxParallelJobs)
 		}
 	}
+	// frequency (in milliseconds) that jobs will be sent to the queue
+	// (this is a minimum bound, as it may take longer to emit jobs)
+	jobFreqMillis := -1
+	if value := opts["--jobinterval"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			jobFreqMillis = value
+			core.LogInfo("options", "--jobinterval=%d", jobFreqMillis)
+		}
+	}
 
 	// Prepare configuration variables.
 	uiport := env["SERE_PORT"]
@@ -154,8 +165,8 @@ Options:
 
 	// Runtime
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, reqMemPerCore, maxParallelJobs, stackVars, zip, skipPreflight,
-		enableMonitor, debug, false)
+		-1, -1, reqMemPerCore, maxParallelJobs, jobFreqMillis, stackVars, zip,
+		skipPreflight, enableMonitor, debug, false)
 
 	// Mailer
 	mailer := manager.NewMailer(instanceName, emailHost, emailSender,
