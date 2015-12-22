@@ -78,10 +78,11 @@ Usage:
     sere -h | --help | --version
 
 Options:
-    --mempercore=<num>   Set max GB each job may use at one time.
-    --debug              Enable debug printing for package argshims.
-    -h --help            Show this message.
-    --version            Show version.`
+    --mempercore=<num>       Set max GB each job may use at one time.
+    --maxparalleljobs=<num>  Set maximum number of concurrent jobs at one time.
+    --debug                  Enable debug printing for package argshims.
+    -h --help                Show this message.
+    --version                Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
 	core.Println("SERE - %s\n", martianVersion)
@@ -119,6 +120,13 @@ Options:
 			core.LogInfo("options", "--mempercore=%d", reqMemPerCore)
 		}
 	}
+	maxParallelJobs := -1
+	if value := opts["--maxparalleljobs"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			maxParallelJobs = value
+			core.LogInfo("options", "--maxparalleljobs=%d", maxParallelJobs)
+		}
+	}
 
 	// Prepare configuration variables.
 	uiport := env["SERE_PORT"]
@@ -146,8 +154,8 @@ Options:
 
 	// Runtime
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, reqMemPerCore, stackVars, zip, skipPreflight, enableMonitor,
-		debug, false)
+		-1, -1, reqMemPerCore, maxParallelJobs, stackVars, zip, skipPreflight,
+		enableMonitor, debug, false)
 
 	// Mailer
 	mailer := manager.NewMailer(instanceName, emailHost, emailSender,

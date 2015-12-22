@@ -177,26 +177,28 @@ Usage:
     marsoc -h | --help | --version
 
 Options:
-    --maxprocs=<num>     Set number of processes used by MARSOC.
-                           Defaults to 1.
-    --jobmode=<name>     Run jobs on custom or local job manager.
-                           Valid job managers are local, sge, lsf or .template file
-                           Defaults to sge.
-    --localcores=<num>   Set max cores the pipeline may request at one time.
-                           (Only applies in local jobmode)
-    --localmem=<num>     Set max GB the pipeline may request at one time.
-                           (Only applies in local jobmode)
-    --mempercore=<num>   Set max GB each job may use at one time.
-                           (Only applies in non-local jobmodes)
-    --vdrmode=<name>     Enables Volatile Data Removal.
-                           Valid options are rolling, post and disable.
-                           Defaults to rolling.
-    --check-dirty        Check packages for dirty versions.
-                           Disables running pipestances if dirty.
-    --autoinvoke         Turns on automatic pipestance invocation.
-    --debug              Enable debug printing for package argshims.
-    -h --help            Show this message.
-    --version            Show version.`
+    --maxprocs=<num>         Set number of processes used by MARSOC.
+                               Defaults to 1.
+    --jobmode=<name>         Run jobs on custom or local job manager.
+                               Valid job managers are local, sge, lsf or .template file
+                               Defaults to sge.
+    --localcores=<num>       Set max cores the pipeline may request at one time.
+                               (Only applies in local jobmode)
+    --localmem=<num>         Set max GB the pipeline may request at one time.
+                               (Only applies in local jobmode)
+    --mempercore=<num>       Set max GB each job may use at one time.
+                               (Only applies in non-local jobmodes)
+    --maxparalleljobs=<num>  Set maximum number of concurrent jobs at one time.
+                               (Only applies in non-local jobmodes)
+    --vdrmode=<name>         Enables Volatile Data Removal.
+                               Valid options are rolling, post and disable.
+                               Defaults to rolling.
+    --check-dirty            Check packages for dirty versions.
+                               Disables running pipestances if dirty.
+    --autoinvoke             Turns on automatic pipestance invocation.
+    --debug                  Enable debug printing for package argshims.
+    -h --help                Show this message.
+    --version                Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
 	core.Println("MARSOC - %s\n", martianVersion)
@@ -269,6 +271,15 @@ Options:
 		}
 	}
 
+	// Max parallel jobs.
+	maxParallelJobs := -1
+	if value := opts["--maxparalleljobs"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			maxParallelJobs = value
+			core.LogInfo("options", "--maxparalleljobs=%d", maxParallelJobs)
+		}
+	}
+
 	vdrMode := "rolling"
 	if value := opts["--vdrmode"]; value != nil {
 		vdrMode = value.(string)
@@ -313,8 +324,8 @@ Options:
 	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		reqCores, reqMem, reqMemPerCore, stackVars, zip, skipPreflight, enableMonitor,
-		debug, false)
+		reqCores, reqMem, reqMemPerCore, maxParallelJobs, stackVars, zip,
+		skipPreflight, enableMonitor, debug, false)
 
 	//=========================================================================
 	// Setup Mailer.
