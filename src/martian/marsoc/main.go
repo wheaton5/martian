@@ -288,6 +288,7 @@ Options:
 		if value, err := strconv.Atoi(value.(string)); err == nil {
 			maxJobs = value
 			core.LogInfo("options", "--maxjobs=%d", maxJobs)
+		}
 	}
 
 	vdrMode := "rolling"
