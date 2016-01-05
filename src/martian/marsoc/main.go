@@ -188,7 +188,7 @@ Options:
                                (Only applies in local jobmode)
     --mempercore=<num>       Set max GB each job may use at one time.
                                (Only applies in non-local jobmodes)
-    --maxparalleljobs=<num>  Set maximum number of concurrent jobs at one time.
+    --maxjobs=<num>          Set maximum number of concurrent jobs at one time.
                                (Only applies in non-local jobmodes)
     --vdrmode=<name>         Enables Volatile Data Removal.
                                Valid options are rolling, post and disable.
@@ -272,11 +272,11 @@ Options:
 	}
 
 	// Max parallel jobs.
-	maxParallelJobs := -1
-	if value := opts["--maxparalleljobs"]; value != nil {
+	maxJobs := -1
+	if value := opts["--maxjobs"]; value != nil {
 		if value, err := strconv.Atoi(value.(string)); err == nil {
-			maxParallelJobs = value
-			core.LogInfo("options", "--maxparalleljobs=%d", maxParallelJobs)
+			maxJobs = value
+			core.LogInfo("options", "--maxjobs=%d", maxJobs)
 		}
 	}
 
@@ -324,7 +324,7 @@ Options:
 	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		reqCores, reqMem, reqMemPerCore, maxParallelJobs, stackVars, zip,
+		reqCores, reqMem, reqMemPerCore, maxJobs, stackVars, zip,
 		skipPreflight, enableMonitor, debug, false)
 
 	//=========================================================================

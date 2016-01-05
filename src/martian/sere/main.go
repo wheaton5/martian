@@ -79,7 +79,7 @@ Usage:
 
 Options:
     --mempercore=<num>       Set max GB each job may use at one time.
-    --maxparalleljobs=<num>  Set maximum number of concurrent jobs at one time.
+    --maxjobs=<num>          Set maximum number of concurrent jobs at one time.
     --debug                  Enable debug printing for package argshims.
     -h --help                Show this message.
     --version                Show version.`
@@ -120,11 +120,11 @@ Options:
 			core.LogInfo("options", "--mempercore=%d", reqMemPerCore)
 		}
 	}
-	maxParallelJobs := -1
-	if value := opts["--maxparalleljobs"]; value != nil {
+	maxJobs := -1
+	if value := opts["--maxjobs"]; value != nil {
 		if value, err := strconv.Atoi(value.(string)); err == nil {
-			maxParallelJobs = value
-			core.LogInfo("options", "--maxparalleljobs=%d", maxParallelJobs)
+			maxJobs = value
+			core.LogInfo("options", "--maxjobs=%d", maxJobs)
 		}
 	}
 
@@ -154,7 +154,7 @@ Options:
 
 	// Runtime
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, reqMemPerCore, maxParallelJobs, stackVars, zip, skipPreflight,
+		-1, -1, reqMemPerCore, maxJobs, stackVars, zip, skipPreflight,
 		enableMonitor, debug, false)
 
 	// Mailer
