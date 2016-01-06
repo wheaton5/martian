@@ -78,13 +78,17 @@ Usage:
     sere -h | --help | --version
 
 Options:
-    --mempercore=<num>       Set max GB each job may use at one time.
-    --maxjobs=<num>          Set maximum number of concurrent jobs at one time.
-    --jobinterval=<num>      Set the rate at which jobs are sent to the cluster, in milliseconds.
-                               (Only applies in non-local jobmodes)
-    --debug                  Enable debug printing for package argshims.
-    -h --help                Show this message.
-    --version                Show version.`
+    --mempercore=NUM    Specify min GB per core on your cluster.
+                            Only applies in cluster jobmodes.
+    --maxjobs=NUM       Set max jobs submitted to cluster at one time.
+                            Only applies in cluster jobmodes.
+    --jobinterval=NUM   Set delay between submitting jobs to cluster, in ms.
+                            Only applies in cluster jobmodes.
+    
+    --debug             Enable debug printing for package argshims.
+    
+    -h --help           Show this message.
+    --version           Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
 	core.Println("SERE - %s\n", martianVersion)
