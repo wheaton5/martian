@@ -107,14 +107,6 @@ func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag inte
 	return ""
 }
 
-func (self *PackageManager) GetWebshimResponseForSample(sample *Sample, function string, sbag interface{}, files map[string]interface{}) interface{} {
-	if p, ok := self.packages[sample.Product]; ok {
-		sampleId := strconv.Itoa(sample.Id)
-		return p.Argshim.GetWebshimResponseForTest("lena", function, sampleId, sbag, files)
-	}
-	return ""
-}
-
 // Pipestance manager functions
 func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, string, map[string]string, error) {
 	if pipeline == "BCL_PROCESSOR_PD" {
