@@ -1,9 +1,6 @@
 [submodule "src/github.com/codegangsta/inject"]
 	path = src/github.com/codegangsta/inject
 	url = https://github.com/codegangsta/inject
-[submodule "src/github.com/docopt/docopt.go"]
-	path = src/github.com/docopt/docopt.go
-	url = https://github.com/docopt/docopt.go.git
 [submodule "src/github.com/dustin/go-humanize"]
 	path = src/github.com/dustin/go-humanize
 	url = https://github.com/dustin/go-humanize
@@ -37,3 +34,6 @@
 [submodule "src/github.com/vaughan0/go-ini"]
 	path = src/github.com/vaughan0/go-ini
 	url = https://github.com/vaughan0/go-ini
+[submodule "src/github.com/10XDev/docopt.go"]
+	path = src/github.com/10XDev/docopt.go
+	url = git@github.com:10XDev/docopt.go.git

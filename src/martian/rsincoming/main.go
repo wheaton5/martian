@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/10XDev/docopt.go"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/docopt/docopt.go"
 	"github.com/dustin/go-humanize"
 )
 
