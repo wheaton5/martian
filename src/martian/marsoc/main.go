@@ -176,27 +176,31 @@ Usage:
     marsoc [options]
     marsoc -h | --help | --version
 
-Options:
-    --maxprocs=<num>     Set number of processes used by MARSOC.
-                           Defaults to 1.
-    --jobmode=<name>     Run jobs on custom or local job manager.
-                           Valid job managers are local, sge, lsf or .template file
-                           Defaults to sge.
-    --localcores=<num>   Set max cores the pipeline may request at one time.
-                           (Only applies in local jobmode)
-    --localmem=<num>     Set max GB the pipeline may request at one time.
-                           (Only applies in local jobmode)
-    --mempercore=<num>   Set max GB each job may use at one time.
-                           (Only applies in non-local jobmodes)
-    --vdrmode=<name>     Enables Volatile Data Removal.
-                           Valid options are rolling, post and disable.
-                           Defaults to rolling.
-    --check-dirty        Check packages for dirty versions.
-                           Disables running pipestances if dirty.
-    --autoinvoke         Turns on automatic pipestance invocation.
-    --debug              Enable debug printing for package argshims.
-    -h --help            Show this message.
-    --version            Show version.`
+Options:    
+    --jobmode=MODE      Job manager to use. Valid options:
+                            local (default), sge, lsf, or a .template file
+    --localcores=NUM    Set max cores the pipeline may request at one time.
+                            Only applies when --jobmode=local.
+    --localmem=NUM      Set max GB the pipeline may request at one time.
+                            Only applies when --jobmode=local.
+    --mempercore=NUM    Specify min GB per core on your cluster.
+                            Only applies in cluster jobmodes.
+    --maxjobs=NUM       Set max jobs submitted to cluster at one time.
+                            Only applies in cluster jobmodes.
+    --jobinterval=NUM   Set delay between submitting jobs to cluster, in ms.
+                            Only applies in cluster jobmodes.
+    --vdrmode=MODE      Enables Volatile Data Removal. Valid options:
+                            post (default), rolling, or disable
+    
+    --maxprocs=NUM      Set number of processes used by MARSOC.
+                            Defaults to 1.
+    --check-dirty       Check packages for dirty versions.
+                            Disables running pipestances if dirty.
+    --autoinvoke        Turns on automatic pipestance invocation.
+    --debug             Enable debug printing for package argshims.
+
+    -h --help           Show this message.
+    --version           Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
 	core.Println("MARSOC - %s\n", martianVersion)
@@ -268,6 +272,24 @@ Options:
 			core.LogInfo("options", "--mempercore=%d", reqMemPerCore)
 		}
 	}
+	// frequency (in milliseconds) that jobs will be sent to the queue
+	// (this is a minimum bound, as it may take longer to emit jobs)
+	jobFreqMillis := -1
+	if value := opts["--jobinterval"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			jobFreqMillis = value
+			core.LogInfo("options", "--jobinterval=%d", jobFreqMillis)
+		}
+	}
+
+	// Max parallel jobs.
+	maxJobs := -1
+	if value := opts["--maxjobs"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			maxJobs = value
+			core.LogInfo("options", "--maxjobs=%d", maxJobs)
+		}
+	}
 
 	vdrMode := "rolling"
 	if value := opts["--vdrmode"]; value != nil {
@@ -313,8 +335,8 @@ Options:
 	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		reqCores, reqMem, reqMemPerCore, stackVars, zip, skipPreflight, enableMonitor,
-		debug, false)
+		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
+		skipPreflight, enableMonitor, debug, false)
 
 	//=========================================================================
 	// Setup Mailer.

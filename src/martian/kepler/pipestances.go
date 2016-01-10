@@ -290,7 +290,7 @@ func (self *PipestanceManager) InsertPipestance(psPath string) error {
 	for _, fork := range topNode.Forks {
 		forkStats = append(forkStats, fork.ForkStats)
 	}
-	pipestanceStats := core.ComputeStats(forkStats, []string{}, nil)
+	pipestanceStats := core.ComputeStats(forkStats, []string{})
 
 	// Insert pipestance with its metadata
 	err = self.db.InsertPipestance(tx, psPath, fqname, martianVersion,

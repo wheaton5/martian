@@ -78,10 +78,17 @@ Usage:
     sere -h | --help | --version
 
 Options:
-    --mempercore=<num>   Set max GB each job may use at one time.
-    --debug              Enable debug printing for package argshims.
-    -h --help            Show this message.
-    --version            Show version.`
+    --mempercore=NUM    Specify min GB per core on your cluster.
+                            Only applies in cluster jobmodes.
+    --maxjobs=NUM       Set max jobs submitted to cluster at one time.
+                            Only applies in cluster jobmodes.
+    --jobinterval=NUM   Set delay between submitting jobs to cluster, in ms.
+                            Only applies in cluster jobmodes.
+    
+    --debug             Enable debug printing for package argshims.
+    
+    -h --help           Show this message.
+    --version           Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
 	core.Println("SERE - %s\n", martianVersion)
@@ -119,6 +126,22 @@ Options:
 			core.LogInfo("options", "--mempercore=%d", reqMemPerCore)
 		}
 	}
+	maxJobs := -1
+	if value := opts["--maxjobs"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			maxJobs = value
+			core.LogInfo("options", "--maxjobs=%d", maxJobs)
+		}
+	}
+	// frequency (in milliseconds) that jobs will be sent to the queue
+	// (this is a minimum bound, as it may take longer to emit jobs)
+	jobFreqMillis := -1
+	if value := opts["--jobinterval"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			jobFreqMillis = value
+			core.LogInfo("options", "--jobinterval=%d", jobFreqMillis)
+		}
+	}
 
 	// Prepare configuration variables.
 	uiport := env["SERE_PORT"]
@@ -146,8 +169,8 @@ Options:
 
 	// Runtime
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, reqMemPerCore, stackVars, zip, skipPreflight, enableMonitor,
-		debug, false)
+		-1, -1, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
+		skipPreflight, enableMonitor, debug, false)
 
 	// Mailer
 	mailer := manager.NewMailer(instanceName, emailHost, emailSender,
