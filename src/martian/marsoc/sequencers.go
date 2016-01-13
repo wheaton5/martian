@@ -115,7 +115,7 @@ func New4kSeqSequencer(pool *SequencerPool, name string) *Sequencer {
 }
 
 func NewXTSeqSequencer(pool *SequencerPool, name string) *Sequencer {
-	return NewSequencer(pool, name, "^(\\d{6})_([\\w-]+)_(\\d+)_[AB]*(FC)?([A-Z0-9]{9})$")
+	return NewSequencer(pool, name, "^(\\d{6})_([\\w-]+)_(\\d+)_[AB]*([A-Z0-9]{9})$")
 }
 
 
