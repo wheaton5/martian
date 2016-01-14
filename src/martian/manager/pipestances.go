@@ -515,8 +515,17 @@ func (self *PipestanceManager) copyPipestance(pkey string) {
 	}
 }
 
+func logProcessProgress(pkey string, label string, start time.Time) time.Time {
+	now := time.Now()
+	// use this daisy-chain pattern if you want to see the interval between
+	// labels, not time since begining of cycle/goroutine
+	core.LogInfo("piperun", "%s|%s: %v", label, pkey, now.Sub(start).String())
+	return now
+}
+
 func (self *PipestanceManager) processRunningPipestances() {
 	running := map[string]*core.Pipestance{}
+	overallStartTime := time.Now()
 
 	// Copy the current run list
 	self.mutex.Lock()
@@ -524,6 +533,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 		running[pkey] = pipestance
 	}
 	self.mutex.Unlock()
+	core.LogInfo("piperun", "--start cycle (length %d)--", len(running))
 
 	// Concurrently step all pipestances in the run list copy.
 	var wg sync.WaitGroup
@@ -531,9 +541,12 @@ func (self *PipestanceManager) processRunningPipestances() {
 
 	for pkey, pipestance := range running {
 		go func(pkey string, pipestance *core.Pipestance, wg *sync.WaitGroup) {
+			startTime := time.Now()
+			core.LogInfo("piperun", "StartProcess|%s", pkey)
 			pipestance.RefreshState()
 
 			state := pipestance.GetState()
+			logProcessProgress(pkey, "GetState", startTime)
 			if state == "complete" {
 				// If pipestance is done, remove from run list, mark it in the
 				// cache as completed, and flush the cache.
@@ -548,12 +561,14 @@ func (self *PipestanceManager) processRunningPipestances() {
 
 				// Post processing.
 				pipestance.PostProcess()
+				logProcessProgress(pkey, "PostCompleteProcess", startTime)
 
 				self.mutex.Lock()
 				delete(self.running, pkey)
 				self.completed[pkey] = true
 				self.copyPipestance(pkey)
 				self.mutex.Unlock()
+				logProcessProgress(pkey, "PostCopyPipestance", startTime)
 
 				// Email notification.
 				container, pname, psid := parsePipestanceKey(pkey)
@@ -577,6 +592,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 					})
 					self.mutex.Unlock()
 				}
+				logProcessProgress(pkey, "SuccessEmail", startTime)
 			} else if state == "failed" {
 				// If pipestance is failed, remove from run list, mark it in the
 				// cache as failed, and flush the cache.
@@ -600,6 +616,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 
 				// Delete jobs for failed stage.
 				deleteJobs(stage)
+				logProcessProgress(pkey, "PostFailureProcess", startTime)
 
 				if pname == "BCL_PROCESSOR_PD" {
 					// For BCL_PROCESSOR_PD, just email the admins.
@@ -623,10 +640,12 @@ func (self *PipestanceManager) processRunningPipestances() {
 					})
 					self.mutex.Unlock()
 				}
+				logProcessProgress(pkey, "PostFailureEmail", startTime)
 			} else {
 				// If it is not done, check job heartbeats and step the nodes.
 				pipestance.CheckHeartbeats()
 				pipestance.StepNodes()
+				logProcessProgress(pkey, "PostStep", startTime)
 			}
 			wg.Done()
 		}(pkey, pipestance, &wg)
@@ -635,10 +654,12 @@ func (self *PipestanceManager) processRunningPipestances() {
 	// Wait for this round of processing to complete, then write
 	// out any changes to the complete/fail cache.
 	wg.Wait()
+	logProcessProgress(strconv.Itoa(len(running)), "PostCycle", overallStartTime)
 
 	self.mutex.Lock()
 	self.writeCache()
 	self.mutex.Unlock()
+	logProcessProgress(strconv.Itoa(len(running)), "PostWriteCache", overallStartTime)
 }
 
 func (self *PipestanceManager) writePipestanceToFailCoop(pkey string, stage string, summary string,
