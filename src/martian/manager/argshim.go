@@ -143,7 +143,7 @@ func (self *ArgShim) buildArgsForTest(category string, id string, sbag interface
 	return map[string]interface{}{}
 }
 
-func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interface{}, mroPath string) string {
+func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interface{}, mroPaths []string) string {
 	pipeline, ok := shimout["call"].(string)
 	if !ok {
 		return ""
@@ -157,17 +157,17 @@ func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interf
 		sweepargs = core.ArrayToString(sweeplist)
 	}
 	incpath := fmt.Sprintf("%s.mro", strings.ToLower(pipeline))
-	src, _ := rt.BuildCallSource([]string{incpath}, pipeline, args, sweepargs, mroPath)
+	src, _ := rt.BuildCallSource([]string{incpath}, pipeline, args, sweepargs, mroPaths)
 	return src
 }
 
-func (self *ArgShim) BuildCallSourceForRun(rt *core.Runtime, rbag interface{}, mroPath string) string {
-	return self.buildCallSource(rt, self.buildArgsForRun(rbag), mroPath)
+func (self *ArgShim) BuildCallSourceForRun(rt *core.Runtime, rbag interface{}, mroPaths []string) string {
+	return self.buildCallSource(rt, self.buildArgsForRun(rbag), mroPaths)
 }
 
 func (self *ArgShim) BuildCallSourceForTest(rt *core.Runtime, category string, id string, sbag interface{},
-	fastqPaths map[string]string, mroPath string) string {
-	return self.buildCallSource(rt, self.buildArgsForTest(category, id, sbag, fastqPaths), mroPath)
+	fastqPaths map[string]string, mroPaths []string) string {
+	return self.buildCallSource(rt, self.buildArgsForTest(category, id, sbag, fastqPaths), mroPaths)
 }
 
 func (self *ArgShim) GetWebshimResponseForTest(category string, function string, id string, sbag interface{},

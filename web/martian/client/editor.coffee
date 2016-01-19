@@ -5,6 +5,11 @@
 #
 
 app = angular.module('app', ['ui.bootstrap'])
+app.filter('shorten',  () -> (s) ->
+    s = s + ""
+    if s.length < 21 then return s
+    else return s.substr(0, 10) + " ... " + s.substr(s.length - 10)
+)
 
 # Pipeline graph directive
 app.directive('pipeGraph', () ->
@@ -18,7 +23,7 @@ app.directive('pipeGraph', () ->
     }
 )
 renderPipeline = (pipelineDec) ->
-    g = new dagreD3.Digraph() 
+    g = new dagreD3.Digraph()
     for callStm in pipelineDec.Calls
         g.addNode(callStm.Id, {label: callStm.Id})
     for callStm in pipelineDec.Calls
@@ -36,7 +41,7 @@ renderPipeline = (pipelineDec) ->
 app.directive('mainAceEditor', () ->
     return {
         restrict: 'E'
-        scope: { 
+        scope: {
             editorInfo: '=editorInfo',
             save: '&save'
         },
@@ -54,7 +59,7 @@ app.directive('mainAceEditor', () ->
             e.commands.addCommand({
                 name: 'Undo',
                 bindKey: {win: 'Ctrl-Z', mac: 'Command-Z'},
-                exec: (e) -> e.undo()            
+                exec: (e) -> e.undo()
                 readOnly: false
             })
     }
@@ -80,37 +85,45 @@ initEditor = (elem) ->
     editor.setHighlightActiveLine(false)
     return editor
 
-initSession = (einfo, fname, contents) ->
+initSession = (einfo, mroPath, fname, contents) ->
     session = new ace.EditSession(contents, 'ace/mode/coffee')
     session.setUseWorker(false)
     session.setUndoManager(new ace.UndoManager());
     einfo.ace.setSession(session)
     einfo.dirty = false
+    einfo.mroPath = mroPath
     einfo.fname = fname
 
 
 # Main Controller.
 app.controller('MartianEdCtrl', ($scope, $http) ->
+    $scope.mroPaths = mroPaths
+    $scope.mroPath = mroPaths[0]
+
     # Define main and include editors.
     $scope.mainEditor = {
+        mroPath: $scope.mroPath,
         fname: 'select file:',
         dirty: false
     }
     $scope.includeEditor = {
         fname: '',
     }
- 
+
     # File selector.
-    $scope.availableFnames = [] 
-    $http.get('/files').success((data) -> $scope.availableFnames = data)
+    $scope.availableFiles = []
+    $http.get('/files').success((data) -> $scope.availableFiles = data)
 
     # Event handlers.
-    $scope.selectFile = (fname) ->
-        $http.post('/load', { fname: fname }).success((data) ->
+    $scope.selectMroPath = (mroPath) ->
+        $scope.mroPath = mroPath
+
+    $scope.selectFile = (file) ->
+        $http.post('/load', { mroPath: file.mroPath, fname: file.fname }).success((data) ->
             # Populate editors with file contents.
-            initSession($scope.mainEditor, fname, data.contents)
+            initSession($scope.mainEditor, file.mroPath, file.fname, data.contents)
             if data.includeFile
-                initSession($scope.includeEditor, data.includeFile.name, data.includeFile.contents)
+                initSession($scope.includeEditor, data.includeFile.mroPath, data.includeFile.name, data.includeFile.contents)
 
             # Clear compiler messages.
             $scope.compilerMessages = ''
@@ -127,7 +140,7 @@ app.controller('MartianEdCtrl', ($scope, $http) ->
             window.alert('Select a file first.')
             return
 
-        $http.post('/build', { fname: $scope.mainEditor.fname, }).success((data) ->
+        $http.post('/build', { mroPath: $scope.mainEditor.mroPath, fname: $scope.mainEditor.fname }).success((data) ->
             if typeof data == 'string'
                 # Got an error message, jump to line in main editor.
                 locMatch = data.match(/on line (\d+):/)
@@ -151,18 +164,18 @@ app.controller('MartianEdCtrl', ($scope, $http) ->
                 if $scope.pipelineDecList[0]?
                     $scope.pipelineDecList[0].active = true
         )
-    
+
     $scope.new = () ->
         fname = window.prompt('Enter file name including .mro extension:')
         if not (fname? and fname.length > 0)
             return
 
         # Add new filename to selector.
-        $scope.availableFnames.push(fname)
+        $scope.availableFiles.push({ mroPath: $scope.mroPath, fname: fname })
 
         # Clear the editors.
-        initSession($scope.mainEditor, fname, '')
-        initSession($scope.includeEditor, '', '')
+        initSession($scope.mainEditor, $scope.mroPath, fname, '')
+        initSession($scope.includeEditor, '', '', '')
         $scope.mainEditor.dirty = true
 
         # Clear compiler messages.
@@ -172,11 +185,11 @@ app.controller('MartianEdCtrl', ($scope, $http) ->
         $scope.pipelineDecList = []
 
     $scope.save = () ->
-        $http.post('/save', { 
-                fname: $scope.mainEditor.fname, 
-                contents: $scope.mainEditor.ace.getValue() 
-            }).success((data) ->            
+        $http.post('/save', {
+                mroPath: $scope.mainEditor.mroPath,
+                fname: $scope.mainEditor.fname,
+                contents: $scope.mainEditor.ace.getValue()
+            }).success((data) ->
                 $scope.mainEditor.dirty = false
         )
 )
-

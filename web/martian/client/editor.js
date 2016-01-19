@@ -3,6 +3,17 @@
 
   app = angular.module('app', ['ui.bootstrap']);
 
+  app.filter('shorten', function() {
+    return function(s) {
+      s = s + "";
+      if (s.length < 21) {
+        return s;
+      } else {
+        return s.substr(0, 10) + " ... " + s.substr(s.length - 10);
+      }
+    };
+  });
+
   app.directive('pipeGraph', function() {
     return {
       restrict: 'A',
@@ -118,35 +129,43 @@
     return editor;
   };
 
-  initSession = function(einfo, fname, contents) {
+  initSession = function(einfo, mroPath, fname, contents) {
     var session;
     session = new ace.EditSession(contents, 'ace/mode/coffee');
     session.setUseWorker(false);
     session.setUndoManager(new ace.UndoManager());
     einfo.ace.setSession(session);
     einfo.dirty = false;
+    einfo.mroPath = mroPath;
     return einfo.fname = fname;
   };
 
   app.controller('MartianEdCtrl', function($scope, $http) {
+    $scope.mroPaths = mroPaths;
+    $scope.mroPath = mroPaths[0];
     $scope.mainEditor = {
+      mroPath: $scope.mroPath,
       fname: 'select file:',
       dirty: false
     };
     $scope.includeEditor = {
       fname: ''
     };
-    $scope.availableFnames = [];
+    $scope.availableFiles = [];
     $http.get('/files').success(function(data) {
-      return $scope.availableFnames = data;
+      return $scope.availableFiles = data;
     });
-    $scope.selectFile = function(fname) {
+    $scope.selectMroPath = function(mroPath) {
+      return $scope.mroPath = mroPath;
+    };
+    $scope.selectFile = function(file) {
       return $http.post('/load', {
-        fname: fname
+        mroPath: file.mroPath,
+        fname: file.fname
       }).success(function(data) {
-        initSession($scope.mainEditor, fname, data.contents);
+        initSession($scope.mainEditor, file.mroPath, file.fname, data.contents);
         if (data.includeFile) {
-          initSession($scope.includeEditor, data.includeFile.name, data.includeFile.contents);
+          initSession($scope.includeEditor, data.includeFile.mroPath, data.includeFile.name, data.includeFile.contents);
         }
         $scope.compilerMessages = '';
         return $scope.pipelineDecList = [];
@@ -161,6 +180,7 @@
         return;
       }
       return $http.post('/build', {
+        mroPath: $scope.mainEditor.mroPath,
         fname: $scope.mainEditor.fname
       }).success(function(data) {
         var filetypes, locMatch, ptree;
@@ -189,15 +209,19 @@
       if (!((fname != null) && fname.length > 0)) {
         return;
       }
-      $scope.availableFnames.push(fname);
-      initSession($scope.mainEditor, fname, '');
-      initSession($scope.includeEditor, '', '');
+      $scope.availableFiles.push({
+        mroPath: $scope.mroPath,
+        fname: fname
+      });
+      initSession($scope.mainEditor, $scope.mroPath, fname, '');
+      initSession($scope.includeEditor, '', '', '');
       $scope.mainEditor.dirty = true;
       $scope.compileMessages = '';
       return $scope.pipelineDecList = [];
     };
     return $scope.save = function() {
       return $http.post('/save', {
+        mroPath: $scope.mainEditor.mroPath,
         fname: $scope.mainEditor.fname,
         contents: $scope.mainEditor.ace.getValue()
       }).success(function(data) {

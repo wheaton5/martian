@@ -97,44 +97,44 @@ func (self *PackageManager) GetPipelineForSample(sample *Sample) string {
 
 func (self *PackageManager) BuildCallSourceForRun(rt *core.Runtime, run *Run) string {
 	p := self.packages[self.defaultPackage]
-	return p.Argshim.BuildCallSourceForRun(rt, run, p.MroPath)
+	return p.Argshim.BuildCallSourceForRun(rt, run, p.MroPaths)
 }
 
 func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string,
 	sample *Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
-		return p.Argshim.BuildCallSourceForTest(rt, "lena", strconv.Itoa(sample.Id), sbag, fastqPaths, p.MroPath)
+		return p.Argshim.BuildCallSourceForTest(rt, "lena", strconv.Itoa(sample.Id), sbag, fastqPaths, p.MroPaths)
 	}
 	return ""
 }
 
 // Pipestance manager functions
-func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, string, map[string]string, error) {
+func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) ([]string, string, string, map[string]string, error) {
 	if pipeline == "BCL_PROCESSOR_PD" {
 		return self.getDefaultPipestanceEnvironment()
 	}
 	return self.getPipestanceEnvironment(psid)
 }
 
-func (self *PackageManager) getPipestanceEnvironment(psid string) (string, string, string, map[string]string, error) {
+func (self *PackageManager) getPipestanceEnvironment(psid string) ([]string, string, string, map[string]string, error) {
 	if sample := self.lena.GetSampleWithId(psid); sample != nil {
 		if p, ok := self.packages[sample.Product]; ok {
 			self.mutex.Lock()
 			defer self.mutex.Unlock()
 
-			return p.MroPath, p.MroVersion, p.ArgshimPath, p.Envs, nil
+			return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil
 		}
 	}
-	return "", "", "", nil, &core.MartianError{fmt.Sprintf("PackageManagerError: Failed to get environment for pipestance '%s'.", psid)}
+	return nil, "", "", nil, &core.MartianError{fmt.Sprintf("PackageManagerError: Failed to get environment for pipestance '%s'.", psid)}
 }
 
-func (self *PackageManager) getDefaultPipestanceEnvironment() (string, string, string, map[string]string, error) {
+func (self *PackageManager) getDefaultPipestanceEnvironment() ([]string, string, string, map[string]string, error) {
 	p := self.packages[self.defaultPackage]
 
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 
-	return p.MroPath, p.MroVersion, p.ArgshimPath, p.Envs, nil
+	return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil
 }
 
 // Version functions
@@ -142,7 +142,7 @@ func (self *PackageManager) refreshVersions() {
 	go func() {
 		for {
 			for _, p := range self.packages {
-				mroVersion := core.GetMroVersion(p.MroPath)
+				mroVersion := core.GetMroVersion(p.MroPaths)
 
 				self.mutex.Lock()
 				p.MroVersion = mroVersion

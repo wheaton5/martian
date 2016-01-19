@@ -40,15 +40,15 @@ Options:
 
 	// Compute MRO path.
 	cwd, _ := filepath.Abs(path.Dir(os.Args[0]))
-	mroPath := cwd
+	mroPaths := core.ParseMroPath(cwd)
 	if value := os.Getenv("MROPATH"); len(value) > 0 {
-		mroPath = value
+		mroPaths = core.ParseMroPath(value)
 	}
-	mroVersion := core.GetMroVersion(mroPath)
+	mroVersion := core.GetMroVersion(mroPaths)
 
 	rt := core.NewRuntime("local", "disable", "disable", martianVersion)
 	db := NewDatabaseManager("sqlite3", dbPath)
-	pman := NewPipestanceManager(pipestancesPaths, mroPath, mroVersion, db, rt)
+	pman := NewPipestanceManager(pipestancesPaths, mroPaths, mroVersion, db, rt)
 
 	// Run web server.
 	go runWebServer(uiport, martianVersion, db)

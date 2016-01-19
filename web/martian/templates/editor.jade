@@ -1,6 +1,6 @@
-//- 
+//-
     Copyright (c) 2014 10X Genomics, Inc. All rights reserved.
-    
+
     Main UI for martianlang editor.
 
 doctype html
@@ -12,12 +12,12 @@ html(ng-app="app")
         script(src="/js/angular.min.js")
         script(src="/js/ui-bootstrap-tpls-0.10.0.min.js")
         script(src="/js/lodash.min.js")
-        script(src="/js/ace/ace.js" type="text/javascript" charset="utf-8") 
+        script(src="/js/ace/ace.js" type="text/javascript" charset="utf-8")
         script(src="/js/d3.v3.min.js")
         script(src="/js/dagre-d3.min.js")
     body(ng-controller="MartianEdCtrl")
         header.navbar.navbar-inverse.navbar-fixed-top
-            .navbar-header 
+            .navbar-header
                 .navbar-brand
                     |10
                     span.logo-color X
@@ -36,21 +36,28 @@ html(ng-app="app")
             button.btn.btn-default.dropdown#file-selector
                 a.dropdown-toggle {{mainEditor.fname}}
                 ul.dropdown-menu
-                    li(ng-repeat="fname in availableFnames")
-                        a(href="#" ng-click="selectFile(fname)") {{fname}}
+                    li(ng-repeat="file in availableFiles")
+                        a(href="#" ng-if="file.mroPath == mroPath" ng-click="selectFile(file)") {{file.fname}}
+            button.btn.btn-default.dropdown#mropath-selector
+                a.dropdown-toggle {{mainEditor.mroPath | shorten}}
+                ul.dropdown-menu
+                    li(ng-repeat="mroPath in mroPaths")
+                        a(href="#" ng-click="selectMroPath(mroPath)") {{mroPath}}
     tabset#info-tabs
         tab(heading="Compiler Messages")
             pre#compiler-messages {{compilerMessages}}
 
-        tab(heading="{{includeEditor.fname}}") 
+        tab(heading="{{includeEditor.fname}}")
             include-ace-editor(editor-info="includeEditor")
 
-        tab(heading="{{pipelineDec.Id}}" ng-repeat="pipelineDec in pipelineDecList" 
+        tab(heading="{{pipelineDec.Id}}" ng-repeat="pipelineDec in pipelineDecList"
             select="selectTab(pipelineDec)" active="pipelineDec.active")
             svg(width="1000px" height="1000px")
                 g(pipe-graph
                   pipeline-dec="pipelineDec"
-                  id="{{pipelineDec.Id}}" 
+                  id="{{pipelineDec.Id}}"
                   transform="translate(20,20)")
 
+    script
+        | mroPaths = [[.MroPaths]];
     script(src="/editor.js")

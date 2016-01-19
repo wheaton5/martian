@@ -50,17 +50,17 @@ func NewPackageManager(packagePath string, debug bool, rt *core.Runtime, db *Dat
 	return self
 }
 
-func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) (string, string, string, map[string]string, error) {
+func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline string, psid string) ([]string, string, string, map[string]string, error) {
 	programName, cycleId, roundId := parseContainerKey(container)
 	round, err := self.db.GetRound(programName, cycleId, roundId)
 	if err != nil {
-		return "", "", "", nil, err
+		return nil, "", "", nil, err
 	}
 	p, err := self.GetPackage(round.PackageName, round.PackageTarget, round.PackageVersion)
 	if err != nil {
-		return "", "", "", nil, err
+		return nil, "", "", nil, err
 	}
-	return p.MroPath, p.MroVersion, p.ArgshimPath, p.Envs, nil
+	return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil
 }
 
 func (self *PackageManager) ManagePackages() []*manager.Package {
@@ -153,10 +153,10 @@ func (self *PackageManager) addPackage(name string, target string, path string) 
 	p.State = "complete"
 
 	checkSrcPath := true
-	if _, err := self.rt.CompileAll(p.MroPath, checkSrcPath); err != nil {
+	if _, err := self.rt.CompileAll(p.MroPaths, checkSrcPath); err != nil {
 		return err
 	}
-	self.rt.MroCache.CacheMros(p.MroPath)
+	self.rt.MroCache.CacheMros(p.MroPaths)
 
 	self.mutex.Lock()
 	if _, ok := self.packages[pid]; !ok {

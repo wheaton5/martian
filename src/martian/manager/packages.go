@@ -17,7 +17,7 @@ import (
 const versionParts = 3
 
 type PackageManager interface {
-	GetPipestanceEnvironment(string, string, string) (string, string, string, map[string]string, error)
+	GetPipestanceEnvironment(string, string, string) ([]string, string, string, map[string]string, error)
 }
 
 type Package struct {
@@ -25,7 +25,7 @@ type Package struct {
 	Target      string            `json:"target"`
 	BuildDate   string            `json:"build_date"`
 	ArgshimPath string            `json:"argshim_path"`
-	MroPath     string            `json:"mro_path"`
+	MroPaths    []string          `json:"mro_paths"`
 	MroVersion  string            `json:"mro_version"`
 	State       string            `json:"state"`
 	Envs        map[string]string `json:"envs"`
@@ -49,8 +49,8 @@ type PackageJsonEnv struct {
 
 func NewPackage(packagePath string, debug bool) *Package {
 	self := &Package{}
-	self.Name, self.Target, self.BuildDate, self.ArgshimPath, self.MroPath, self.Envs, _ = VerifyPackage(packagePath)
-	self.MroVersion = core.GetMroVersion(self.MroPath)
+	self.Name, self.Target, self.BuildDate, self.ArgshimPath, self.MroPaths, self.Envs, _ = VerifyPackage(packagePath)
+	self.MroVersion = core.GetMroVersion(self.MroPaths)
 	self.Argshim = NewArgShim(self.ArgshimPath, self.Envs, debug)
 	return self
 }
@@ -72,30 +72,34 @@ func (self *Package) IsDirty() bool {
 	return false
 }
 
-func VerifyPackage(packagePath string) (string, string, string, string, string, map[string]string, error) {
+func VerifyPackage(packagePath string) (string, string, string, string, []string, map[string]string, error) {
 	packageFile := path.Join(packagePath, "marsoc.json")
 	if _, err := os.Stat(packageFile); os.IsNotExist(err) {
 		core.PrintInfo("package", "Package config file %s does not exist.", packageFile)
-		return "", "", "", "", "", nil, err
+		return "", "", "", "", nil, nil, err
 	}
 	bytes, _ := ioutil.ReadFile(packageFile)
 
 	var packageJson *PackageJson
 	if err := json.Unmarshal(bytes, &packageJson); err != nil {
 		core.PrintInfo("package", "Package config file %s does not contain valid JSON.", packageFile)
-		return "", "", "", "", "", nil, err
+		return "", "", "", "", nil, nil, err
 	}
 
 	argshimPath := path.Join(packagePath, packageJson.ArgshimPath)
 	if _, err := os.Stat(argshimPath); err != nil {
 		core.PrintInfo("package", "Package argshim file %s does not exist.", argshimPath)
-		return "", "", "", "", "", nil, err
+		return "", "", "", "", nil, nil, err
 	}
 
-	mroPath := path.Join(packagePath, packageJson.MroPath)
-	if _, err := os.Stat(mroPath); err != nil {
-		core.PrintInfo("package", "Package mro path %s does not exist.", mroPath)
-		return "", "", "", "", "", nil, err
+	mroPaths := []string{}
+	for _, mroPath := range core.ParseMroPath(packageJson.MroPath) {
+		mroPath := path.Join(packagePath, mroPath)
+		if _, err := os.Stat(mroPath); err != nil {
+			core.PrintInfo("package", "Package mro path %s does not exist.", mroPath)
+			return "", "", "", "", nil, nil, err
+		}
+		mroPaths = append(mroPaths, mroPath)
 	}
 
 	name := packageJson.Name
@@ -127,11 +131,11 @@ func VerifyPackage(packagePath string) (string, string, string, string, string, 
 			break
 		default:
 			core.PrintInfo("package", "Unsupported env variable type %s.", envJson.Type)
-			return "", "", "", "", "", nil, &core.MartianError{fmt.Sprintf(
+			return "", "", "", "", nil, nil, &core.MartianError{fmt.Sprintf(
 				"Unsupported env variable type %s.", envJson.Type)}
 		}
 		envs[key] = value
 	}
 
-	return name, target, buildDate, argshimPath, mroPath, envs, nil
+	return name, target, buildDate, argshimPath, mroPaths, envs, nil
 }

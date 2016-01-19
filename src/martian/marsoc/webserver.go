@@ -677,8 +677,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		martianVersion, mroVersion, _ := pman.GetPipestanceVersions(container, pname, psid)
 		psinfo["version"] = martianVersion
 		psinfo["mroversion"] = mroVersion
-		mroPath, mroVersion, _, _, _ := pman.GetPipestanceEnvironment(container, pname, psid)
-		psinfo["mropath"] = mroPath
+		mroPaths, mroVersion, _, _, _ := pman.GetPipestanceEnvironment(container, pname, psid)
+		psinfo["mropath"] = core.FormatMroPath(mroPaths)
 		psinfo["mroversion"] = mroVersion
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
 		state["nodes"] = ser

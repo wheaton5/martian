@@ -263,7 +263,7 @@ func (self *SubmissionManager) getPipestanceMetadata(container string, pname str
 
 func (self *SubmissionManager) GetPipestance(container string, pname string, psid string, readOnly bool) (*core.Pipestance, bool) {
 	filesPath := self.makePipestancePath(container, pname, psid)
-	pipestance, err := self.rt.ReattachToPipestanceWithMroSrc(psid, filesPath, "", "", "", map[string]string{}, false, true)
+	pipestance, err := self.rt.ReattachToPipestanceWithMroSrc(psid, filesPath, "", []string{}, "", map[string]string{}, false, true)
 	if err != nil {
 		core.LogError(err, "submngr", "Failed to reattach to %s/%s/%s", container, pname, psid)
 		return nil, false
