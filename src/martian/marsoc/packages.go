@@ -73,6 +73,7 @@ func (self *PackageManager) CheckDirtyPackages() bool {
 	// Send emails only when packages are first detected with dirty version.
 	if !lastDirty {
 		for _, p := range packages {
+			core.LogInfo("package", "Package %s is dirty.", p.Name)
 			self.mailer.Sendmail(
 				[]string{},
 				fmt.Sprintf("Package %s dirty!", p.Name),

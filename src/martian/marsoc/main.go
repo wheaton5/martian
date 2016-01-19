@@ -320,7 +320,7 @@ Options:
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	redstoneConfigPath := env["MARSOC_REDSTONE_CONFIG"]
-	stepSecs := 5
+	runLoopIntervalms := 5 * 1000
 
 	// Setup Go runtime
 	runtime.GOMAXPROCS(maxProcs)
@@ -375,7 +375,7 @@ Options:
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
 	pman := manager.NewPipestanceManager(rt, pipestancesPaths, scratchPaths,
-		cachePath, failCoopPath, stepSecs, autoInvoke, mailer, packages)
+		cachePath, failCoopPath, runLoopIntervalms, autoInvoke, mailer, packages)
 	pman.LoadPipestances()
 
 	//=========================================================================

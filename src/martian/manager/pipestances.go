@@ -26,8 +26,8 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-const minBytesAvailable = 1024 * 1024 * 1024 * 1024 * 1.5 // 1.5 terabytes
-const scratchTimeout = 24 * 7 * 2                         // 2 weeks
+const MIN_BYTES_AVAILABLE = 1024 * 1024 * 1024 * 1024 * 1.5 // 1.5 terabytes
+const SCRATCH_EXPIRATION_HOURS = 24 * 7 * 1                 // 1 weeks
 
 type PipestanceFunc func(string, string, string) error
 type PipestanceInventoryFunc func(string, string, string, string, string, *sync.WaitGroup)
@@ -48,28 +48,28 @@ type AnalysisNotification struct {
 }
 
 type PipestanceManager struct {
-	rt            *core.Runtime
-	cachePath     string
-	autoInvoke    bool
-	runLoop       bool
-	stepms        int
-	aggregatePath string
-	writePath     string
-	failCoopPath  string
-	scratchIndex  int
-	scratchPaths  []string
-	paths         []string
-	pipelines     []string
-	completed     map[string]bool
-	failed        map[string]bool
-	mutex         *sync.Mutex
-	running       map[string]*core.Pipestance
-	pending       map[string]bool
-	copying       map[string]bool
-	mailQueue     []*PipestanceNotification
-	analysisQueue []*AnalysisNotification
-	mailer        *Mailer
-	packages      PackageManager
+	rt                *core.Runtime
+	cachePath         string
+	autoInvoke        bool
+	runLoop           bool
+	runLoopIntervalms int
+	aggregatePath     string
+	writePath         string
+	failCoopPath      string
+	scratchIndex      int
+	scratchPaths      []string
+	paths             []string
+	pipelines         []string
+	completed         map[string]bool
+	failed            map[string]bool
+	mutex             *sync.Mutex
+	running           map[string]*core.Pipestance
+	pending           map[string]bool
+	copying           map[string]bool
+	mailQueue         []*PipestanceNotification
+	analysisQueue     []*AnalysisNotification
+	mailer            *Mailer
+	packages          PackageManager
 }
 
 func makePipestanceKey(container string, pipeline string, psid string) string {
@@ -120,7 +120,7 @@ func getFilenameWithSuffix(dir string, fname string) string {
 }
 
 func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPaths []string,
-	cachePath string, failCoopPath string, stepms int, autoInvoke bool, mailer *Mailer,
+	cachePath string, failCoopPath string, runLoopIntervalms int, autoInvoke bool, mailer *Mailer,
 	packages PackageManager) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
@@ -131,7 +131,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPa
 	self.scratchIndex = 0
 	self.cachePath = path.Join(cachePath, "pipestances")
 	self.failCoopPath = failCoopPath
-	self.stepms = stepms
+	self.runLoopIntervalms = runLoopIntervalms
 	self.autoInvoke = autoInvoke
 	self.runLoop = true
 	self.pipelines = rt.MroCache.GetPipelines()
@@ -158,12 +158,16 @@ func (self *PipestanceManager) SetAutoInvoke(autoInvoke bool) {
 }
 
 func (self *PipestanceManager) EnableRunLoop() {
-	core.LogInfo("pipeman", "Enabling run loop.")
+	if self.runLoop == false {
+		core.LogInfo("pipeman", "Enabling run loop.")
+	}
 	self.runLoop = true
 }
 
 func (self *PipestanceManager) DisableRunLoop() {
-	core.LogInfo("pipeman", "Disabling run loop.")
+	if self.runLoop == true {
+		core.LogInfo("pipeman", "Disabling run loop.")
+	}
 	self.runLoop = false
 }
 
@@ -367,7 +371,7 @@ func (self *PipestanceManager) cleanScratchPaths() {
 			name := scratchPsInfo.Name()
 			modTime := scratchPsInfo.ModTime()
 
-			if time.Since(modTime) < time.Hour*scratchTimeout {
+			if time.Since(modTime) < time.Hour*SCRATCH_EXPIRATION_HOURS {
 				continue
 			}
 
@@ -400,7 +404,7 @@ func (self *PipestanceManager) goProcessLoop() {
 			}
 
 			// Wait for a bit.
-			time.Sleep(time.Second * time.Duration(self.stepms))
+			time.Sleep(time.Millisecond * time.Duration(self.runLoopIntervalms))
 		}
 	}()
 }
@@ -410,7 +414,7 @@ func (self *PipestanceManager) goCleanLoop() {
 		for {
 			self.cleanScratchPaths()
 
-			time.Sleep(time.Hour * time.Duration(24))
+			time.Sleep(time.Hour * time.Duration(12))
 		}
 	}()
 }
@@ -716,7 +720,7 @@ func (self *PipestanceManager) getScratchPath() (string, error) {
 		var stat syscall.Statfs_t
 		if err := syscall.Statfs(scratchPath, &stat); err == nil {
 			bytesAvailable := stat.Bavail * uint64(stat.Bsize)
-			if bytesAvailable >= minBytesAvailable {
+			if bytesAvailable >= MIN_BYTES_AVAILABLE {
 				return scratchPath, nil
 			}
 		}
