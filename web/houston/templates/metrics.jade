@@ -73,7 +73,7 @@ html(ng-app="app")
                                 a(href="/pipestance/{{sub.source}}/{{sub.date}}/{{sub.name}}" style="color: #333") {{sub.name}}
                         td.right {{sub.summary.num_reads/1000000 | intComma}}M
                         td.right {{sub.summary.median_insert_size}}
-                        td.right {{(sub.summary.mean_dup_rate-1)*100 | formatNumber:2}}%
+                        td.right {{(sub.summary.mean_dup_rate-1)/(sub.summary.mean_dup_rate)*100 | formatNumber:2}}%
                         td.right {{sub.summary.mean_depth_deduped | intComma}}X
                         td.right {{sub.summary.inferred_number_gems/1000 | intComma}}k
                         td.right {{sub.summary.mean_bp_per_bc | intComma}}
