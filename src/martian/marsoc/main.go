@@ -155,11 +155,11 @@ func checkDirtyLoop(pman *manager.PipestanceManager, packages *PackageManager, m
 
 func verifyMros(packages *PackageManager, rt *core.Runtime, checkSrcPath bool) {
 	for _, p := range packages.GetPackages() {
-		if _, err := rt.CompileAll(p.MroPath, checkSrcPath); err != nil {
+		if _, err := rt.CompileAll(p.MroPaths, checkSrcPath); err != nil {
 			core.Println(err.Error())
 			os.Exit(1)
 		}
-		rt.MroCache.CacheMros(p.MroPath)
+		rt.MroCache.CacheMros(p.MroPaths)
 	}
 }
 
@@ -176,7 +176,7 @@ Usage:
     marsoc [options]
     marsoc -h | --help | --version
 
-Options:    
+Options:
     --jobmode=MODE      Job manager to use. Valid options:
                             local (default), sge, lsf, or a .template file
     --localcores=NUM    Set max cores the pipeline may request at one time.
@@ -191,7 +191,7 @@ Options:
                             Only applies in cluster jobmodes.
     --vdrmode=MODE      Enables Volatile Data Removal. Valid options:
                             post (default), rolling, or disable
-    
+
     --maxprocs=NUM      Set number of processes used by MARSOC.
                             Defaults to 1.
     --check-dirty       Check packages for dirty versions.

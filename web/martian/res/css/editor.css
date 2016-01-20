@@ -25,9 +25,9 @@
     font-size: 20px;
 }
 .navbar-inverse .navbar-left {
-    padding: 15px; 
+    padding: 15px;
     color: #888;
-    vertical-align: bottom; 
+    vertical-align: bottom;
     font-size: 14px;
 }
 .navbar-inverse .navbar-right {
@@ -37,7 +37,7 @@
     height: 50px;
     padding: 15px;
     color: #888;
-    vertical-align: bottom; 
+    vertical-align: bottom;
     font-size: 14px;
     font-family: Menlo;
 }
@@ -54,9 +54,9 @@
 
 /*******************************************/
 
-main-ace-editor { 
+main-ace-editor {
     margin-top: 105px;
-    width: 550px;
+    width: 600px;
     float:left;
     margin-right: 20px;
     z-index: 5;
@@ -65,7 +65,7 @@ main-ace-editor {
 
 #toolbar {
     position: fixed;
-    width: 550px;
+    width: 600px;
     height: 55px;
     padding: 10px;
     top: 50px;
@@ -82,10 +82,15 @@ main-ace-editor {
 }
 #toolbar #new {
 }
+#toolbar #mropath-selector {
+    float: right;
+    text-align: left;
+    margin-right: 20px;
+}
 #toolbar #file-selector {
     float: right;
     text-align: left;
-    margin-right: 20px;    
+    margin-right: 20px;
 }
 #toolbar #build {
     float: right;
@@ -102,7 +107,7 @@ main-ace-editor {
 
 include-ace-editor {
     display: block;
-    width: 550px;
+    width: 600px;
     height: 800px;
 }
 
@@ -113,7 +118,7 @@ include-ace-editor {
     position: fixed;
     color: #dc415d;
     top: 66px;
-    left: 550px;
+    left: 600px;
     right: 0px;
     bottom: 0px;
     font-family: Menlo;

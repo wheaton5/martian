@@ -6,11 +6,6 @@
 package main
 
 import (
-	"bytes"
-	"github.com/go-martini/martini"
-	"github.com/martini-contrib/binding"
-	"github.com/martini-contrib/gzip"
-	"html/template"
 	"io/ioutil"
 	"martian/core"
 	"net/http"
@@ -18,18 +13,28 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+
+	"github.com/go-martini/martini"
+	"github.com/martini-contrib/binding"
+	"github.com/martini-contrib/gzip"
 )
 
-type LoadForm struct {
-	Fname string
+type MainPage struct {
+	MroPaths []string
+}
+
+type FileForm struct {
+	MroPath string `json:"mroPath"`
+	Fname   string `json:"fname"`
 }
 
 type SaveForm struct {
-	Fname    string
-	Contents string
+	MroPath  string `json:"mroPath"`
+	Fname    string `json:"fname"`
+	Contents string `json:"contents"`
 }
 
-func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
+func runWebServer(uiport string, rt *core.Runtime, mroPaths []string) {
 	//=========================================================================
 	// Configure server.
 	//=========================================================================
@@ -47,10 +52,10 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 	// Page renderers.
 	//=========================================================================
 	app.Get("/", func() string {
-		tmpl, _ := template.New("editor.html").Delims("[[", "]]").ParseFiles(core.RelPath("../web/martian/templates/editor.html"))
-		var doc bytes.Buffer
-		tmpl.Execute(&doc, map[string]interface{}{})
-		return doc.String()
+		return core.Render("web/martian/templates", "editor.html",
+			&MainPage{
+				MroPaths: mroPaths,
+			})
 	})
 
 	//=========================================================================
@@ -59,20 +64,25 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 
 	// Get list of names of MRO files in the runtime's MRO path.
 	app.Get("/files", func() string {
-		filePaths, _ := filepath.Glob(path.Join(mroPath, "*"))
-		fnames := []string{}
-		for _, filePath := range filePaths {
-			fnames = append(fnames, filepath.Base(filePath))
+		files := []FileForm{}
+		for _, mroPath := range mroPaths {
+			filePaths, _ := filepath.Glob(path.Join(mroPath, "*"))
+			for _, filePath := range filePaths {
+				files = append(files, FileForm{
+					MroPath: mroPath,
+					Fname:   filepath.Base(filePath),
+				})
+			}
 		}
-		return core.MakeJSON(fnames)
+		return core.MakeJSON(files)
 	})
 
 	// Load the contents of the specified MRO file plus the contents
 	// of its first included file for the 2-up view.
 	re := regexp.MustCompile("@include \"([^\"]+)")
-	app.Post("/load", binding.Bind(LoadForm{}), func(body LoadForm, p martini.Params) string {
+	app.Post("/load", binding.Bind(FileForm{}), func(body FileForm, p martini.Params) string {
 		// Load contents of selected file.
-		bytes, _ := ioutil.ReadFile(path.Join(mroPath, body.Fname))
+		bytes, _ := ioutil.ReadFile(path.Join(body.MroPath, body.Fname))
 		contents := string(bytes)
 
 		// Parse the first @include line.
@@ -82,10 +92,14 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 		if len(submatches) > 1 {
 			// Load contents of included file.
 			includeFname := submatches[1]
-			includeBytes, _ := ioutil.ReadFile(path.Join(mroPath, includeFname))
-			includeFile = map[string]string{
-				"name":     includeFname,
-				"contents": string(includeBytes),
+			for _, mroPath := range mroPaths {
+				if includeBytes, err := ioutil.ReadFile(path.Join(mroPath, includeFname)); err == nil {
+					includeFile = map[string]string{
+						"mroPath":  mroPath,
+						"name":     includeFname,
+						"contents": string(includeBytes),
+					}
+				}
 			}
 		}
 		return core.MakeJSON(map[string]interface{}{"contents": contents, "includeFile": includeFile})
@@ -93,13 +107,13 @@ func runWebServer(uiport string, rt *core.Runtime, mroPath string) {
 
 	// Save file.
 	app.Post("/save", binding.Bind(SaveForm{}), func(body SaveForm, p martini.Params) string {
-		ioutil.WriteFile(path.Join(mroPath, body.Fname), []byte(body.Contents), 0644)
+		ioutil.WriteFile(path.Join(body.MroPath, body.Fname), []byte(body.Contents), 0644)
 		return ""
 	})
 
 	// Compile file.
-	app.Post("/build", binding.Bind(LoadForm{}), func(body LoadForm, p martini.Params) string {
-		_, _, global, err := rt.Compile(path.Join(mroPath, body.Fname), mroPath, false)
+	app.Post("/build", binding.Bind(FileForm{}), func(body FileForm, p martini.Params) string {
+		_, _, global, err := rt.Compile(path.Join(body.MroPath, body.Fname), mroPaths, false)
 		if err != nil {
 			return err.Error()
 		}

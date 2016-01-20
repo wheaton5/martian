@@ -13,7 +13,7 @@ import (
 
 type PipestanceManager struct {
 	psPaths         []string
-	mroPath         string
+	mroPaths        []string
 	mroVersion      string
 	exploredPaths   map[string]bool
 	cache           map[string][]string
@@ -49,11 +49,11 @@ func read(path string) string {
 	return string(bytes)
 }
 
-func NewPipestanceManager(psPaths []string, mroPath string, mroVersion string, db *DatabaseManager,
+func NewPipestanceManager(psPaths []string, mroPaths []string, mroVersion string, db *DatabaseManager,
 	rt *core.Runtime) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.psPaths = psPaths
-	self.mroPath = mroPath
+	self.mroPaths = mroPaths
 	self.mroVersion = mroVersion
 	self.rt = rt
 	self.db = db
@@ -214,7 +214,7 @@ func (self *PipestanceManager) writePerf(psPath string) error {
 		_, psid := core.ParseFQName(fqname)
 
 		envs := map[string]string{}
-		pipestance, err := self.rt.ReattachToPipestanceWithMroSrc(psid, psPath, "", self.mroPath,
+		pipestance, err := self.rt.ReattachToPipestanceWithMroSrc(psid, psPath, "", self.mroPaths,
 			self.mroVersion, envs, false, true)
 		if err != nil {
 			return err

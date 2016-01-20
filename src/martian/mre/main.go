@@ -51,14 +51,14 @@ Options:
 
 	// Compute MRO path.
 	cwd, _ := filepath.Abs(path.Dir(os.Args[0]))
-	mroPath := cwd
+	mroPaths := core.ParseMroPath(cwd)
 	if value := os.Getenv("MROPATH"); len(value) > 0 {
-		mroPath = value
+		mroPaths = core.ParseMroPath(value)
 	}
-	core.PrintInfo("environ", "MROPATH=%s", mroPath)
+	core.PrintInfo("environ", "MROPATH=%s", core.FormatMroPath(mroPaths))
 
 	// Compute version.
-	mroVersion := core.GetMroVersion(mroPath)
+	mroVersion := core.GetMroVersion(mroPaths)
 	core.PrintInfo("version", "MRO Version=%s", mroVersion)
 
 	//=========================================================================
@@ -69,7 +69,7 @@ Options:
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
-	go runWebServer(uiport, rt, mroPath)
+	go runWebServer(uiport, rt, mroPaths)
 
 	// Let daemons take over.
 	done := make(chan bool)
