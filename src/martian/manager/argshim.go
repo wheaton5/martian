@@ -76,13 +76,13 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 		"function":  function,
 		"arguments": arguments,
 	}
-	bytes, _ := json.Marshal(input)
+	data, _ := json.Marshal(input)
 	if self.debug {
-		fmt.Printf("%s\n\n", string(bytes))
+		fmt.Printf("%s\n\n", string(data))
 	}
 
 	self.mutex.Lock()
-	self.writer.Write([]byte(string(bytes) + "\n"))
+	self.writer.Write([]byte(string(data) + "\n"))
 	self.writer.Flush()
 
 	line, err := self.readAll()
@@ -95,8 +95,10 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 		fmt.Printf("%s\n\n", string(line))
 	}
 
+	dec := json.NewDecoder(bytes.NewReader(line))
+	dec.UseNumber()
 	var v interface{}
-	if err := json.Unmarshal(line, &v); err != nil {
+	if err := dec.Decode(&v); err != nil {
 		core.LogError(err, "argshim", "Failed to convert argshim %s output to JSON: %s", self.cmdPath, line)
 		return nil, err
 	}
