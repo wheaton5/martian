@@ -6,8 +6,10 @@ package main
 import (
 	"martian/core"
 	"os"
+	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/10XDev/docopt.go"
 )
@@ -44,8 +46,11 @@ Options:
 	// Required Martian environment variables.
 	env := core.EnvRequire([][]string{
 		{"WEBSOC_PORT", ">2000"},
+		{"WEBSOC_LOG_PATH", "path/to/websoc/logs"},
 		{"WEBSOC_PACKAGES_PATH", "path/to/packages"},
 	}, true)
+
+	core.LogTee(path.Join(env["WEBSOC_LOG_PATH"], time.Now().Format("20060102150405")+".log"))
 
 	// Parse options.
 	debug := opts["--debug"].(bool)
