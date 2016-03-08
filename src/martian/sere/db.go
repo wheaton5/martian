@@ -189,41 +189,41 @@ func (self *DatabaseManager) createTables() {
 	defer core.ExitCriticalSection()
 
 	self.createTable("battery", []string{
-		"battery_name string not null primary key",
+		"battery_name text not null primary key",
 	})
 	self.createTable("program", []string{
-		"program_name string not null primary key",
-		"battery_name string",
+		"program_name text not null primary key",
+		"battery_name text",
 		"foreign key(battery_name) references battery(battery_name)",
 	})
 	self.createTable("test", []string{
-		"test_name string not null primary key",
-		"test_category string",
-		"test_id string",
+		"test_name text not null primary key",
+		"test_category text",
+		"test_id text",
 	})
 	self.createTable("battery_test", []string{
-		"battery_name string",
-		"test_name string",
+		"battery_name text",
+		"test_name text",
 		"primary key (battery_name, test_name)",
 		"foreign key(battery_name) references battery(battery_name)",
 		"foreign key(test_name) references test(test_name)",
 	})
 	self.createTable("cycle", []string{
-		"program_name string",
+		"program_name text",
 		"cycle_id integer",
-		"cycle_name string",
+		"cycle_name text",
 		"start_date string",
 		"end_date string",
 		"primary key (program_name, cycle_id)",
 		"foreign key(program_name) references program(program_name)",
 	})
 	self.createTable("round", []string{
-		"program_name string",
+		"program_name text",
 		"cycle_id integer",
 		"round_id integer",
-		"package_name string",
-		"package_target string",
-		"package_version string",
+		"package_name text",
+		"package_target text",
+		"package_version text",
 		"start_date string",
 		"end_date string",
 		"primary key (program_name, cycle_id, round_id)",
