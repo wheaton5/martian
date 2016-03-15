@@ -9,13 +9,12 @@ import (
 	"martian/manager"
 	"os"
 	"path"
-	"strconv"
 )
 
 type WebShimQuery struct {
 	function string
-	sampleId string
-	sbag     interface{}
+	id       string
+	bag      interface{}
 	files    map[string]interface{}
 	out      chan WebShimResult
 }
@@ -40,10 +39,10 @@ func NewPackageManager(packagesPath string, maxProcs int, debug bool) *PackageMa
 	return self
 }
 
-func (self *PackageManager) GetWebshimResponseForSample(sampleId int, product string, function string, sbag interface{}, files map[string]interface{}) interface{} {
+func (self *PackageManager) GetWebshimResponseForSample(id string, product string, function string, bag interface{}, files map[string]interface{}) interface{} {
 	if _, ok := self.packages[product]; ok {
 		out := make(chan WebShimResult)
-		query := WebShimQuery{function, strconv.Itoa(sampleId), sbag, files, out}
+		query := WebShimQuery{function, id, bag, files, out}
 		self.in <- query
 		result := <-out
 		return result.v
@@ -83,7 +82,7 @@ func (self *PackageManager) startWebShim(p *manager.Package) {
 	go func(p *manager.Package) {
 		for {
 			query := <-self.in
-			v := p.Argshim.GetWebshimResponseForTest("lena", query.function, query.sampleId, query.sbag, query.files)
+			v := p.Argshim.GetWebshimResponseForTest("lena", query.function, query.id, query.bag, query.files)
 			result := WebShimResult{v}
 			query.out <- result
 		}

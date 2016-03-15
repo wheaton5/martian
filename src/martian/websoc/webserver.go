@@ -8,7 +8,6 @@ import (
 	"martian/core"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/binding"
@@ -16,7 +15,7 @@ import (
 )
 
 type WebshimForm struct {
-	Sample   map[string]interface{}
+	Bag      map[string]interface{}
 	Files    map[string]interface{}
 	Product  string
 	Function string
@@ -31,19 +30,8 @@ func runWebServer(uiport string, packages *PackageManager) {
 	app := &martini.ClassicMartini{m, r}
 	app.Use(gzip.All())
 
-	app.Post("/api/webshim/:sid", binding.Json(WebshimForm{}), func(body WebshimForm, params martini.Params) string {
-		sid := params["sid"]
-		sampleBag := body.Sample
-		files := body.Files
-		product := body.Product
-		function := body.Function
-
-		sampleId, err := strconv.Atoi(sid)
-		if err != nil {
-			return fmt.Sprintf("Invalid Lena ID: %s", sid)
-		}
-
-		view := packages.GetWebshimResponseForSample(sampleId, product, function, sampleBag, files)
+	app.Post("/api/webshim/:id", binding.Json(WebshimForm{}), func(body WebshimForm, params martini.Params) string {
+		view := packages.GetWebshimResponseForSample(params["id"], body.Product, body.Function, body.Bag, body.Files)
 		return core.MakeJSON(view)
 	})
 
