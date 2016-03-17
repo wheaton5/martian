@@ -44,3 +44,11 @@ func TestFilesBclProcessorFastqPaths(t *testing.T) {
 	paths = BclProcessorFastqPaths(bclPath, "RA", "*", nil, 0)
 	assert.Len(t, paths, 4)
 }
+
+func TestFilesSequencerBclPaths(t *testing.T) {
+	flowcell := getTestFilePath("HTESTBCXX");
+	assert.NotEmpty(t, flowcell)
+
+	paths := SequencerBclPaths(flowcell)
+	assert.Len(t, paths, 8)
+}

@@ -69,3 +69,13 @@ func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string
 }
 
 // TODO: add bcldirect mode if necessary for HWM project
+
+//
+// Find all the bcl.gz files in the flow cell.
+//
+func SequencerBclPaths(flowCellPath string) []string {
+	var baseCallFolder = filepath.Join(flowCellPath, "Data/Intensities/BaseCalls")
+	// first star is lane, second star is cycle
+	files, _ := filepath.Glob(filepath.Join(baseCallFolder, "*", "*", "*.bcl.gz"))
+	return files
+}
