@@ -9,24 +9,30 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 )
+
+func BclProcessorWGSFastqPaths(rootPath string, sampleIndex string, lanes []int) []string {
+	allFiles := []string{}
+	allFiles = append(allFiles, BclProcessorFastqPaths(rootPath, "RA", sampleIndex, lanes, 2)...)
+	allFiles = append(allFiles, BclProcessorFastqPaths(rootPath, "I1", sampleIndex, lanes, 2)...)
+	return allFiles
+}
+
+func BclProcessorCRFastqPaths(rootPath string, sampleIndex string, lanes []int, bc_read_type string, si_read_type string) []string {
+	allFiles := []string{}
+	allFiles = append(allFiles, BclProcessorFastqPaths(rootPath, "RA", sampleIndex, lanes, 2)...)
+	allFiles = append(allFiles, BclProcessorFastqPaths(rootPath, bc_read_type, sampleIndex, lanes, 2)...)
+	allFiles = append(allFiles, BclProcessorFastqPaths(rootPath, si_read_type, sampleIndex, lanes, 2)...)
+	return allFiles
+}
 
 //
 // port of find_input_files_10x_preprocess in tenkit/fasta.py
 //
-func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string, lanes []string, maxNs int) []string {
+func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string, lanes []int, maxNs int) []string {
 	var siPattern string
 	var files []string
-	var laneInts = make([]int, len(lanes))
-	for idx, lane := range(lanes) {
-		laneInt, err := strconv.Atoi(lane)
-		if err != nil {
-			panic(fmt.Sprintf("Unrecognized lane format: %s", lane))
-		}
-		laneInts[idx] = laneInt
-	}
 	if sampleIndex != "*" {
 		chars := strings.Split(sampleIndex, "")
 		regexpTokens := make([]string, len(chars))
@@ -43,7 +49,7 @@ func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string
 		filePattern := path.Join(rootPath, fmt.Sprintf("read-%s_si-%s_*.fastq*", readType, siPattern))
 		files, _ = filepath.Glob(filePattern)
 	} else {
-		for _, lane := range(laneInts) {
+		for _, lane := range(lanes) {
 			filePattern := path.Join(rootPath,
 				fmt.Sprintf("read-%s_si-%s_lane-%03d[_\\-]*.fastq.*", readType, siPattern, lane))
 			globMatches, _ := filepath.Glob(filePattern)
@@ -67,7 +73,6 @@ func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string
 	sort.Strings(goodFiles)
 	return goodFiles
 }
-
 // TODO: add bcldirect mode if necessary for HWM project
 
 //

@@ -1,0 +1,18 @@
+@include "sample_def.mro"
+
+call SAMPLE_DEF_TEST(
+    sample_def = [
+        {
+            "bc_read_type": "I1",
+            "fastq_mode": "BCL_PROCESSOR",
+            "gem_group": null,
+            "lanes": null,
+            "read_path": "../test/manager/bclprocessor",
+            "sample_indices": [
+                "AAAGCGTA",
+                "TCCAATAA"
+            ],
+            "si_read_type"
+        }
+    ],
+)
