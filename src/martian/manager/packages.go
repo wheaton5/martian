@@ -12,6 +12,8 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 const versionParts = 3
@@ -70,6 +72,10 @@ func (self *Package) IsDirty() bool {
 	}
 
 	return false
+}
+
+func (self *Package) RestartArgShim() error {
+	return self.Argshim.restart()
 }
 
 func VerifyPackage(packagePath string) (string, string, string, string, []string, map[string]string, error) {
@@ -138,4 +144,30 @@ func VerifyPackage(packagePath string) (string, string, string, string, []string
 	}
 
 	return name, target, buildDate, argshimPath, mroPaths, envs, nil
+}
+
+func GoRefreshPackageVersions(packages []*Package, mutex *sync.Mutex) {
+	go func() {
+		for {
+			for _, p := range packages {
+				mroVersion := core.GetMroVersion(p.MroPaths)
+
+				if p.MroVersion != mroVersion {
+					if err := p.RestartArgShim(); err != nil {
+						core.LogError(err, "package", "Failed to restart package %s argshim for version %s",
+							p.Name, mroVersion)
+					} else {
+						core.LogInfo("package", "Successfully restarted package %s argshim for version %s",
+							p.Name, mroVersion)
+					}
+				}
+
+				mutex.Lock()
+				p.MroVersion = mroVersion
+				mutex.Unlock()
+			}
+
+			time.Sleep(time.Minute * time.Duration(5))
+		}
+	}()
 }

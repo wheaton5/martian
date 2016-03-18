@@ -14,7 +14,6 @@ import (
 	"path"
 	"strconv"
 	"sync"
-	"time"
 )
 
 type PackageFunc func(p *manager.Package) bool
@@ -38,7 +37,7 @@ func NewPackageManager(packagesPath string, defaultPackage string, debug bool, l
 	self.packages = verifyPackages(packagesPath, defaultPackage, debug)
 
 	core.LogInfo("package", "%d packages found.", len(self.packages))
-	self.refreshVersions()
+	self.goRefreshPackageVersions()
 	return self
 }
 
@@ -138,20 +137,13 @@ func (self *PackageManager) getDefaultPipestanceEnvironment() ([]string, string,
 }
 
 // Version functions
-func (self *PackageManager) refreshVersions() {
-	go func() {
-		for {
-			for _, p := range self.packages {
-				mroVersion := core.GetMroVersion(p.MroPaths)
+func (self *PackageManager) goRefreshPackageVersions() {
+	packages := []*manager.Package{}
+	for _, p := range self.packages {
+		packages = append(packages, p)
+	}
 
-				self.mutex.Lock()
-				p.MroVersion = mroVersion
-				self.mutex.Unlock()
-			}
-
-			time.Sleep(time.Minute * time.Duration(5))
-		}
-	}()
+	manager.GoRefreshPackageVersions(packages, self.mutex)
 }
 
 func (self *PackageManager) GetMroVersion() string {

@@ -22,8 +22,10 @@ type TestKey struct {
 }
 
 type ArgShim struct {
+	cmd              *exec.Cmd
 	cmdPath          string
 	debug            bool
+	envs             map[string]string
 	testPipelinesMap map[TestKey]string
 	writer           *bufio.Writer
 	reader           *bufio.Reader
@@ -33,19 +35,40 @@ type ArgShim struct {
 func NewArgShim(argshimPath string, envs map[string]string, debug bool) *ArgShim {
 	self := &ArgShim{}
 	self.cmdPath = argshimPath
+	self.envs = envs
 	self.debug = debug
 	self.mutex = &sync.Mutex{}
 	self.testPipelinesMap = map[TestKey]string{}
 
-	cmd := exec.Command(self.cmdPath)
-	cmd.Env = core.MergeEnv(envs)
-	stdin, _ := cmd.StdinPipe()
-	self.writer = bufio.NewWriterSize(stdin, 1000000)
-	stdout, _ := cmd.StdoutPipe()
-	self.reader = bufio.NewReaderSize(stdout, 1000000)
-	cmd.Start()
-
+	self.start()
 	return self
+}
+
+func (self *ArgShim) start() {
+	self.cmd = exec.Command(self.cmdPath)
+	self.cmd.Env = core.MergeEnv(self.envs)
+	stdin, _ := self.cmd.StdinPipe()
+	self.writer = bufio.NewWriterSize(stdin, 1000000)
+	stdout, _ := self.cmd.StdoutPipe()
+	self.reader = bufio.NewReaderSize(stdout, 1000000)
+	self.cmd.Start()
+}
+
+func (self *ArgShim) restart() error {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
+	// Kill argshim process
+	if err := self.cmd.Process.Kill(); err != nil {
+		return err
+	}
+
+	// Wait until process exits
+	self.cmd.Wait()
+
+	// Start command again
+	self.start()
+	return nil
 }
 
 func (self *ArgShim) readAll() ([]byte, error) {

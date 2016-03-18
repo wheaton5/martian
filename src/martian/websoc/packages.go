@@ -9,6 +9,7 @@ import (
 	"martian/manager"
 	"os"
 	"path"
+	"sync"
 )
 
 type WebShimQuery struct {
@@ -26,16 +27,19 @@ type WebShimResult struct {
 type PackageManager struct {
 	packages map[string][]*manager.Package
 	in       chan WebShimQuery
+	mutex    *sync.Mutex
 }
 
 func NewPackageManager(packagesPath string, maxProcs int, debug bool) *PackageManager {
 	self := &PackageManager{}
 	self.packages = map[string][]*manager.Package{}
 	self.in = make(chan WebShimQuery)
+	self.mutex = &sync.Mutex{}
 
 	self.verifyPackages(packagesPath, maxProcs, debug)
 
 	core.LogInfo("package", "%d packages found.", len(self.packages))
+	self.goRefreshPackageVersions()
 	return self
 }
 
@@ -87,4 +91,13 @@ func (self *PackageManager) startWebShim(p *manager.Package) {
 			query.out <- result
 		}
 	}(p)
+}
+
+func (self *PackageManager) goRefreshPackageVersions() {
+	packages := []*manager.Package{}
+	for _, p := range self.packages {
+		packages = append(packages, p...)
+	}
+
+	manager.GoRefreshPackageVersions(packages, self.mutex)
 }
