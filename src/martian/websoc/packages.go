@@ -4,6 +4,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"martian/core"
 	"martian/manager"
@@ -20,7 +22,8 @@ type WebShimQuery struct {
 }
 
 type WebShimResult struct {
-	v interface{}
+	v   interface{}
+	err error
 }
 
 type PackageManager struct {
@@ -39,15 +42,15 @@ func NewPackageManager(packagesPath string, maxProcs int, debug bool) *PackageMa
 	return self
 }
 
-func (self *PackageManager) GetWebshimResponseForSample(id string, product string, function string, bag interface{}, files map[string]interface{}) interface{} {
+func (self *PackageManager) GetWebshimResponseForSample(id string, product string, function string, bag interface{}, files map[string]interface{}) (interface{}, error) {
 	if _, ok := self.packages[product]; ok {
 		out := make(chan WebShimResult)
 		query := WebShimQuery{function, id, bag, files, out}
 		self.in <- query
 		result := <-out
-		return result.v
+		return result.v, result.err
 	}
-	return ""
+	return nil, errors.New(fmt.Sprintf("Product %s not found", product))
 }
 
 func (self *PackageManager) verifyPackages(packagesPath string, maxProcs int, debug bool) {
@@ -82,8 +85,8 @@ func (self *PackageManager) startWebShim(p *manager.Package) {
 	go func(p *manager.Package) {
 		for {
 			query := <-self.in
-			v := p.Argshim.GetWebshimResponseForTest("lena", query.function, query.id, query.bag, query.files)
-			result := WebShimResult{v}
+			v, err := p.Argshim.GetWebshimResponseForTest("lena", query.function, query.id, query.bag, query.files)
+			result := WebShimResult{v, err}
 			query.out <- result
 		}
 	}(p)

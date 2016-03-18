@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"martian/core"
 	"os/exec"
@@ -99,8 +100,9 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 	dec.UseNumber()
 	var v interface{}
 	if err := dec.Decode(&v); err != nil {
-		core.LogError(err, "argshim", "Failed to convert argshim %s output to JSON: %s", self.cmdPath, line)
-		return nil, err
+		msg := fmt.Sprintf("Failed to convert argshim %s output to JSON: %s", self.cmdPath, line)
+		core.LogError(err, "argshim", msg)
+		return nil, errors.New(msg)
 	}
 	return v, nil
 }
@@ -173,9 +175,10 @@ func (self *ArgShim) BuildCallSourceForTest(rt *core.Runtime, category string, i
 }
 
 func (self *ArgShim) GetWebshimResponseForTest(category string, function string, id string, sbag interface{},
-	files interface{}) interface{} {
-	if v, err := self.invoke(function, []interface{}{category, id, sbag, files}); err == nil {
-		return v
+	files interface{}) (interface{}, error) {
+	v, err := self.invoke(function, []interface{}{category, id, sbag, files})
+	if err != nil {
+		return nil, err
 	}
-	return map[string]interface{}{}
+	return v, nil
 }
