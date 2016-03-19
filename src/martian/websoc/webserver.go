@@ -30,9 +30,14 @@ func runWebServer(uiport string, packages *PackageManager) {
 	app := &martini.ClassicMartini{m, r}
 	app.Use(gzip.All())
 
-	app.Post("/api/webshim/:id", binding.Json(WebshimForm{}), func(body WebshimForm, params martini.Params) string {
-		view := packages.GetWebshimResponseForSample(params["id"], body.Product, body.Function, body.Bag, body.Files)
-		return core.MakeJSON(view)
+	app.Post("/api/webshim/:id", binding.Json(WebshimForm{}), func(body WebshimForm, params martini.Params) (int, string) {
+		id := params["id"]
+
+		view, err := packages.GetWebshimResponseForSample(id, body.Product, body.Function, body.Bag, body.Files)
+		if err != nil {
+			return http.StatusBadRequest, fmt.Sprintf("Request for id %s, product %s, function %s failed with error: %s", id, body.Product, body.Function, err.Error())
+		}
+		return http.StatusOK, core.MakeJSON(view)
 	})
 
 	if err := http.ListenAndServe(":"+uiport, app); err != nil {
