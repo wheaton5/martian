@@ -29,14 +29,14 @@ type WebShimResult struct {
 
 type PackageManager struct {
 	packages map[string][]*manager.Package
-	in       chan WebShimQuery
+	in       map[string]chan WebShimQuery
 	mutex    *sync.Mutex
 }
 
 func NewPackageManager(packagesPath string, maxProcs int, debug bool) *PackageManager {
 	self := &PackageManager{}
 	self.packages = map[string][]*manager.Package{}
-	self.in = make(chan WebShimQuery)
+	self.in = map[string]chan WebShimQuery{}
 	self.mutex = &sync.Mutex{}
 
 	self.verifyPackages(packagesPath, maxProcs, debug)
@@ -50,7 +50,7 @@ func (self *PackageManager) GetWebshimResponseForSample(id string, product strin
 	if _, ok := self.packages[product]; ok {
 		out := make(chan WebShimResult)
 		query := WebShimQuery{function, id, bag, files, out}
-		self.in <- query
+		self.in[product] <- query
 		result := <-out
 		return result.v, result.err
 	}
@@ -75,6 +75,7 @@ func (self *PackageManager) verifyPackages(packagesPath string, maxProcs int, de
 			os.Exit(1)
 		}
 
+		self.in[name] = make(chan WebShimQuery)
 		self.packages[name] = make([]*manager.Package, 0, maxProcs)
 		for i := 0; i < maxProcs; i++ {
 			p := manager.NewPackage(packagePath, debug)
@@ -88,7 +89,7 @@ func (self *PackageManager) verifyPackages(packagesPath string, maxProcs int, de
 func (self *PackageManager) startWebShim(p *manager.Package) {
 	go func(p *manager.Package) {
 		for {
-			query := <-self.in
+			query := <-self.in[p.Name]
 			v, err := p.Argshim.GetWebshimResponseForTest("lena", query.function, query.id, query.bag, query.files)
 			result := WebShimResult{v, err}
 			query.out <- result
