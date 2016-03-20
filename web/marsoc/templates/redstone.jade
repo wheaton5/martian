@@ -122,7 +122,7 @@ html(ng-app="app" ng-cloak)
                                         span(style="vertical-align: middle")
                                             b {{$index+1}}
                                     td.form-group.col-sm-1(ng-if="b.itype=='lena'" style="width: 100px")
-                                        a(target="_blank" href="https://lena.fuzzplex.com/seq_results/sample/{{b.id}}/trim/10/") {{ b.id }}
+                                        a(target="_blank" href="https://lena.fuzzplex.com/seq_results/sample/{{b.id}}/trim/10/") {{ b.id }} {{ b.bag.description }}
                                     td.form-group.col-sm-1(ng-if="b.itype=='lena'" style="width: 125px")
                                         select.form-control(ng-model="b.version" ng-change="refresh()")
                                             option(ng-repeat="v in b.versions") {{ v }}

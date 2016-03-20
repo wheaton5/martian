@@ -112,6 +112,7 @@ app.controller('RedstoneCtrl', ($scope, $http, $interval) ->
                 itype:      data.itype,
                 versions:   data.versions.reverse(),
                 version:    data.versions[0],
+                bag:        data.bag,
                 name:       "FILL THIS IN",
                 files:      data.files,
             })

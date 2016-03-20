@@ -4,10 +4,10 @@
   app = angular.module('app', ['ui.bootstrap']);
 
   callApiWithConfirmation = function($scope, $http, $url) {
-    var id, ref;
+    var id, _ref;
     $scope.showbutton = false;
     id = window.prompt("Please type the sample ID to confirm");
-    if (id === ((ref = $scope.selsample) != null ? ref.id.toString() : void 0)) {
+    if (id === ((_ref = $scope.selsample) != null ? _ref.id.toString() : void 0)) {
       return callApi($scope, $http, $url);
     } else {
       window.alert("Incorrect sample id");
@@ -16,10 +16,10 @@
   };
 
   callApi = function($scope, $http, $url) {
-    var ref;
+    var _ref;
     $scope.showbutton = false;
     return $http.post($url, {
-      id: (ref = $scope.selsample) != null ? ref.id.toString() : void 0
+      id: (_ref = $scope.selsample) != null ? _ref.id.toString() : void 0
     }).success(function(data) {
       $scope.refreshSamples();
       if (data) {
@@ -43,16 +43,16 @@
       });
     };
     $scope.selectSample = function(sample) {
-      var i, len, ref, ref1, s;
+      var s, _i, _len, _ref, _ref1;
       $scope.selsample = sample;
-      ref = $scope.samples;
-      for (i = 0, len = ref.length; i < len; i++) {
-        s = ref[i];
+      _ref = $scope.samples;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        s = _ref[_i];
         s.selected = false;
       }
       $scope.selsample.selected = true;
       return $http.post('/api/get-metasample-callsrc', {
-        id: (ref1 = $scope.selsample) != null ? ref1.id.toString() : void 0
+        id: (_ref1 = $scope.selsample) != null ? _ref1.id.toString() : void 0
       }).success(function(data) {
         if ($scope.selsample != null) {
           return _.assign($scope.selsample, data);
