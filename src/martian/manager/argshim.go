@@ -11,10 +11,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"martian/core"
 	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
 )
 
 type TestKey struct {
@@ -28,6 +30,8 @@ type ArgShim struct {
 	debug            bool
 	envs             map[string]string
 	testPipelinesMap map[TestKey]string
+	stdin            io.WriteCloser
+	stdout           io.ReadCloser
 	writer           *bufio.Writer
 	reader           *bufio.Reader
 	mutex            *sync.Mutex
@@ -48,28 +52,30 @@ func NewArgShim(argshimPath string, envs map[string]string, debug bool) *ArgShim
 func (self *ArgShim) start() {
 	self.cmd = exec.Command(self.cmdPath)
 	self.cmd.Env = core.MergeEnv(self.envs)
-	stdin, _ := self.cmd.StdinPipe()
-	self.writer = bufio.NewWriterSize(stdin, 1000000)
-	stdout, _ := self.cmd.StdoutPipe()
-	self.reader = bufio.NewReaderSize(stdout, 1000000)
+	self.stdin, _ = self.cmd.StdinPipe()
+	self.writer = bufio.NewWriterSize(self.stdin, 1000000)
+	self.stdout, _ = self.cmd.StdoutPipe()
+	self.reader = bufio.NewReaderSize(self.stdout, 1000000)
 	self.cmd.Start()
 }
 
-func (self *ArgShim) restart() error {
+func (self *ArgShim) Kill() {
+	self.stdin.Close()
+	self.stdout.Close()
+
+	pid := self.cmd.Process.Pid
+	if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
+		core.LogError(err, "argshim", "Failed to kill argshim process with PID %d", pid)
+	}
+	self.cmd.Wait()
+}
+
+func (self *ArgShim) Restart() {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 
-	// Kill argshim process
-	if err := self.cmd.Process.Kill(); err != nil {
-		return err
-	}
-
-	// Wait until process exits
-	self.cmd.Wait()
-
-	// Start command again
+	self.Kill()
 	self.start()
-	return nil
 }
 
 func (self *ArgShim) readAll() ([]byte, error) {

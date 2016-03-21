@@ -58,7 +58,7 @@ Options:
 	core.PrintInfo("environ", "MROPATH=%s", core.FormatMroPath(mroPaths))
 
 	// Compute version.
-	mroVersion := core.GetMroVersion(mroPaths)
+	mroVersion, _ := core.GetMroVersion(mroPaths)
 	core.PrintInfo("version", "MRO Version=%s", mroVersion)
 
 	//=========================================================================

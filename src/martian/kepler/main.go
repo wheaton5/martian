@@ -44,7 +44,7 @@ Options:
 	if value := os.Getenv("MROPATH"); len(value) > 0 {
 		mroPaths = core.ParseMroPath(value)
 	}
-	mroVersion := core.GetMroVersion(mroPaths)
+	mroVersion, _ := core.GetMroVersion(mroPaths)
 
 	rt := core.NewRuntime("local", "disable", "disable", martianVersion)
 	db := NewDatabaseManager("sqlite3", dbPath)

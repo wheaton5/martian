@@ -52,7 +52,7 @@ type PackageJsonEnv struct {
 func NewPackage(packagePath string, debug bool) *Package {
 	self := &Package{}
 	self.Name, self.Target, self.BuildDate, self.ArgshimPath, self.MroPaths, self.Envs, _ = VerifyPackage(packagePath)
-	self.MroVersion = core.GetMroVersion(self.MroPaths)
+	self.MroVersion, _ = core.GetMroVersion(self.MroPaths)
 	self.Argshim = NewArgShim(self.ArgshimPath, self.Envs, debug)
 	return self
 }
@@ -74,8 +74,8 @@ func (self *Package) IsDirty() bool {
 	return false
 }
 
-func (self *Package) RestartArgShim() error {
-	return self.Argshim.restart()
+func (self *Package) RestartArgShim() {
+	self.Argshim.Restart()
 }
 
 func VerifyPackage(packagePath string) (string, string, string, string, []string, map[string]string, error) {
@@ -150,16 +150,16 @@ func GoRefreshPackageVersions(packages []*Package, mutex *sync.Mutex) {
 	go func() {
 		for {
 			for _, p := range packages {
-				mroVersion := core.GetMroVersion(p.MroPaths)
+				mroVersion, err := core.GetMroVersion(p.MroPaths)
+				if err != nil {
+					core.LogError(err, "package", "Failed to get package %s version", p.Name)
+					continue
+				}
 
 				if p.MroVersion != mroVersion {
-					if err := p.RestartArgShim(); err != nil {
-						core.LogError(err, "package", "Failed to restart package %s argshim for version %s",
-							p.Name, mroVersion)
-					} else {
-						core.LogInfo("package", "Successfully restarted package %s argshim for version %s",
-							p.Name, mroVersion)
-					}
+					p.RestartArgShim()
+					core.LogInfo("package", "Restarted package %s argshim for version %s",
+						p.Name, mroVersion)
 				}
 
 				mutex.Lock()
