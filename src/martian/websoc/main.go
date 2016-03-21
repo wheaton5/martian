@@ -30,7 +30,6 @@ Usage:
 Options:
     --maxprocs=<num>     Set number of processes used by WEBSOC.
                            Defaults to 1.
-    --debug              Enable debug printing for package argshims.
     -h --help            Show this message.
     --version            Show version.`
 	martianVersion := core.GetVersion()
@@ -53,8 +52,6 @@ Options:
 	core.LogTee(path.Join(env["WEBSOC_LOG_PATH"], time.Now().Format("20060102150405")+".log"))
 
 	// Parse options.
-	debug := opts["--debug"].(bool)
-
 	maxProcs := 1
 	if value := opts["--maxprocs"]; value != nil {
 		if value, err := strconv.Atoi(value.(string)); err == nil {
@@ -68,7 +65,7 @@ Options:
 	packagesPath := env["WEBSOC_PACKAGES_PATH"]
 
 	// Set up package manager
-	packages := NewPackageManager(packagesPath, maxProcs, debug)
+	packages := NewPackageManager(packagesPath, maxProcs)
 
 	// Start webserver
 	runWebServer(uiport, packages)

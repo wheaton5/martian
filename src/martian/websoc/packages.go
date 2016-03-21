@@ -28,21 +28,20 @@ type WebShimResult struct {
 }
 
 type PackageManager struct {
-	packages map[string][]*manager.Package
+	packages map[string]*manager.Package
 	in       map[string]chan WebShimQuery
 	mutex    *sync.Mutex
 }
 
-func NewPackageManager(packagesPath string, maxProcs int, debug bool) *PackageManager {
+func NewPackageManager(packagesPath string, maxProcs int) *PackageManager {
 	self := &PackageManager{}
-	self.packages = map[string][]*manager.Package{}
+	self.packages = map[string]*manager.Package{}
 	self.in = map[string]chan WebShimQuery{}
 	self.mutex = &sync.Mutex{}
 
-	self.verifyPackages(packagesPath, maxProcs, debug)
+	self.verifyPackages(packagesPath, maxProcs)
 
 	core.LogInfo("package", "%d packages found.", len(self.packages))
-	self.goRefreshPackageVersions()
 	return self
 }
 
@@ -57,7 +56,7 @@ func (self *PackageManager) GetWebshimResponseForSample(id string, product strin
 	return nil, errors.New(fmt.Sprintf("Product %s not found", product))
 }
 
-func (self *PackageManager) verifyPackages(packagesPath string, maxProcs int, debug bool) {
+func (self *PackageManager) verifyPackages(packagesPath string, maxProcs int) {
 	infos, err := ioutil.ReadDir(packagesPath)
 	if err != nil {
 		core.PrintInfo("package", "Packages path %s does not exist.", packagesPath)
@@ -75,13 +74,11 @@ func (self *PackageManager) verifyPackages(packagesPath string, maxProcs int, de
 			os.Exit(1)
 		}
 
+		p := manager.NewPackage(packagePath, false)
+		self.packages[name] = p
 		self.in[name] = make(chan WebShimQuery)
-		self.packages[name] = make([]*manager.Package, 0, maxProcs)
 		for i := 0; i < maxProcs; i++ {
-			p := manager.NewPackage(packagePath, debug)
 			self.startWebShim(p)
-
-			self.packages[p.Name] = append(self.packages[p.Name], p)
 		}
 	}
 }
@@ -90,18 +87,11 @@ func (self *PackageManager) startWebShim(p *manager.Package) {
 	go func(p *manager.Package) {
 		for {
 			query := <-self.in[p.Name]
-			v, err := p.Argshim.GetWebshimResponseForTest("lena", query.function, query.id, query.bag, query.files)
+			argshim := manager.NewArgShim(p.ArgshimPath, p.Envs, false)
+			v, err := argshim.GetWebshimResponseForTest("lena", query.function, query.id, query.bag, query.files)
+			argshim.Kill()
 			result := WebShimResult{v, err}
 			query.out <- result
 		}
 	}(p)
-}
-
-func (self *PackageManager) goRefreshPackageVersions() {
-	packages := []*manager.Package{}
-	for _, p := range self.packages {
-		packages = append(packages, p...)
-	}
-
-	manager.GoRefreshPackageVersions(packages, self.mutex)
 }
