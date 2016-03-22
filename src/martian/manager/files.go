@@ -5,6 +5,7 @@ package manager
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -99,6 +100,18 @@ func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string
 	}
 	sort.Strings(goodFiles)
 	return goodFiles
+}
+
+func InputSizeTotal(paths []string) int64 {
+	var size int64
+	for _, path := range(paths) {
+		if fileInfo, err := os.Stat(path); err == nil {
+			size += fileInfo.Size()
+		} else {
+			fmt.Printf("Could not read file: %s", path)
+		}
+	}
+	return size
 }
 
 // TODO: add bcldirect mode if necessary for HWM project

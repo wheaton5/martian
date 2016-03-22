@@ -79,3 +79,11 @@ func TestBclProcessorSequencer(t *testing.T) {
 	seq = BclProcessorSequencer("/mnt/fleet/iontorrent/hypothetical")
 	assert.Equal(t, seq, SEQ_UNKNOWN)
 }
+
+func TestInputSizeTotal(t *testing.T) {
+	bclPath := getTestFilePath("bclprocessor")
+	assert.NotEmpty(t, bclPath)
+	paths := BclProcessorFastqPaths(bclPath, "RA", "*", nil, 0)
+	size := InputSizeTotal(paths)
+	assert.Equal(t, size, int64(4)) // should be one byte per file
+}
