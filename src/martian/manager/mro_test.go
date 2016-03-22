@@ -44,7 +44,7 @@ func getTestMROPath(relPath string) string {
 	}
 }
 
-func TestFastqFilesFromMRO(t *testing.T) {
+func TestFastqFilesFromInvocation(t *testing.T) {
 	sourcePath := getTestMROPath("test_wgs.mro")
 	mroPaths := []string{}
 	//if value := os.Getenv("MROPATH"); len(value) > 0 {
@@ -54,7 +54,8 @@ func TestFastqFilesFromMRO(t *testing.T) {
 	if source, err := ioutil.ReadFile(sourcePath); err != nil {
 		assert.Fail(t, fmt.Sprintf("Could not read file: %s", sourcePath))
 	} else {
-		paths = FastqFilesFromMRO(string(source), sourcePath, mroPaths)
+		invocation := InvocationFromMRO(string(source), sourcePath, mroPaths)
+		paths = FastqFilesFromInvocation(invocation)
 	}
 	// RA+I1 only
 	assert.Len(t, paths, 5, "WGS mode, oligo sample indices")
@@ -63,7 +64,21 @@ func TestFastqFilesFromMRO(t *testing.T) {
 	if source, err := ioutil.ReadFile(sourcePath); err != nil {
 		assert.Fail(t, fmt.Sprintf("Could not read file: %s", sourcePath))
 	} else {
-		paths = FastqFilesFromMRO(string(source), sourcePath, mroPaths)
+		invocation := InvocationFromMRO(string(source), sourcePath, mroPaths)
+		paths = FastqFilesFromInvocation(invocation)
 	}
 	assert.Len(t, paths, 5, "WGS mode, sample index set")
+}
+
+func TestPipelineFromInvocation(t *testing.T) {
+	sourcePath := getTestMROPath("test_wgs.mro")
+	mroPaths := []string{}
+
+	if source, err := ioutil.ReadFile(sourcePath); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", sourcePath))
+	} else {
+		invocation := InvocationFromMRO(string(source), sourcePath, mroPaths)
+		pipeline := PipelineFromInvocation(invocation)
+		assert.Equal(t, pipeline, "SAMPLE_DEF_TEST")
+	}
 }

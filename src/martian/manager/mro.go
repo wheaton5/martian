@@ -10,6 +10,8 @@ import (
 const CHROMIUM string = "chromium"
 const GEMCODE string = "gemcode"
 
+type Invocation map[string]interface{}
+
 type SampleDef struct {
 	bc_length  int
 	bc_in_read int
@@ -167,14 +169,18 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 	return allPaths, nil
 }
 
-func FastqFilesFromMRO(source string, srcPath string, mroPaths []string) []string {
+func InvocationFromMRO(source string, srcPath string, mroPaths []string) Invocation {
 	rt := core.NewRuntime("local", "disable", "disable", core.GetVersion())
 	invocationJson, err := rt.BuildCallJSON(source, srcPath, mroPaths)
 	if err != nil {
+		// invocation JSON is nil in this case
 		fmt.Println(err.Error())
-		return []string{}
 	}
-	args := invocationJson["args"].(map[string]interface{})
+	return invocationJson
+}
+
+func FastqFilesFromInvocation(invocation Invocation) []string {
+	args := invocation["args"].(map[string]interface{})
 	sampleDefsJson := args["sample_def"].([]interface{})
 	sampleDefs := []*SampleDef{}
 	allPaths := []string{}
@@ -190,4 +196,8 @@ func FastqFilesFromMRO(source string, srcPath string, mroPaths []string) []strin
 		}
 	}
 	return allPaths
+}
+
+func PipelineFromInvocation(invocation Invocation) string {
+	return invocation["call"].(string)
 }
