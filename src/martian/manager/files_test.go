@@ -59,3 +59,23 @@ func TestFilesSequencerBclPaths(t *testing.T) {
 	paths := SequencerBclPaths(flowcell)
 	assert.Len(t, paths, 8)
 }
+
+func TestBclProcessorSequencer(t *testing.T) {
+	seq := BclProcessorSequencer("/mnt/fleet/hiseq002a/160318_D00547_0652_BHKNNGBCXX")
+	assert.Equal(t, seq, SEQ_HISEQ_2500)
+
+	seq = BclProcessorSequencer("/mnt/fleet/4kseq001a/160318_ST-K00126_0164_AH77VLBBXX")
+	assert.Equal(t, seq, SEQ_HISEQ_4000)
+
+	seq = BclProcessorSequencer("/mnt/fleet/nxseq001a/160318_NB500915_0167_AHYMTVBGXX")
+	assert.Equal(t, seq, SEQ_NEXTSEQ)
+
+	seq = BclProcessorSequencer("/mnt/fleet/miseq001a/160316_M00308_0356_000000000-AN5A6")
+	assert.Equal(t, seq, SEQ_MISEQ)
+
+	seq = BclProcessorSequencer("/mnt/fleet/xtseqEXTa/160131_ST-E00314_0132_BHLCJTCCXX")
+	assert.Equal(t, seq, SEQ_XTEN)
+
+	seq = BclProcessorSequencer("/mnt/fleet/iontorrent/hypothetical")
+	assert.Equal(t, seq, SEQ_UNKNOWN)
+}

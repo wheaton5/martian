@@ -12,6 +12,33 @@ import (
 	"strings"
 )
 
+const SEQ_MISEQ string = "miseq"
+const SEQ_HISEQ_2500 string = "hiseq_2500"
+const SEQ_HISEQ_4000 string = "hiseq_4000"
+const SEQ_NEXTSEQ string = "nextseq"
+const SEQ_XTEN string = "xten"
+const SEQ_UNKNOWN string = "unknown"
+
+var SEQUENCER_PREFIXES = map[string]string {
+	SEQ_MISEQ: "miseq",
+	SEQ_HISEQ_2500: "hiseq",
+	SEQ_HISEQ_4000: "4kseq",
+	SEQ_NEXTSEQ: "nxseq",
+	SEQ_XTEN: "xtseq",
+}
+
+//
+// Return the id of the sequencer from the root path
+//
+func BclProcessorSequencer(rootPath string) string {
+	for seq, prefix := range(SEQUENCER_PREFIXES) {
+		if strings.Contains(rootPath, prefix) {
+			return seq
+		}
+	}
+	return SEQ_UNKNOWN
+}
+
 func BclProcessorWGSFastqPaths(rootPath string, sampleIndex string, lanes []int) []string {
 	allFiles := []string{}
 	allFiles = append(allFiles, BclProcessorFastqPaths(rootPath, "RA", sampleIndex, lanes, 2)...)
@@ -36,7 +63,7 @@ func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string
 	if sampleIndex != "*" {
 		chars := strings.Split(sampleIndex, "")
 		regexpTokens := make([]string, len(chars))
-		for i, char := range(chars) {
+		for i, char := range chars {
 			regexpTokens[i] = fmt.Sprintf("[%sN]", char)
 		}
 		siPattern = strings.Join(regexpTokens, "")
@@ -49,7 +76,7 @@ func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string
 		filePattern := path.Join(rootPath, fmt.Sprintf("read-%s_si-%s_*.fastq*", readType, siPattern))
 		files, _ = filepath.Glob(filePattern)
 	} else {
-		for _, lane := range(lanes) {
+		for _, lane := range lanes {
 			filePattern := path.Join(rootPath,
 				fmt.Sprintf("read-%s_si-%s_lane-%03d[_\\-]*.fastq.*", readType, siPattern, lane))
 			globMatches, _ := filepath.Glob(filePattern)
@@ -60,7 +87,7 @@ func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string
 	// filter files to remove those with > 2 Ns in the sample index
 	goodFiles := []string{}
 	goodRe := regexp.MustCompile(".*si-([A-Z]*)_")
-	for _, file := range(files) {
+	for _, file := range files {
 		submatches := goodRe.FindStringSubmatch(file)
 		if submatches != nil {
 			matchSI := submatches[1]
@@ -73,6 +100,7 @@ func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string
 	sort.Strings(goodFiles)
 	return goodFiles
 }
+
 // TODO: add bcldirect mode if necessary for HWM project
 
 //
