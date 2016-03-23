@@ -2,6 +2,7 @@ package manager
 
 import (
 	"encoding/xml"
+	"fmt"
 	"math"
 	"os"
 	"path"
@@ -88,13 +89,15 @@ func GetAllocation(psid string, invocation Invocation) *PipestanceStorageAllocat
 		psid:   psid,
 		psname: psname}
 
+	invokeArgs := invocation["args"].(map[string]interface{})
+
 	var inputSize int64
 	var weightedSize float64
 
 	// get weighted size for bcl processor off the bat
 	if strings.Contains(psname, "BCL_PROCESSOR") {
 		var sequencer string
-		runPath := invocation["run_path"].(string)
+		runPath := invokeArgs["run_path"].(string)
 		numCycles := GetNumCycles(runPath)
 		sequencer = BclProcessorSequencer(runPath)
 		filePaths := SequencerBclPaths(runPath)
@@ -123,19 +126,19 @@ func GetAllocation(psid string, invocation Invocation) *PipestanceStorageAllocat
 		NO_DOWNSAMPLE_RATIO := 11.6 // mean = 10.2 + 1.4
 		// get downsample rate
 		weightedSize = NO_DOWNSAMPLE_RATIO * float64(inputSize)
-		downsample_iface := invocation["downsample"]
+		fmt.Println(invocation)
+		downsample_iface := invokeArgs["downsample"]
 		if downsample_iface != nil {
 			downsample := downsample_iface.(map[string]interface{})
+			fmt.Println(downsample)
 			if gigabases, ok := downsample["gigabases"]; ok {
 				// mean 8.3 + 1.1
-				if gigabases, err := strconv.ParseFloat(gigabases.(string), 64); err == nil {
-					weightedSize = GB_DOWNSAMPLE_RATIO * 1024 * 1024 * 1024 * gigabases
-				}
+				gb := gigabases.(int64)
+				weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
+				fmt.Println(weightedSize)
 			} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
-				if subsample_rate, err := strconv.ParseFloat(subsample_rate.(string), 64); err == nil {
-					// mean = 10.2 + 1.4
-					weightedSize *= subsample_rate
-				}
+				sr := subsample_rate.(float64)
+				weightedSize *= sr
 			}
 		}
 	} else if strings.Contains(psname, "PHASER_SVCALLER") {

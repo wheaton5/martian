@@ -2,7 +2,7 @@
 
 pipeline MOCK_PHASER_SVCALLER_EXOME(
     in  map[]      sample_def,
-    in  map[]      downsample,
+    in  map        downsample,
 )
 {
     call PROCESS_FASTQS(

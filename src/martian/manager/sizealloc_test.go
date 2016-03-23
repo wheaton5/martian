@@ -26,3 +26,42 @@ func TestCellRangerAlloc(t *testing.T) {
 	assert.Equal(t, 6, alloc.inputSize)
 	assert.Equal(t, 79, alloc.weightedSize)
 }
+
+func TestPhaserSvCallerExomeAlloc(t *testing.T) {
+	mro := getTestFilePath("mro/test_phaser_svcaller_exome_downsample.mro")
+	mroPaths := []string{}
+	var invocation Invocation
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc := GetAllocation("test_phaser_svcaller_exome", invocation)
+	assert.Equal(t, 6, alloc.inputSize)
+	expectedValue := 1024*1024*1024*9*9.4
+	assert.Equal(t, int64(expectedValue), alloc.weightedSize)
+
+	mro = getTestFilePath("mro/test_phaser_svcaller_exome_subsample_rate.mro")
+	mroPaths = []string{}
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc = GetAllocation("test_phaser_svcaller_exome", invocation)
+	assert.Equal(t, 6, alloc.inputSize)
+	// 11.6 * 5
+	assert.Equal(t, 58, alloc.weightedSize)
+
+	mro = getTestFilePath("mro/test_phaser_svcaller_exome.mro")
+	mroPaths = []string{}
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc = GetAllocation("test_phaser_svcaller_exome", invocation)
+	assert.Equal(t, 6, alloc.inputSize)
+	// 11.6 * 5
+	assert.Equal(t, 69, alloc.weightedSize)
+}

@@ -1,6 +1,6 @@
 stage PROCESS_FASTQS(
     in map[]  sample_def,
-    in map[]  downsample,
+    in map    downsample,
     src py "process_fastqs",
 )
 
