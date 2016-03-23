@@ -1,0 +1,14 @@
+@include "_mock_stages.mro"
+
+pipeline MOCK_ANALYZER(
+    in  map[]      sample_def,
+)
+{
+    call PROCESS_FASTQS(
+        sample_def = self.sample_def,
+        downsample = null,
+    )
+
+    return (
+    )
+}

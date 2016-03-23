@@ -1,6 +1,6 @@
-@include "sample_def.mro"
+@include "mock_cellranger.mro"
 
-call SAMPLE_DEF_TEST(
+call MOCK_CELLRANGER(
     sample_def = [
         {
             "bc_read_type": "I1",
@@ -9,10 +9,10 @@ call SAMPLE_DEF_TEST(
             "lanes": null,
             "read_path": "../test/manager/bclprocessor",
             "sample_indices": [
-                "AAAGCGTA",
+                "AAAGCATA",
                 "TCCAATAA"
             ],
-            "si_read_type"
+            "si_read_type": "I2"
         }
     ],
 )

@@ -1,0 +1,15 @@
+@include "_mock_stages.mro"
+
+pipeline MOCK_PHASER_SVCALLER(
+    in  map[]      sample_def,
+    in  map[]      downsample,
+)
+{
+    call PROCESS_FASTQS(
+        sample_def = self.sample_def,
+        downsample = self.downsample,
+    )
+
+    return (
+    )
+}
