@@ -27,6 +27,20 @@ func TestCellRangerAlloc(t *testing.T) {
 	assert.Equal(t, 79, alloc.weightedSize)
 }
 
+func TestAnalyzerAlloc(t *testing.T) {
+	mro := getTestFilePath("mro/test_analyzer.mro")
+	mroPaths := []string{}
+	var invocation Invocation
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc := GetAllocation("test_cellranger", invocation)
+	assert.Equal(t, 6, alloc.inputSize)
+	assert.Equal(t, 58, alloc.weightedSize)
+}
+
 func TestPhaserSvCallerExomeAlloc(t *testing.T) {
 	mro := getTestFilePath("mro/test_phaser_svcaller_exome_downsample.mro")
 	mroPaths := []string{}
