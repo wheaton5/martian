@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetTotalReadCount(t *testing.T) {
-	runPath := getTestFilePath("HTESTBCXX")
+	runPath := getTestFilePath("sequencers/miseq002/HTESTBCXX")
 	numCycles := GetNumCycles(runPath)
 	assert.Equal(t, numCycles, 125)
 }
@@ -67,9 +67,9 @@ func TestPhaserSvCallerExomeAlloc(t *testing.T) {
 }
 
 func TestPhaserSvCallerAlloc(t *testing.T) {
-	mro := getTestFilePath("mro/test_phaser_svcaller.mro")
 	mroPaths := []string{}
 	var invocation Invocation
+	mro := getTestFilePath("mro/test_phaser_svcaller.mro")
 	if source, err := ioutil.ReadFile(mro); err != nil {
 		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
 	} else {
@@ -80,7 +80,6 @@ func TestPhaserSvCallerAlloc(t *testing.T) {
 	assert.Equal(t, int64(expectedValue), alloc.weightedSize)
 
 	mro = getTestFilePath("mro/test_phaser_svcaller_downsample.mro")
-	mroPaths = []string{}
 	if source, err := ioutil.ReadFile(mro); err != nil {
 		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
 	} else {
@@ -90,5 +89,28 @@ func TestPhaserSvCallerAlloc(t *testing.T) {
 	assert.Equal(t, 6, alloc.inputSize)
 	expectedSize := 1024*1024*1024*10*7.6
 	assert.Equal(t, int64(expectedSize), alloc.weightedSize)
+}
+
+func TestBclAlloc(t *testing.T) {
+	var invocation Invocation
+	mroPaths := []string{}
+	mro := getTestFilePath("mro/test_bclprocessor_hiseq.mro")
+
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc := GetAllocation("test_bclprocessor", invocation)
+	assert.Equal(t, 26, alloc.weightedSize)
+
+	mro = getTestFilePath("mro/test_bclprocessor_miseq.mro")
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc = GetAllocation("test_bclprocessor", invocation)
+	assert.Equal(t, 13, alloc.weightedSize)
 
 }

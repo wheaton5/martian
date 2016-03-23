@@ -53,7 +53,7 @@ func TestFilesBclProcessorWGSFastqPaths(t *testing.T) {
 }
 
 func TestFilesSequencerBclPaths(t *testing.T) {
-	flowcell := getTestFilePath("HTESTBCXX");
+	flowcell := getTestFilePath("sequencers/hiseq004/HTESTBCXX");
 	assert.NotEmpty(t, flowcell)
 
 	paths := SequencerBclPaths(flowcell)

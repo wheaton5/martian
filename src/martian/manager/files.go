@@ -122,6 +122,7 @@ func InputSizeTotal(paths []string) int64 {
 func SequencerBclPaths(flowCellPath string) []string {
 	var baseCallFolder = filepath.Join(flowCellPath, "Data/Intensities/BaseCalls")
 	// first star is lane, second star is cycle
+	fmt.Println(baseCallFolder)
 	files, _ := filepath.Glob(filepath.Join(baseCallFolder, "*", "*", "*.bcl.gz"))
 	return files
 }

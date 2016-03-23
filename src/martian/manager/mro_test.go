@@ -55,7 +55,7 @@ func TestFastqFilesFromInvocation(t *testing.T) {
 		assert.Fail(t, fmt.Sprintf("Could not read file: %s", sourcePath))
 	} else {
 		invocation := InvocationFromMRO(string(source), sourcePath, mroPaths)
-		paths = FastqFilesFromInvocation(invocation)
+		paths, _ = FastqFilesFromInvocation(invocation)
 	}
 	// RA+I1 only
 	assert.Len(t, paths, 5, "WGS mode, oligo sample indices")
@@ -65,7 +65,7 @@ func TestFastqFilesFromInvocation(t *testing.T) {
 		assert.Fail(t, fmt.Sprintf("Could not read file: %s", sourcePath))
 	} else {
 		invocation := InvocationFromMRO(string(source), sourcePath, mroPaths)
-		paths = FastqFilesFromInvocation(invocation)
+		paths, _ = FastqFilesFromInvocation(invocation)
 	}
 	assert.Len(t, paths, 5, "WGS mode, sample index set")
 }

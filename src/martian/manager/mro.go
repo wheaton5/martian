@@ -134,6 +134,29 @@ func NewSampleDef(jsonDef map[string]interface{}) *SampleDef {
 	return sampleDef
 }
 
+func BclPathsFromRunPath(runPath string) ([]string, error) {
+	allPaths := []string{}
+	fmt.Printf("Run path: %s\n", runPath)
+	if !strings.HasPrefix(runPath, "/") {
+		absPath, err := filepath.Abs(runPath)
+		if err != nil {
+			fmt.Println("error")
+			return allPaths, err
+		}
+		runPath = absPath
+	}
+	fmt.Printf("Run path after abs: %s\n", runPath)
+	if path, err := filepath.EvalSymlinks(runPath); err == nil {
+		runPath = path
+	} else {
+		// TODO log error
+		fmt.Println(err)
+		return allPaths, err
+	}
+	fmt.Printf("Run path after eval: %s\n", runPath)
+	return SequencerBclPaths(runPath), nil
+}
+
 func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 	allPaths := []string{}
 	readPath := sampleDef.read_path
@@ -143,6 +166,10 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 			return allPaths, err
 		}
 		readPath = absPath
+	}
+	readPath, err := filepath.EvalSymlinks(sampleDef.read_path)
+	if err != nil {
+		fmt.Printf("Error evaluating symlink: %s", sampleDef.read_path)
 	}
 	sampleOligos := []string{}
 	for _, sampleIndex := range(sampleDef.sample_indices) {
@@ -179,7 +206,7 @@ func InvocationFromMRO(source string, srcPath string, mroPaths []string) Invocat
 	return invocationJson
 }
 
-func FastqFilesFromInvocation(invocation Invocation) []string {
+func FastqFilesFromInvocation(invocation Invocation) ([]string, error) {
 	args := invocation["args"].(map[string]interface{})
 	sampleDefsJson := args["sample_def"].([]interface{})
 	sampleDefs := []*SampleDef{}
@@ -192,10 +219,11 @@ func FastqFilesFromInvocation(invocation Invocation) []string {
 				allPaths = append(allPaths, defPaths...)
 			} else {
 				fmt.Println(err.Error())
+				return []string{}, err
 			}
 		}
 	}
-	return allPaths
+	return allPaths, nil
 }
 
 func PipelineFromInvocation(invocation Invocation) string {

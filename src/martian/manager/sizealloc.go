@@ -2,7 +2,6 @@ package manager
 
 import (
 	"encoding/xml"
-	"fmt"
 	"math"
 	"os"
 	"path"
@@ -99,10 +98,10 @@ func GetAllocation(psid string, invocation Invocation) *PipestanceStorageAllocat
 		runPath := invokeArgs["run_path"].(string)
 		numCycles := GetNumCycles(runPath)
 		sequencer = BclProcessorSequencer(runPath)
-		filePaths := SequencerBclPaths(runPath)
+		// TODO log on error
+		filePaths, _ := BclPathsFromRunPath(runPath)
 		inputSize = InputSizeTotal(filePaths)
 		if sequencer == SEQ_MISEQ {
-			// TODO update off of latest MARSOC figures
 			// miseq BCL: 18x(sqrt read size, est.), stdev 1x
 			weightedSize = 19.0 * float64(inputSize) / math.Sqrt(float64(numCycles))
 		} else {
@@ -110,7 +109,8 @@ func GetAllocation(psid string, invocation Invocation) *PipestanceStorageAllocat
 			weightedSize = 37.3 * float64(inputSize) / math.Sqrt(float64(numCycles))
 		}
 	} else {
-		filePaths := FastqFilesFromInvocation(invocation)
+		// TODO log on error
+		filePaths, _ := FastqFilesFromInvocation(invocation)
 		inputSize = InputSizeTotal(filePaths)
 	}
 
@@ -125,16 +125,13 @@ func GetAllocation(psid string, invocation Invocation) *PipestanceStorageAllocat
 		NO_DOWNSAMPLE_RATIO := 11.6 // mean = 10.2 + 1.4
 		// get downsample rate
 		weightedSize = NO_DOWNSAMPLE_RATIO * float64(inputSize)
-		fmt.Println(invocation)
 		downsample_iface := invokeArgs["downsample"]
 		if downsample_iface != nil {
 			downsample := downsample_iface.(map[string]interface{})
-			fmt.Println(downsample)
 			if gigabases, ok := downsample["gigabases"]; ok {
 				// mean 8.3 + 1.1
 				gb := gigabases.(int64)
 				weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
-				fmt.Println(weightedSize)
 			} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
 				sr := subsample_rate.(float64)
 				weightedSize *= sr
