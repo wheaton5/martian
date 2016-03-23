@@ -75,6 +75,10 @@ func (self *PackageManager) verifyPackages(packagesPath string, maxProcs int) {
 		}
 
 		p := manager.NewPackage(packagePath, false)
+
+		// Kill package argshim process since a new argshim process is started per request
+		p.Argshim.Kill()
+
 		self.packages[name] = p
 		self.in[name] = make(chan WebShimQuery)
 		for i := 0; i < maxProcs; i++ {
