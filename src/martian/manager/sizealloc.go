@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 )
 
@@ -145,16 +144,18 @@ func GetAllocation(psid string, invocation Invocation) *PipestanceStorageAllocat
 		// get downsample rate
 		GB_DOWNSAMPLE_RATIO := 7.6
 		NO_DOWNSAMPLE_RATIO := 11.6
-		NO_DOWNSAMPLE_OFFSET := 30.0 * (1024 * 1024 * 1024)
-		downsample_iface := invocation["downsample"]
+		NO_DOWNSAMPLE_OFFSET := 30.0 * float64(1024 * 1024 * 1024)
+		downsample_iface := invokeArgs["downsample"]
 		weightedSize = NO_DOWNSAMPLE_OFFSET + NO_DOWNSAMPLE_RATIO*float64(inputSize)
 		if downsample_iface != nil {
 			downsample := downsample_iface.(map[string]interface{})
 			if gigabases, ok := downsample["gigabases"]; ok {
 				// mean 6.5 + 1.1
-				if gigabases, err := strconv.ParseFloat(gigabases.(string), 64); err == nil {
-					weightedSize = GB_DOWNSAMPLE_RATIO * 1024 * 1024 * 1024 * gigabases
-				}
+				gb := gigabases.(int64)
+				weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
+			} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
+				sr := subsample_rate.(float64)
+				weightedSize *= sr
 			}
 		}
 	}

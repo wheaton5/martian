@@ -65,3 +65,30 @@ func TestPhaserSvCallerExomeAlloc(t *testing.T) {
 	// 11.6 * 5
 	assert.Equal(t, 69, alloc.weightedSize)
 }
+
+func TestPhaserSvCallerAlloc(t *testing.T) {
+	mro := getTestFilePath("mro/test_phaser_svcaller.mro")
+	mroPaths := []string{}
+	var invocation Invocation
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc := GetAllocation("test_phaser_svcaller", invocation)
+	expectedValue := 30.0*1024*1024*1024 + 11.6*6
+	assert.Equal(t, int64(expectedValue), alloc.weightedSize)
+
+	mro = getTestFilePath("mro/test_phaser_svcaller_downsample.mro")
+	mroPaths = []string{}
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc = GetAllocation("test_phaser_svcaller", invocation)
+	assert.Equal(t, 6, alloc.inputSize)
+	expectedSize := 1024*1024*1024*10*7.6
+	assert.Equal(t, int64(expectedSize), alloc.weightedSize)
+
+}
