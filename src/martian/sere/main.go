@@ -112,6 +112,7 @@ Options:
 		{"SERE_EMAIL_HOST", "smtp.server.local"},
 		{"SERE_EMAIL_SENDER", "email@address.com"},
 		{"SERE_EMAIL_RECIPIENT", "email@address.com"},
+		{"MARSOC_MAX_STORAGE_MB", ">0"},
 		{"MARSOC_DOWNLOAD_URL", "url"},
 	}, true)
 
@@ -167,6 +168,13 @@ Options:
 	autoInvoke := true
 	stepSecs := 5
 
+	// default 50GB scratch space
+	maxStorageBytes := int64(1024*1024*1024)*int64(50)
+	if mb, err := strconv.Atoi(env["MARSOC_MAX_STORAGE_MB"]); err == nil {
+		maxStorageBytes = int64(1024*1024)*int64(mb)
+	}
+	core.LogInfo("options", "Storage high water mark: %d bytes", maxStorageBytes)
+
 	// Runtime
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		-1, -1, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
@@ -187,7 +195,7 @@ Options:
 
 	// Pipestance manager
 	pman := manager.NewPipestanceManager(rt, pipestancesPaths, scratchPaths,
-		cachePath, failCoopPath, stepSecs, autoInvoke, mailer, packages)
+		cachePath, failCoopPath, stepSecs, autoInvoke, maxStorageBytes, mailer, packages)
 	pman.LoadPipestances()
 
 	//=========================================================================

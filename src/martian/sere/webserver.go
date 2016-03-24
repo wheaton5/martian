@@ -186,7 +186,7 @@ func getProgram(programName string, cycleId int, pman *manager.PipestanceManager
 	return program, nil
 }
 
-func invokePipestance(container string, pipeline string, psid string, rt *core.Runtime, pman *manager.PipestanceManager,
+func enqueuePipestance(container string, pipeline string, psid string, rt *core.Runtime, pman *manager.PipestanceManager,
 	marsoc *MarsocManager, db *DatabaseManager, packages *PackageManager) error {
 	programName, cycleId, roundId := parseContainerKey(container)
 
@@ -226,7 +226,7 @@ func invokePipestance(container string, pipeline string, psid string, rt *core.R
 	src := p.Argshim.BuildCallSourceForTest(rt, test.Category, test.Id, sampleBag, fastqPaths, p.MroPaths)
 	tags := []string{}
 
-	return pman.Invoke(container, pipeline, psid, src, tags)
+	return pman.Enqueue(container, pipeline, psid, src, tags)
 }
 
 func callPipestancesAPI(pipestances []PipestanceForm, pipestanceFunc manager.PipestanceFunc) string {
@@ -450,7 +450,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 	app.Post("/api/test/invoke-pipestances", binding.Bind([]PipestanceForm{}), func(body []PipestanceForm, p martini.Params) string {
 		errors := []string{}
 		for _, pipestance := range body {
-			if err := invokePipestance(pipestance.Container, pipestance.Pipeline, pipestance.Psid, rt, pman, marsoc, db, packages); err != nil {
+			if err := enqueuePipestance(pipestance.Container, pipestance.Pipeline, pipestance.Psid, rt, pman, marsoc, db, packages); err != nil {
 				errors = append(errors, err.Error())
 			}
 		}

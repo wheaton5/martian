@@ -47,6 +47,25 @@ type AnalysisNotification struct {
 	Fcid string
 }
 
+type PipestanceQueueRecord struct {
+	Name      string   `json:"name"`
+	Size      int64    `json:"size"`
+	InvokeSrc string   `json:"psid"`
+	Tags      []string `json:"tags"`
+	Timestamp string   `json:"timestamp"`
+}
+
+func NewPipestanceQueueRecord(pkey string, size int64, src string, tags []string) *PipestanceQueueRecord {
+	recordTags := make([]string, len(tags))
+	copy(recordTags, tags)
+	return &PipestanceQueueRecord{
+		Name: pkey,
+		InvokeSrc: src,
+		Tags: recordTags,
+		Timestamp: core.Timestamp(),
+		Size: size}
+}
+
 type PipestanceManager struct {
 	rt                *core.Runtime
 	cachePath         string
@@ -68,6 +87,11 @@ type PipestanceManager struct {
 	copying           map[string]bool
 	mailQueue         []*PipestanceNotification
 	analysisQueue     []*AnalysisNotification
+	storageMaxBytes   int64
+	storageQueue      []*PipestanceQueueRecord
+	storageAllocBytes int64
+	storageMap        map[string]int64
+	storageMutex      *sync.Mutex
 	mailer            *Mailer
 	packages          PackageManager
 }
@@ -120,7 +144,7 @@ func getFilenameWithSuffix(dir string, fname string) string {
 }
 
 func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPaths []string,
-	cachePath string, failCoopPath string, runLoopIntervalms int, autoInvoke bool, mailer *Mailer,
+	cachePath string, failCoopPath string, runLoopIntervalms int, autoInvoke bool, storageMaxBytes int64, mailer *Mailer,
 	packages PackageManager) *PipestanceManager {
 	self := &PipestanceManager{}
 	self.rt = rt
@@ -143,6 +167,11 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPa
 	self.copying = map[string]bool{}
 	self.mailQueue = []*PipestanceNotification{}
 	self.analysisQueue = []*AnalysisNotification{}
+	self.storageMutex = &sync.Mutex{}
+	self.storageQueue = []*PipestanceQueueRecord{}
+	self.storageAllocBytes = 0
+	self.storageMaxBytes = storageMaxBytes
+	self.storageMap = map[string]int64{}
 	self.mailer = mailer
 	self.packages = packages
 	return self
@@ -220,9 +249,19 @@ func (self *PipestanceManager) loadCache() error {
 	}
 	if failed, ok := cache["failed"]; ok {
 		self.failed = failed
+		for pkey, _ := range self.failed {
+			container, pipeline, psid := parsePipestanceKey(pkey)
+			// check to see if pipeline has been invoked
+			if _, err := self.GetPipestanceInvokeSrc(container, pipeline, psid); err == nil {
+				self.allocateLoadedPipestance(pkey)
+			}
+		}
 	}
 	if copying, ok := cache["copying"]; ok {
 		for pkey, _ := range copying {
+			// count copying pipestances against storage initially
+			// hopefully the _invocation file is still there...
+			self.allocateLoadedPipestance(pkey)
 			self.copyPipestance(pkey)
 		}
 	}
@@ -272,6 +311,12 @@ func (self *PipestanceManager) loadPipestance(pkey string) {
 		self.mutex.Lock()
 		self.failed[pkey] = true
 		self.mutex.Unlock()
+
+		// if the _invocation is present, count the pipestance size against the
+		// storage max
+		if _, ok := err.(*core.PipestancePathError); !ok {
+			self.allocateLoadedPipestance(pkey)
+		}
 		return
 	}
 
@@ -281,6 +326,7 @@ func (self *PipestanceManager) loadPipestance(pkey string) {
 	self.mutex.Lock()
 	self.running[pkey] = pipestance
 	self.mutex.Unlock()
+	self.allocateLoadedPipestance(pkey)
 }
 
 func (self *PipestanceManager) writeCache() {
@@ -391,6 +437,7 @@ func (self *PipestanceManager) cleanScratchPaths() {
 // Start an infinite process loop.
 func (self *PipestanceManager) GoRunLoop() {
 	self.goProcessLoop()
+	self.goStorageLoop()
 	self.goCleanLoop()
 }
 
@@ -405,6 +452,21 @@ func (self *PipestanceManager) goProcessLoop() {
 
 			// Wait for a bit.
 			time.Sleep(time.Millisecond * time.Duration(self.runLoopIntervalms))
+		}
+	}()
+}
+
+func (self *PipestanceManager) goStorageLoop() {
+	go func() {
+		// sleep for 5 seconds to let webserver fail on port rebind.
+		time.Sleep(time.Second * time.Duration(5))
+		for {
+			if self.runLoop {
+				self.processEnqueuedPipestances()
+			}
+
+			// run every 15 seconds to make sure invoked pipestances get loaded fairly quickly
+			time.Sleep(time.Second * time.Duration(15))
 		}
 	}()
 }
@@ -499,6 +561,8 @@ func (self *PipestanceManager) copyPipestance(pkey string) {
 				os.Remove(psPath)
 				os.Rename(newPsPath, psPath)
 				os.RemoveAll(hardPsPath)
+				// we can now clear against scratch
+				self.deallocateLoadedPipestance(pkey)
 			} else {
 				self.mailer.Sendmail(
 					[]string{},
@@ -729,8 +793,122 @@ func (self *PipestanceManager) getScratchPath() (string, error) {
 	return "", &core.MartianError{fmt.Sprintf("Pipestance scratch paths %s are full.", strings.Join(self.scratchPaths, ", "))}
 }
 
-func (self *PipestanceManager) Invoke(container string, pipeline string, psid string, src string, tags []string) error {
+func (self *PipestanceManager) GetAllocation(container string, pipeline string, psid string, invokeSrc string) (*PipestanceStorageAllocation, error) {
+	if invokeSrc == "" {
+		existingSrc, err := self.GetPipestanceInvokeSrc(container, pipeline, psid)
+		if err != nil {
+			return nil, err
+		}
+		invokeSrc = existingSrc
+	}
+	mroPaths, _, argshimPath, _, err := self.GetPipestanceEnvironment(container, pipeline, psid)
+	if err != nil {
+		return nil, err
+	}
+	invocation, err := self.rt.BuildCallJSON(invokeSrc, argshimPath, mroPaths)
+	if err != nil {
+		return nil, err
+	}
+	alloc := GetAllocation(psid, invocation)
+	return alloc, nil
+}
+
+func (self *PipestanceManager) Enqueue(container string, pipeline string, psid string, src string, tags []string) error {
+	alloc, err := self.GetAllocation(container, pipeline, psid, src)
+	if err != nil {
+		core.LogInfo("storage", "Allocation Error: %v", err.Error())
+		return &core.PipestanceSizeError{psid}
+	}
 	pkey := makePipestanceKey(container, pipeline, psid)
+	queueRecord := NewPipestanceQueueRecord(pkey, alloc.weightedSize, src, tags)
+	core.LogInfo("storage", "Enqueued pipestance: %s (%d bytes)", pkey, alloc.weightedSize)
+	self.storageMutex.Lock()
+	self.storageQueue = append(self.storageQueue, queueRecord)
+	self.storageMutex.Unlock()
+	return nil
+}
+
+//
+// If a pipestance is already loaded, figure out its allocation and count
+// it against active storage.  This will fail if a pipestance lacks an
+// _invocation file.
+//
+func (self *PipestanceManager) allocateLoadedPipestance(pkey string) {
+	if _, ok := self.storageMap[pkey]; ok {
+		core.LogInfo("storage", "loaded pipestance already accounted for: %s", pkey)
+		return
+	}
+	container, pipeline, psid := parsePipestanceKey(pkey)
+	alloc, err := self.GetAllocation(container, pipeline, psid, "")
+	if err != nil {
+		return
+	}
+	self.storageMutex.Lock()
+	self.storageAllocBytes += alloc.weightedSize
+	state, ok := self.GetPipestanceState(container, pipeline, psid)
+	if !ok {
+		state = "not ok"
+	}
+	core.LogInfo("storage", "Counting loaded pipestance: %s (%d bytes, %d remaining, %s)",
+		pkey, alloc.weightedSize, self.storageMaxBytes-self.storageAllocBytes, state)
+	self.storageMap[pkey] = alloc.weightedSize
+	self.storageMutex.Unlock()
+}
+
+//
+// If a pipestance is loaded and its size is recorded in the storage map,
+// clear it from the storage map and release its hit against storage.
+func (self *PipestanceManager) deallocateLoadedPipestance(pkey string) {
+	self.storageMutex.Lock()
+	if size, ok := self.storageMap[pkey]; ok {
+		self.storageAllocBytes -= size
+		delete(self.storageMap, pkey)
+	}
+	self.storageMutex.Unlock()
+}
+
+func (self *PipestanceManager) processEnqueuedPipestances() {
+	//
+	// FIFO for fairness and simplicity to start; there could be a better
+	// queue service algorithm in the future
+	numFired := 0
+	self.storageMutex.Lock()
+	for idx, pipestance := range(self.storageQueue) {
+		if self.storageAllocBytes + pipestance.Size <= self.storageMaxBytes {
+			if _, ok := self.storageMap[pipestance.Name]; ok {
+				core.LogInfo("storage", "pipestance already counted against cap, will be removed from queue: %s", pipestance.Name)
+			} else {
+				self.storageAllocBytes += pipestance.Size
+				self.storageMap[pipestance.Name] = pipestance.Size
+				core.LogInfo("storage", "Cleared for takeoff: %s (%d bytes, %d remaining)",
+					pipestance.Name, pipestance.Size, self.storageMaxBytes - self.storageAllocBytes)
+				self.Invoke(pipestance)
+			}
+			numFired = idx+1
+		} else {
+			break
+		}
+	}
+	if numFired == len(self.storageQueue) {
+		self.storageQueue = []*PipestanceQueueRecord{}
+	} else {
+		self.storageQueue = self.storageQueue[numFired:]
+	}
+	self.storageMutex.Unlock()
+}
+
+func (self *PipestanceManager) releasePipestanceStorage(size int64) {
+	self.storageMutex.Lock()
+	self.storageAllocBytes -= size
+	self.storageMutex.Unlock()
+}
+
+func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
+	pkey := stance.Name
+	container, pipeline, psid := parsePipestanceKey(pkey)
+	src := stance.InvokeSrc
+	tags := make([]string, len(stance.Tags))
+	copy(tags, stance.Tags)
 
 	self.mutex.Lock()
 	// Check if pipestance has already been invoked
@@ -876,6 +1054,7 @@ func (self *PipestanceManager) WipePipestance(container string, pipeline string,
 				delete(self.pending, pkey)
 				self.writeCache()
 				self.mutex.Unlock()
+				self.deallocateLoadedPipestance(pkey)
 			}()
 			return nil
 		}

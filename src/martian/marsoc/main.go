@@ -112,7 +112,7 @@ func processRunLoop(pool *SequencerPool, pman *manager.PipestanceManager, lena *
 				for _, notice := range runQueue {
 					run := notice.Run
 					fcids = append(fcids, run.Fcid)
-					InvokePreprocess(run.Fcid, rt, packages, pman, pool, mailer.InstanceName)
+					EnqueuePreprocess(run.Fcid, rt, packages, pman, pool, mailer.InstanceName)
 				}
 
 				// If there are new runs completed, send email.
@@ -127,7 +127,7 @@ func processRunLoop(pool *SequencerPool, pman *manager.PipestanceManager, lena *
 
 				for _, notice := range analysisQueue {
 					fcid := notice.Fcid
-					InvokeAllSamples(fcid, rt, packages, pman, lena, mailer.InstanceName)
+					EnqueueAllSamples(fcid, rt, packages, pman, lena, mailer.InstanceName)
 				}
 			}
 
@@ -228,6 +228,7 @@ Options:
 		{"MARSOC_EMAIL_SENDER", "email@address.com"},
 		{"MARSOC_EMAIL_RECIPIENT", "email@address.com"},
 		{"MARSOC_REDSTONE_CONFIG", "path/to/redstone/config"},
+		{"MARSOC_MAX_STORAGE_MB", ">0"},
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
@@ -320,6 +321,13 @@ Options:
 	emailSender := env["MARSOC_EMAIL_SENDER"]
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	redstoneConfigPath := env["MARSOC_REDSTONE_CONFIG"]
+
+	// default 50GB scratch space
+	maxStorageBytes := int64(1024*1024*1024)*int64(50)
+	if mb, err := strconv.Atoi(env["MARSOC_MAX_STORAGE_MB"]); err == nil {
+		maxStorageBytes = int64(1024*1024)*int64(mb)
+	}
+	core.LogInfo("options", "Storage high water mark: %d bytes", maxStorageBytes)
 	runLoopIntervalms := 5 * 1000
 
 	// Setup Go runtime
@@ -375,7 +383,7 @@ Options:
 	// Setup PipestanceManager and load pipestance cache.
 	//=========================================================================
 	pman := manager.NewPipestanceManager(rt, pipestancesPaths, scratchPaths,
-		cachePath, failCoopPath, runLoopIntervalms, autoInvoke, mailer, packages)
+		cachePath, failCoopPath, runLoopIntervalms, autoInvoke, maxStorageBytes, mailer, packages)
 	pman.LoadPipestances()
 
 	//=========================================================================
