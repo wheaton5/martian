@@ -814,6 +814,11 @@ func (self *PipestanceManager) GetAllocation(container string, pipeline string, 
 }
 
 func (self *PipestanceManager) Enqueue(container string, pipeline string, psid string, src string, tags []string) error {
+	if state, ok := self.GetPipestanceState(container, pipeline, psid); ok {
+		core.LogInfo("storage", "Pipestance already tracked: %s (%s)",
+			makePipestanceKey(container, pipeline, psid), state)
+		return &core.PipestanceExistsError{psid}
+	}
 	alloc, err := self.GetAllocation(container, pipeline, psid, src)
 	if err != nil {
 		core.LogInfo("storage", "Allocation Error: %v", err.Error())
@@ -826,6 +831,15 @@ func (self *PipestanceManager) Enqueue(container string, pipeline string, psid s
 	self.storageQueue = append(self.storageQueue, queueRecord)
 	self.storageMutex.Unlock()
 	return nil
+}
+
+func (self *PipestanceManager) PipestanceInStorageQueue(pkey string) bool {
+	for _, spec := range self.storageQueue {
+		if spec.Name == pkey {
+			return true
+		}
+	}
+	return false
 }
 
 //
@@ -912,7 +926,7 @@ func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
 
 	self.mutex.Lock()
 	// Check if pipestance has already been invoked
-	if _, ok := self.getPipestanceState(container, pipeline, psid); ok {
+	if state, ok := self.getPipestanceState(container, pipeline, psid); ok && state != "queued" {
 		self.mutex.Unlock()
 		return &core.PipestanceExistsError{psid}
 	}
@@ -1112,6 +1126,9 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 
 func (self *PipestanceManager) getPipestanceState(container string, pipeline string, psid string) (string, bool) {
 	pkey := makePipestanceKey(container, pipeline, psid)
+	if self.PipestanceInStorageQueue(pkey) {
+		return "queued", true
+	}
 	if _, ok := self.copying[pkey]; ok {
 		return "copying", true
 	}
