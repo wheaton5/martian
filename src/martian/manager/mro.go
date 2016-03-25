@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"fmt"
 	"martian/core"
 	"strings"
 	"path/filepath"
@@ -136,24 +135,20 @@ func NewSampleDef(jsonDef map[string]interface{}) *SampleDef {
 
 func BclPathsFromRunPath(runPath string) ([]string, error) {
 	allPaths := []string{}
-	fmt.Printf("Run path: %s\n", runPath)
 	if !strings.HasPrefix(runPath, "/") {
 		absPath, err := filepath.Abs(runPath)
 		if err != nil {
-			fmt.Println("error")
+			core.LogError(err, "storage", "can't get abs path of bcl run_path")
 			return allPaths, err
 		}
 		runPath = absPath
 	}
-	fmt.Printf("Run path after abs: %s\n", runPath)
 	if path, err := filepath.EvalSymlinks(runPath); err == nil {
 		runPath = path
 	} else {
-		// TODO log error
-		fmt.Println(err)
+		core.LogError(err, "storage", "eval symlinks doesn't work")
 		return allPaths, err
 	}
-	fmt.Printf("Run path after eval: %s\n", runPath)
 	return SequencerBclPaths(runPath), nil
 }
 
@@ -163,13 +158,15 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 	if !strings.HasPrefix(readPath, "/") {
 		absPath, err := filepath.Abs(readPath)
 		if err != nil {
+			core.LogError(err, "storage", "Error getting absolute path: %s", readPath)
 			return allPaths, err
 		}
 		readPath = absPath
 	}
 	readPath, err := filepath.EvalSymlinks(sampleDef.read_path)
 	if err != nil {
-		fmt.Printf("Error evaluating symlink: %s", sampleDef.read_path)
+		core.LogError(err, "storage", "Error evaluating symlink: %s", sampleDef.read_path)
+		return allPaths, err
 	}
 	sampleOligos := []string{}
 	for _, sampleIndex := range(sampleDef.sample_indices) {
@@ -200,8 +197,7 @@ func InvocationFromMRO(source string, srcPath string, mroPaths []string) Invocat
 	rt := core.NewRuntime("local", "disable", "disable", core.GetVersion())
 	invocationJson, err := rt.BuildCallJSON(source, srcPath, mroPaths)
 	if err != nil {
-		// invocation JSON is nil in this case
-		fmt.Println(err.Error())
+		core.LogError(err, "storage", "Error getting MRO invocation: %s", srcPath)
 	}
 	return invocationJson
 }
@@ -218,7 +214,6 @@ func FastqFilesFromInvocation(invocation Invocation) ([]string, error) {
 			if defPaths, err := FastqPathsFromSampleDef(sampleDef); err == nil {
 				allPaths = append(allPaths, defPaths...)
 			} else {
-				fmt.Println(err.Error())
 				return []string{}, err
 			}
 		}

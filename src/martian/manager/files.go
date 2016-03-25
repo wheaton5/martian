@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"martian/core"
 )
 
 const SEQ_MISEQ string = "miseq"
@@ -108,7 +109,7 @@ func InputSizeTotal(paths []string) int64 {
 		if fileInfo, err := os.Stat(path); err == nil {
 			size += fileInfo.Size()
 		} else {
-			fmt.Printf("Could not read file: %s", path)
+			core.LogError(err, "storage", "Could not read file for size: %s", path)
 		}
 	}
 	return size
@@ -122,7 +123,7 @@ func InputSizeTotal(paths []string) int64 {
 func SequencerBclPaths(flowCellPath string) []string {
 	var baseCallFolder = filepath.Join(flowCellPath, "Data/Intensities/BaseCalls")
 	// first star is lane, second star is cycle
-	fmt.Println(baseCallFolder)
-	files, _ := filepath.Glob(filepath.Join(baseCallFolder, "*", "*", "*.bcl.gz"))
+	// .bcl.gz gzipped, .bcl miseq
+	files, _ := filepath.Glob(filepath.Join(baseCallFolder, "*", "*", "*.bcl*"))
 	return files
 }

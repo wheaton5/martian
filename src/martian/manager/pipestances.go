@@ -92,6 +92,7 @@ type PipestanceManager struct {
 	storageAllocBytes int64
 	storageMap        map[string]int64
 	storageMutex      *sync.Mutex
+	storageQueuePath  string
 	mailer            *Mailer
 	packages          PackageManager
 }
@@ -172,6 +173,7 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPa
 	self.storageAllocBytes = 0
 	self.storageMaxBytes = storageMaxBytes
 	self.storageMap = map[string]int64{}
+	self.storageQueuePath = path.Join(cachePath, "storageQueue")
 	self.mailer = mailer
 	self.packages = packages
 	return self
@@ -226,6 +228,7 @@ func (self *PipestanceManager) CopyAndClearAnalysisQueue() []*AnalysisNotificati
 }
 
 func (self *PipestanceManager) LoadPipestances() {
+	self.loadStorageCache()
 	if err := self.loadCache(); err != nil {
 		self.inventoryPipestances()
 	}
@@ -286,6 +289,25 @@ func (self *PipestanceManager) loadCache() error {
 	return nil
 }
 
+func (self *PipestanceManager) loadStorageCache() error {
+	bytes, err := ioutil.ReadFile(self.storageQueuePath)
+	if err != nil {
+		core.LogInfo("storage", "Could not read cache file %s.", self.storageQueue)
+	}
+
+	var cache []*PipestanceQueueRecord
+	if err := json.Unmarshal(bytes, &cache); err != nil {
+		self.sendStorageQueueError("storageQueue", "loading cached storage queue", err)
+		return err
+	}
+
+	for _, entry := range cache {
+		core.LogInfo("storage", "Loaded pipestance onto queue: %s", entry.Name)
+		self.storageQueue = append(self.storageQueue, entry)
+	}
+	return nil
+}
+
 func (self *PipestanceManager) loadPipestance(pkey string) {
 	container, pipeline, psid := parsePipestanceKey(pkey)
 	psPath := self.makePipestancePath(container, pipeline, psid)
@@ -343,6 +365,10 @@ func (self *PipestanceManager) writeCache() {
 		"running":   running,
 	}
 	writeJson(self.cachePath, cache)
+}
+
+func (self *PipestanceManager) writeStorageCache() {
+	writeJson(self.storageQueuePath, self.storageQueue)
 }
 
 func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []string, pipestanceInventoryFunc PipestanceInventoryFunc) int {
@@ -564,6 +590,7 @@ func (self *PipestanceManager) copyPipestance(pkey string) {
 				// we can now clear against scratch
 				self.deallocateLoadedPipestance(pkey)
 			} else {
+				self.sendStorageQueueError(pkey, "copy failure: stale HWM possible", err)
 				self.mailer.Sendmail(
 					[]string{},
 					fmt.Sprintf("%s of %s copy failed!", pname, psid),
@@ -793,6 +820,15 @@ func (self *PipestanceManager) getScratchPath() (string, error) {
 	return "", &core.MartianError{fmt.Sprintf("Pipestance scratch paths %s are full.", strings.Join(self.scratchPaths, ", "))}
 }
 
+func (self *PipestanceManager) sendStorageQueueError(pkey string, event string, err error) {
+	core.LogError(err, "storage", "%s: %s", pkey, event)
+	self.mailer.Sendmail(
+		[]string{"jeff@10xgenomics.com"},
+		fmt.Sprintf("Storage Queue Error: %s", pkey),
+		fmt.Sprintf("This is Principal Belding.\n\nI regret to inform you that there is a problem with the storage queue.  It acted up on the %s pipestance, failed %s, and yelled this in the middle of class:\n\n%s", pkey, event, err.Error()),
+	)
+}
+
 func (self *PipestanceManager) GetAllocation(container string, pipeline string, psid string, invokeSrc string) (*PipestanceStorageAllocation, error) {
 	if invokeSrc == "" {
 		existingSrc, err := self.GetPipestanceInvokeSrc(container, pipeline, psid)
@@ -810,6 +846,10 @@ func (self *PipestanceManager) GetAllocation(container string, pipeline string, 
 		return nil, err
 	}
 	alloc := GetAllocation(psid, invocation)
+	// can't find size for some reason
+	if alloc.inputSize == 0 {
+		return nil, &core.PipestanceSizeError{psid}
+	}
 	return alloc, nil
 }
 
@@ -821,7 +861,8 @@ func (self *PipestanceManager) Enqueue(container string, pipeline string, psid s
 	}
 	alloc, err := self.GetAllocation(container, pipeline, psid, src)
 	if err != nil {
-		core.LogInfo("storage", "Allocation Error: %v", err.Error())
+		pkey := makePipestanceKey(container, pipeline, psid)
+		self.sendStorageQueueError(pkey, "Sizing error", err)
 		return &core.PipestanceSizeError{psid}
 	}
 	pkey := makePipestanceKey(container, pipeline, psid)
@@ -829,6 +870,7 @@ func (self *PipestanceManager) Enqueue(container string, pipeline string, psid s
 	core.LogInfo("storage", "Enqueued pipestance: %s (%d bytes)", pkey, alloc.weightedSize)
 	self.storageMutex.Lock()
 	self.storageQueue = append(self.storageQueue, queueRecord)
+	self.writeStorageCache()
 	self.storageMutex.Unlock()
 	return nil
 }
@@ -855,6 +897,7 @@ func (self *PipestanceManager) allocateLoadedPipestance(pkey string) {
 	container, pipeline, psid := parsePipestanceKey(pkey)
 	alloc, err := self.GetAllocation(container, pipeline, psid, "")
 	if err != nil {
+		self.sendStorageQueueError(pkey, "sizing cached pipestance", err)
 		return
 	}
 	self.storageMutex.Lock()
@@ -877,6 +920,7 @@ func (self *PipestanceManager) deallocateLoadedPipestance(pkey string) {
 	if size, ok := self.storageMap[pkey]; ok {
 		self.storageAllocBytes -= size
 		delete(self.storageMap, pkey)
+		core.LogInfo("storage", "Freed pipestance: %s (%d bytes, %d remaining)", pkey, size, self.storageMaxBytes-self.storageAllocBytes)
 	}
 	self.storageMutex.Unlock()
 }
@@ -903,10 +947,13 @@ func (self *PipestanceManager) processEnqueuedPipestances() {
 			break
 		}
 	}
-	if numFired == len(self.storageQueue) {
-		self.storageQueue = []*PipestanceQueueRecord{}
-	} else {
-		self.storageQueue = self.storageQueue[numFired:]
+	if numFired > 0 {
+		if numFired == len(self.storageQueue) {
+			self.storageQueue = []*PipestanceQueueRecord{}
+		} else {
+			self.storageQueue = self.storageQueue[numFired:]
+		}
+		self.writeStorageCache()
 	}
 	self.storageMutex.Unlock()
 }
