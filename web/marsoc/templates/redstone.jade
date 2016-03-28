@@ -88,7 +88,7 @@ html(ng-app="app" ng-cloak)
                         .form-group
                             label.control-label.col-sm-3 Description
                             .col-sm-9
-                                input.form-control(type="text" ng-model="redstone.desc" ng-change="refresh()")
+                                input.form-control(type="text" ng-model="redstone.desc" ng-change="refresh()" maxlength="40")
                         .form-group
                             label.control-label.col-sm-3 Days to Live
                             .col-sm-2
