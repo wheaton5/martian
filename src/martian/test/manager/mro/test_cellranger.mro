@@ -1,0 +1,18 @@
+@include "mock_cellranger.mro"
+
+call MOCK_CELLRANGER(
+    sample_def = [
+        {
+            "bc_read_type": "I1",
+            "fastq_mode": "BCL_PROCESSOR",
+            "gem_group": null,
+            "lanes": null,
+            "read_path": "../test/manager/bclprocessor",
+            "sample_indices": [
+                "AAAGCATA",
+                "TCCAATAA"
+            ],
+            "si_read_type": "I2"
+        }
+    ],
+)

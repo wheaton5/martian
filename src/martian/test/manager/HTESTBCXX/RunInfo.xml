@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!-- from /mnt/fleet/hiseq002a/160321_D00547_0653_AHKTNYBCXX/RunInfo.xml -->
+<RunInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="2">
+  <Run Id="160321_D00547_0653_AHKTNYBCXX" Number="653">
+    <Flowcell>HKTNYBCXX</Flowcell>
+    <Instrument>D00547</Instrument>
+    <Date>160321</Date>
+    <Reads>
+      <Read Number="1" NumCycles="98" IsIndexedRead="N" />
+      <Read Number="2" NumCycles="14" IsIndexedRead="Y" />
+      <Read Number="3" NumCycles="8" IsIndexedRead="Y" />
+      <Read Number="4" NumCycles="5" IsIndexedRead="N" />
+    </Reads>
+    <FlowcellLayout LaneCount="2" SurfaceCount="2" SwathCount="2" TileCount="16" />
+    <AlignToPhiX>
+      <Lane>1</Lane>
+      <Lane>2</Lane>
+    </AlignToPhiX>
+  </Run>
+</RunInfo>

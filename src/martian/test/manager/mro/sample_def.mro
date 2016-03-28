@@ -1,0 +1,13 @@
+@include "_sample_def_stages.mro"
+
+pipeline SAMPLE_DEF_TEST(
+    in  map[]      sample_def,
+)
+{
+    call SAMPLE_DEF(
+        sample_def = self.sample_def,
+    )
+
+    return (
+    )
+}

@@ -1,0 +1,10 @@
+stage PROCESS_FASTQS(
+    in map[]  sample_def,
+    in map    downsample,
+    src py "process_fastqs",
+)
+
+stage PROCESS_BCLS(
+    in string run_path,
+    src py "process_bcls",
+)

@@ -1,0 +1,5 @@
+@include "mock_bcl_processor.mro"
+
+call MOCK_BCL_PROCESSOR(
+    run_path = "../test/manager/sequencers/hiseq004/HTESTBCXX",
+)
