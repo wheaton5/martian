@@ -936,8 +936,6 @@ func (self *PipestanceManager) processEnqueuedPipestances() {
 			if _, ok := self.storageMap[pipestance.Name]; ok {
 				core.LogInfo("storage", "pipestance already counted against cap, will be removed from queue: %s", pipestance.Name)
 			} else {
-				self.storageAllocBytes += pipestance.Size
-				self.storageMap[pipestance.Name] = pipestance.Size
 				core.LogInfo("storage", "Cleared for takeoff: %s (%d bytes, %d remaining)",
 					pipestance.Name, pipestance.Size, self.storageMaxBytes - self.storageAllocBytes)
 				self.Invoke(pipestance)
@@ -958,10 +956,12 @@ func (self *PipestanceManager) processEnqueuedPipestances() {
 	self.storageMutex.Unlock()
 }
 
-func (self *PipestanceManager) releasePipestanceStorage(size int64) {
-	self.storageMutex.Lock()
-	self.storageAllocBytes -= size
-	self.storageMutex.Unlock()
+// Labled unsafe because it does not grab a lock/assumes that the context holds the storage mutex.
+func (self *PipestanceManager) allocatePipestanceStorageUnsafe(stance *PipestanceQueueRecord) {
+	self.storageAllocBytes += stance.Size
+	self.storageMap[stance.Name] = stance.Size
+	core.LogInfo("storage", "Storage reserved: %s (%d bytes, %d remaining)",
+		stance.Name, stance.Size, self.storageMaxBytes - self.storageAllocBytes)
 }
 
 func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
@@ -1019,6 +1019,9 @@ func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
 		self.removePendingPipestance(pkey, false)
 		return err
 	}
+	// only reserve allocation if the invoke is successful.  This assumes that Invoke is within
+	// the storage mutex lock.
+	self.allocatePipestanceStorageUnsafe(stance)
 
 	// Create symlink from HEAD -> aggregate version path
 	headPath := self.makePipestancePath(container, pipeline, psid)
