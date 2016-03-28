@@ -2,6 +2,7 @@ package manager
 
 import (
 	"encoding/xml"
+	"martian/core"
 	"math"
 	"os"
 	"path"
@@ -81,7 +82,7 @@ func GetNumCycles(runPath string) int {
 	return numCycles
 }
 
-func GetAllocation(psid string, invocation Invocation) *PipestanceStorageAllocation {
+func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAllocation, error) {
 	psname := PipelineFromInvocation(invocation)
 	alloc := &PipestanceStorageAllocation{
 		psid:   psid,
@@ -108,56 +109,64 @@ func GetAllocation(psid string, invocation Invocation) *PipestanceStorageAllocat
 			// non-miseq BCL: 36x (sqrt read size), stdev 1.3
 			weightedSize = 37.3 * float64(inputSize) / math.Sqrt(float64(numCycles))
 		}
-	} else {
-		// TODO log on error
-		filePaths, _ := FastqFilesFromInvocation(invocation)
-		inputSize = InputSizeTotal(filePaths)
-	}
 
-	if strings.Contains(psname, "CELLRANGER") {
-		// CELLRANGER_PD: 12.1x FASTQs, stdev 1.1x
-		weightedSize = 13.2 * float64(inputSize)
-	} else if strings.Contains(psname, "ANALYZER") {
-		// ANALYZER_PD: 9.2x + 0.6 = 9.8
-		weightedSize = 9.8 * float64(inputSize)
-	} else if strings.Contains(psname, "PHASER_SVCALLER_EXOME") {
-		GB_DOWNSAMPLE_RATIO := 9.4  // mean = 8.3 + 1.1
-		NO_DOWNSAMPLE_RATIO := 11.6 // mean = 10.2 + 1.4
-		// get downsample rate
-		weightedSize = NO_DOWNSAMPLE_RATIO * float64(inputSize)
-		downsample_iface := invokeArgs["downsample"]
-		if downsample_iface != nil {
-			downsample := downsample_iface.(map[string]interface{})
-			if gigabases, ok := downsample["gigabases"]; ok {
-				// mean 8.3 + 1.1
-				gb := gigabases.(int64)
-				weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
-			} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
-				sr := subsample_rate.(float64)
-				weightedSize *= sr
-			}
+	} else {
+		filePaths, err := FastqFilesFromInvocation(invocation)
+		if err != nil {
+			return nil, err
 		}
-	} else if strings.Contains(psname, "PHASER_SVCALLER") {
-		// get downsample rate
-		GB_DOWNSAMPLE_RATIO := 7.6
-		NO_DOWNSAMPLE_RATIO := 11.6
-		NO_DOWNSAMPLE_OFFSET := 30.0 * float64(1024 * 1024 * 1024)
-		downsample_iface := invokeArgs["downsample"]
-		weightedSize = NO_DOWNSAMPLE_OFFSET + NO_DOWNSAMPLE_RATIO*float64(inputSize)
-		if downsample_iface != nil {
-			downsample := downsample_iface.(map[string]interface{})
-			if gigabases, ok := downsample["gigabases"]; ok {
-				// mean 6.5 + 1.1
-				gb := gigabases.(int64)
-				weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
-			} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
-				sr := subsample_rate.(float64)
-				weightedSize *= sr
+		inputSize = InputSizeTotal(filePaths)
+
+		if strings.Contains(psname, "CELLRANGER") {
+			// CELLRANGER_PD: 12.1x FASTQs, stdev 1.1x
+			weightedSize = 13.2 * float64(inputSize)
+		} else if strings.Contains(psname, "ANALYZER") {
+			// ANALYZER_PD: 9.2x + 0.6 = 9.8
+			weightedSize = 9.8 * float64(inputSize)
+		} else if strings.Contains(psname, "PHASER_SVCALLER_EXOME") {
+			GB_DOWNSAMPLE_RATIO := 9.4  // mean = 8.3 + 1.1
+			NO_DOWNSAMPLE_RATIO := 11.6 // mean = 10.2 + 1.4
+			// get downsample rate
+			weightedSize = NO_DOWNSAMPLE_RATIO * float64(inputSize)
+			downsample_iface := invokeArgs["downsample"]
+			if downsample_iface != nil {
+				downsample := downsample_iface.(map[string]interface{})
+				if gigabases, ok := downsample["gigabases"]; ok {
+					// mean 8.3 + 1.1
+					gb := gigabases.(int64)
+					weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
+				} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
+					sr := subsample_rate.(float64)
+					weightedSize *= sr
+				}
 			}
+		} else if strings.Contains(psname, "PHASER_SVCALLER") {
+			// get downsample rate
+			GB_DOWNSAMPLE_RATIO := 7.6
+			NO_DOWNSAMPLE_RATIO := 11.6
+			NO_DOWNSAMPLE_OFFSET := 30.0 * float64(1024 * 1024 * 1024)
+			downsample_iface := invokeArgs["downsample"]
+			weightedSize = NO_DOWNSAMPLE_OFFSET + NO_DOWNSAMPLE_RATIO * float64(inputSize)
+			if downsample_iface != nil {
+				downsample := downsample_iface.(map[string]interface{})
+				if gigabases, ok := downsample["gigabases"]; ok {
+					// mean 6.5 + 1.1
+					gb := gigabases.(int64)
+					weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
+				} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
+					sr := subsample_rate.(float64)
+					weightedSize *= sr
+				}
+			}
+		} else if strings.Contains(psname, "SAMPLE_INDEX_QCER_PD") {
+			// effectively a noop, according to pryvkin
+			weightedSize = 0
+		} else {
+			return nil, &core.PipestanceSizeError{psid}
 		}
 	}
 
 	alloc.inputSize = inputSize
 	alloc.weightedSize = int64(weightedSize)
-	return alloc
+	return alloc, nil
 }

@@ -1,0 +1,16 @@
+@include "mock_unknown.mro"
+
+call MOCK_UNKNOWN(
+    sample_def = [
+        {
+            "gem_group": null,
+            "lanes": null,
+            "read_path": "../test/manager/bclprocessor",
+            "sample_indices": [
+                "AAAGCATA",
+                "TCCAATAA"
+            ]
+        }
+    ],
+    downsample = null,
+)

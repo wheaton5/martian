@@ -845,10 +845,10 @@ func (self *PipestanceManager) GetAllocation(container string, pipeline string, 
 	if err != nil {
 		return nil, err
 	}
-	alloc := GetAllocation(psid, invocation)
-	// can't find size for some reason
-	if alloc.inputSize == 0 {
-		return nil, &core.PipestanceSizeError{psid}
+	alloc, err := GetAllocation(psid, invocation)
+	// can't find size for some reason (likely an unknown pipeline)
+	if err != nil {
+		return nil, err
 	}
 	return alloc, nil
 }
