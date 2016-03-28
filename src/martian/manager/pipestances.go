@@ -823,7 +823,7 @@ func (self *PipestanceManager) getScratchPath() (string, error) {
 func (self *PipestanceManager) sendStorageQueueError(pkey string, event string, err error) {
 	core.LogError(err, "storage", "%s: %s", pkey, event)
 	self.mailer.Sendmail(
-		[]string{"jeff@10xgenomics.com"},
+		[]string{},
 		fmt.Sprintf("Storage Queue Error: %s", pkey),
 		fmt.Sprintf("This is Principal Belding.\n\nI regret to inform you that there is a problem with the storage queue.  It acted up on the %s pipestance, failed %s, and yelled this in the middle of class:\n\n%s", pkey, event, err.Error()),
 	)
