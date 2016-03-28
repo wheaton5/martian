@@ -28,6 +28,7 @@ import (
 
 const MIN_BYTES_AVAILABLE = 1024 * 1024 * 1024 * 1024 * 1.5 // 1.5 terabytes
 const SCRATCH_EXPIRATION_HOURS = 24 * 7 * 1                 // 1 weeks
+const STORAGE_UNLIMITED_BYTES int64 = -1
 
 type PipestanceFunc func(string, string, string) error
 type PipestanceInventoryFunc func(string, string, string, string, string, *sync.WaitGroup)
@@ -144,6 +145,9 @@ func getFilenameWithSuffix(dir string, fname string) string {
 	return fmt.Sprintf("%s-%d", fname, suffix)
 }
 
+//
+// If storageMaxBytes is set to STORAGE_UNLIMITED_BYTES, it will auto-enqueue everything.
+//
 func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPaths []string,
 	cachePath string, failCoopPath string, runLoopIntervalms int, autoInvoke bool, storageMaxBytes int64, mailer *Mailer,
 	packages PackageManager) *PipestanceManager {
@@ -932,7 +936,8 @@ func (self *PipestanceManager) processEnqueuedPipestances() {
 	numFired := 0
 	self.storageMutex.Lock()
 	for idx, pipestance := range(self.storageQueue) {
-		if self.storageAllocBytes + pipestance.Size <= self.storageMaxBytes {
+		// storageMaxBytes == STORAGE_UNLIMITED_BYTES: signal that the queue is disabled
+		if self.storageMaxBytes == STORAGE_UNLIMITED_BYTES || (self.storageAllocBytes + pipestance.Size <= self.storageMaxBytes) {
 			if _, ok := self.storageMap[pipestance.Name]; ok {
 				core.LogInfo("storage", "pipestance already counted against cap, will be removed from queue: %s", pipestance.Name)
 			} else {

@@ -112,7 +112,7 @@ Options:
 		{"SERE_EMAIL_HOST", "smtp.server.local"},
 		{"SERE_EMAIL_SENDER", "email@address.com"},
 		{"SERE_EMAIL_RECIPIENT", "email@address.com"},
-		{"MARSOC_MAX_STORAGE_MB", ">0"},
+		{"MARSOC_MAX_STORAGE_MB", fmt.Sprintf(">0 or %d to disable", manager.STORAGE_UNLIMITED_BYTES)},
 		{"MARSOC_DOWNLOAD_URL", "url"},
 	}, true)
 
@@ -168,10 +168,15 @@ Options:
 	autoInvoke := true
 	stepSecs := 5
 
-	// default 50GB scratch space
-	maxStorageBytes := int64(1024*1024*1024)*int64(50)
+	// default disable storage gating by default
+	maxStorageBytes := manager.STORAGE_UNLIMITED_BYTES
 	if mb, err := strconv.Atoi(env["MARSOC_MAX_STORAGE_MB"]); err == nil {
-		maxStorageBytes = int64(1024*1024)*int64(mb)
+		// handle any negative value as a command to disable
+		if mb < 0 {
+			maxStorageBytes = manager.STORAGE_UNLIMITED_BYTES
+		} else {
+			maxStorageBytes = int64(1024 * 1024) * int64(mb)
+		}
 	}
 	core.LogInfo("options", "Storage high water mark: %d bytes", maxStorageBytes)
 

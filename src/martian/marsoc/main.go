@@ -228,7 +228,7 @@ Options:
 		{"MARSOC_EMAIL_SENDER", "email@address.com"},
 		{"MARSOC_EMAIL_RECIPIENT", "email@address.com"},
 		{"MARSOC_REDSTONE_CONFIG", "path/to/redstone/config"},
-		{"MARSOC_MAX_STORAGE_MB", ">0"},
+		{"MARSOC_MAX_STORAGE_MB", fmt.Sprintf(">0 or %d to disable", manager.STORAGE_UNLIMITED_BYTES)},
 		{"LENA_DOWNLOAD_URL", "url"},
 	}, true)
 
@@ -322,10 +322,15 @@ Options:
 	emailRecipient := env["MARSOC_EMAIL_RECIPIENT"]
 	redstoneConfigPath := env["MARSOC_REDSTONE_CONFIG"]
 
-	// default 50GB scratch space
-	maxStorageBytes := int64(1024*1024*1024)*int64(50)
+	// default disable storage gating by default
+	maxStorageBytes := manager.STORAGE_UNLIMITED_BYTES
 	if mb, err := strconv.Atoi(env["MARSOC_MAX_STORAGE_MB"]); err == nil {
-		maxStorageBytes = int64(1024*1024)*int64(mb)
+		// handle any negative value as disable
+		if mb < 0 {
+			maxStorageBytes = manager.STORAGE_UNLIMITED_BYTES
+		} else {
+			maxStorageBytes = int64(1024*1024)*int64(mb)
+		}
 	}
 	core.LogInfo("options", "Storage high water mark: %d bytes", maxStorageBytes)
 	runLoopIntervalms := 5 * 1000
