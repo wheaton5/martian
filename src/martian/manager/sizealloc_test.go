@@ -52,7 +52,7 @@ func TestAnalyzerAlloc(t *testing.T) {
 	}
 	alloc, _ := GetAllocation("test_cellranger", invocation)
 	assert.Equal(t, 6, alloc.inputSize)
-	assert.Equal(t, 58, alloc.weightedSize)
+	assert.Equal(t, 78, alloc.weightedSize)
 }
 
 func TestPhaserSvCallerExomeAlloc(t *testing.T) {
@@ -66,7 +66,7 @@ func TestPhaserSvCallerExomeAlloc(t *testing.T) {
 	}
 	alloc, _ := GetAllocation("test_phaser_svcaller_exome", invocation)
 	assert.Equal(t, 6, alloc.inputSize)
-	expectedValue := 1024*1024*1024*9*9.4
+	expectedValue := 1024*1024*1024*9*11.7
 	assert.Equal(t, int64(expectedValue), alloc.weightedSize)
 
 	mro = getTestFilePath("mro/test_phaser_svcaller_exome_subsample_rate.mro")
@@ -79,7 +79,7 @@ func TestPhaserSvCallerExomeAlloc(t *testing.T) {
 	alloc, _ = GetAllocation("test_phaser_svcaller_exome", invocation)
 	assert.Equal(t, 6, alloc.inputSize)
 	// 11.6 * 5
-	assert.Equal(t, 58, alloc.weightedSize)
+	assert.Equal(t, 73, alloc.weightedSize)
 
 	mro = getTestFilePath("mro/test_phaser_svcaller_exome.mro")
 	mroPaths = []string{}
@@ -91,7 +91,7 @@ func TestPhaserSvCallerExomeAlloc(t *testing.T) {
 	alloc, _ = GetAllocation("test_phaser_svcaller_exome", invocation)
 	assert.Equal(t, 6, alloc.inputSize)
 	// 11.6 * 5
-	assert.Equal(t, 69, alloc.weightedSize)
+	assert.Equal(t, 87, alloc.weightedSize)
 }
 
 func TestPhaserSvCallerAlloc(t *testing.T) {
@@ -104,7 +104,7 @@ func TestPhaserSvCallerAlloc(t *testing.T) {
 		invocation = InvocationFromMRO(string(source), mro, mroPaths)
 	}
 	alloc, _ := GetAllocation("test_phaser_svcaller", invocation)
-	expectedValue := 30.0*1024*1024*1024 + 11.6*6
+	expectedValue := 30.0*1024*1024*1024 + 14.5*6
 	assert.Equal(t, int64(expectedValue), alloc.weightedSize)
 
 	mro = getTestFilePath("mro/test_phaser_svcaller_downsample.mro")
@@ -115,7 +115,7 @@ func TestPhaserSvCallerAlloc(t *testing.T) {
 	}
 	alloc, _ = GetAllocation("test_phaser_svcaller", invocation)
 	assert.Equal(t, 6, alloc.inputSize)
-	expectedSize := 1024*1024*1024*10*7.6
+	expectedSize := 1024*1024*1024*10*9.5
 	assert.Equal(t, int64(expectedSize), alloc.weightedSize)
 }
 

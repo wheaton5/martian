@@ -121,11 +121,13 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 			// CELLRANGER_PD: 12.1x FASTQs, stdev 1.1x
 			weightedSize = 13.2 * float64(inputSize)
 		} else if strings.Contains(psname, "ANALYZER") {
+			// JM 3-29-2016: increase ratios by 33% to match observed
 			// ANALYZER_PD: 9.2x + 0.6 = 9.8
-			weightedSize = 9.8 * float64(inputSize)
+			weightedSize = 13.0 * float64(inputSize)
 		} else if strings.Contains(psname, "PHASER_SVCALLER_EXOME") {
-			GB_DOWNSAMPLE_RATIO := 9.4  // mean = 8.3 + 1.1
-			NO_DOWNSAMPLE_RATIO := 11.6 // mean = 10.2 + 1.4
+			// JM 3-29-2016: increase ratios by 25% to handle observed delay in TRIM_READS vdrkill
+			GB_DOWNSAMPLE_RATIO := 11.7  // mean = 8.3 + 1.1 (*1.25)
+			NO_DOWNSAMPLE_RATIO := 14.5 // mean = 10.2 + 1.4 (*1.25)
 			// get downsample rate
 			weightedSize = NO_DOWNSAMPLE_RATIO * float64(inputSize)
 			downsample_iface := invokeArgs["downsample"]
@@ -142,15 +144,15 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 			}
 		} else if strings.Contains(psname, "PHASER_SVCALLER") {
 			// get downsample rate
-			GB_DOWNSAMPLE_RATIO := 7.6
-			NO_DOWNSAMPLE_RATIO := 11.6
+			// JM 3-29-2016: increase ratios by 25% to handle observed delay in TRIM_READS vdrkill
+			GB_DOWNSAMPLE_RATIO := 9.5
+			NO_DOWNSAMPLE_RATIO := 14.5
 			NO_DOWNSAMPLE_OFFSET := 30.0 * float64(1024 * 1024 * 1024)
 			downsample_iface := invokeArgs["downsample"]
 			weightedSize = NO_DOWNSAMPLE_OFFSET + NO_DOWNSAMPLE_RATIO * float64(inputSize)
 			if downsample_iface != nil {
 				downsample := downsample_iface.(map[string]interface{})
 				if gigabases, ok := downsample["gigabases"]; ok {
-					// mean 6.5 + 1.1
 					gb := gigabases.(int64)
 					weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
 				} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
