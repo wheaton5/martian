@@ -83,6 +83,11 @@ func GetNumCycles(runPath string) int {
 }
 
 func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAllocation, error) {
+	if invocation == nil {
+		err := &core.PipestanceSizeError{psid}
+		core.LogError(err, "storage", "getting allocation (nil, possibly malformed MRO): %s", psid)
+		return nil, err
+	}
 	psname := PipelineFromInvocation(invocation)
 	alloc := &PipestanceStorageAllocation{
 		psid:   psid,
@@ -110,6 +115,9 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 			weightedSize = 37.3 * float64(inputSize) / math.Sqrt(float64(numCycles))
 		}
 
+	} else if strings.Contains(psname, "SAMPLE_INDEX_QCER") {
+		// effectively a noop, according to pryvkin
+		weightedSize = 0
 	} else {
 		filePaths, err := FastqFilesFromInvocation(invocation)
 		if err != nil {
@@ -160,9 +168,6 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 					weightedSize *= sr
 				}
 			}
-		} else if strings.Contains(psname, "SAMPLE_INDEX_QCER_PD") {
-			// effectively a noop, according to pryvkin
-			weightedSize = 0
 		} else {
 			return nil, &core.PipestanceSizeError{psid}
 		}

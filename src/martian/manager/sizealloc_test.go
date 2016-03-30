@@ -140,5 +140,18 @@ func TestBclAlloc(t *testing.T) {
 	}
 	alloc, _ = GetAllocation("test_bclprocessor", invocation)
 	assert.Equal(t, 13, alloc.weightedSize)
+}
 
+func TestSampleQCAlloc(t *testing.T) {
+	var invocation Invocation
+	mroPaths := []string{}
+	mro := getTestFilePath("mro/test_sample_index_qcer.mro")
+
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc, _ := GetAllocation("test_sample_index_qcer", invocation)
+	assert.Equal(t, 0, alloc.weightedSize)
 }

@@ -1,0 +1,186 @@
+@include "mock_sample_index_qcer.mro"
+
+call MOCK_SAMPLE_INDEX_QCER(
+    pool_defs = [
+        {
+            "pool_name": "Pool A",
+            "sample_indices": [
+                "CTTTCGAC",
+                "ACGGGACT",
+                "TGCATCTG",
+                "GAACATGA"
+            ]
+        },
+        {
+            "pool_name": "Pool B",
+            "sample_indices": [
+                "GCGCACCT",
+                "AACGCGAA",
+                "CTATTTGG",
+                "TGTAGATC"
+            ]
+        },
+        {
+            "pool_name": "Pool C",
+            "sample_indices": [
+                "CGCTCAGG",
+                "GAGGTTTA",
+                "ACTCAGAC",
+                "TTAAGCCT"
+            ]
+        },
+        {
+            "pool_name": "Pool D",
+            "sample_indices": [
+                "GAAGTCTT",
+                "TGCAGGGC",
+                "ATGCCAAA",
+                "CCTTATCG"
+            ]
+        },
+        {
+            "pool_name": "Pool E",
+            "sample_indices": [
+                "TGATGGCT",
+                "GCCATTTG",
+                "ATTGAAAC",
+                "CAGCCCGA"
+            ]
+        },
+        {
+            "pool_name": "Pool F",
+            "sample_indices": [
+                "GACTTCCT",
+                "TGAGGAAG",
+                "ATGCCGGC",
+                "CCTAATTA"
+            ]
+        },
+        {
+            "pool_name": "Pool G",
+            "sample_indices": [
+                "GTGCGACA",
+                "TCAGTGTT",
+                "AGCACTGG",
+                "CATTACAC"
+            ]
+        },
+        {
+            "pool_name": "Pool H",
+            "sample_indices": [
+                "AAGCATAA",
+                "CCCATCGC",
+                "TTAGCGCT",
+                "GGTTGATG"
+            ]
+        },
+        {
+            "pool_name": "Pool 1",
+            "sample_indices": [
+                "GACTGTTC",
+                "ATGATACG",
+                "CCACAGAA",
+                "TGTGCCGT"
+            ]
+        },
+        {
+            "pool_name": "Pool 2",
+            "sample_indices": [
+                "ACGTTCAC",
+                "TGCCCAGA",
+                "CAAGGTCT",
+                "GTTAAGTG"
+            ]
+        },
+        {
+            "pool_name": "Pool 3",
+            "sample_indices": [
+                "TTTATCCC",
+                "GCACGTTT",
+                "CAGGAAGA",
+                "AGCTCGAG"
+            ]
+        },
+        {
+            "pool_name": "Pool 4",
+            "sample_indices": [
+                "AATCTTTG",
+                "GGATGAGT",
+                "CTCAAGAC",
+                "TCGGCCCA"
+            ]
+        },
+        {
+            "pool_name": "Pool 5",
+            "sample_indices": [
+                "GCTTACAT",
+                "TAGGGTGC",
+                "AGCCTATG",
+                "CTAACGCA"
+            ]
+        },
+        {
+            "pool_name": "Pool 6",
+            "sample_indices": [
+                "AGTTGGGA",
+                "TACATTCT",
+                "CCAGAAAG",
+                "GTGCCCTC"
+            ]
+        },
+        {
+            "pool_name": "Pool 7",
+            "sample_indices": [
+                "AAGTACTC",
+                "GGAACTCT",
+                "TCCCTGAG",
+                "CTTGGAGA"
+            ]
+        },
+        {
+            "pool_name": "Pool 8",
+            "sample_indices": [
+                "AAGAGCGG",
+                "TCATAGCA",
+                "GGCCCATC",
+                "CTTGTTAT"
+            ]
+        },
+        {
+            "pool_name": "Pool 9",
+            "sample_indices": [
+                "AAGACGTG",
+                "CCATGTGT",
+                "GTTCACAA",
+                "TGCGTACC"
+            ]
+        },
+        {
+            "pool_name": "Pool 10",
+            "sample_indices": [
+                "GGTTAGAC",
+                "CAAACTTT",
+                "ACCCGAGA",
+                "TTGGTCCG"
+            ]
+        },
+        {
+            "pool_name": "Pool 11",
+            "sample_indices": [
+                "GCCGGTAA",
+                "TGACTGCC",
+                "ATTACCGG",
+                "CAGTAATT"
+            ]
+        },
+        {
+            "pool_name": "Pool 12",
+            "sample_indices": [
+                "TGGCACGA",
+                "AACGGGTG",
+                "CTAATTCT",
+                "GCTTCAAC"
+            ]
+        }
+    ],
+)

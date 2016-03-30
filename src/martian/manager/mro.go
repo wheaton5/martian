@@ -204,6 +204,12 @@ func InvocationFromMRO(source string, srcPath string, mroPaths []string) Invocat
 
 func FastqFilesFromInvocation(invocation Invocation) ([]string, error) {
 	args := invocation["args"].(map[string]interface{})
+	if _, ok := args["sample_def"]; !ok {
+		psname := PipelineFromInvocation(invocation)
+		err := &core.PipestanceSizeError{psname}
+		core.LogError(err, "storage", "Pipeline without sample def: %s", psname)
+		return nil, err
+	}
 	sampleDefsJson := args["sample_def"].([]interface{})
 	sampleDefs := []*SampleDef{}
 	allPaths := []string{}
