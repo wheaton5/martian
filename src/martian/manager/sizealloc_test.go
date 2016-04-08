@@ -66,7 +66,7 @@ func TestPhaserSvCallerExomeAlloc(t *testing.T) {
 	}
 	alloc, _ := GetAllocation("test_phaser_svcaller_exome", invocation)
 	assert.Equal(t, 6, alloc.inputSize)
-	expectedValue := 1024*1024*1024*9*11.7
+	expectedValue := 1024 * 1024 * 1024 * 9 * 11.7
 	assert.Equal(t, int64(expectedValue), alloc.weightedSize)
 
 	mro = getTestFilePath("mro/test_phaser_svcaller_exome_subsample_rate.mro")
@@ -115,7 +115,7 @@ func TestPhaserSvCallerAlloc(t *testing.T) {
 	}
 	alloc, _ = GetAllocation("test_phaser_svcaller", invocation)
 	assert.Equal(t, 6, alloc.inputSize)
-	expectedSize := 1024*1024*1024*10*9.5
+	expectedSize := 1024 * 1024 * 1024 * 10 * 9.5
 	assert.Equal(t, int64(expectedSize), alloc.weightedSize)
 }
 
@@ -154,4 +154,19 @@ func TestSampleQCAlloc(t *testing.T) {
 	}
 	alloc, _ := GetAllocation("test_sample_index_qcer", invocation)
 	assert.Equal(t, 0, alloc.weightedSize)
+}
+
+func TestMultiSampleDef(t *testing.T) {
+	var invocation Invocation
+	mroPaths := []string{}
+	mro := getTestFilePath("mro/test_multi_sample_def.mro")
+
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc, _ := GetAllocation("test_multi_sample_def", invocation)
+	assert.Equal(t, 6, alloc.inputSize)
+	assert.Equal(t, 79, alloc.weightedSize)
 }
