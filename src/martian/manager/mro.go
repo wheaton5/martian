@@ -2,8 +2,8 @@ package manager
 
 import (
 	"martian/core"
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
 const CHROMIUM string = "chromium"
@@ -12,16 +12,16 @@ const GEMCODE string = "gemcode"
 type Invocation map[string]interface{}
 
 type SampleDef struct {
-	bc_length  int
-	bc_in_read int
-	sample_names []string
+	bc_length      int
+	bc_in_read     int
+	sample_names   []string
 	sample_indices []string
-	read_path string
-	gem_group int
-	lanes []int
+	read_path      string
+	gem_group      int
+	lanes          []int
 	// cellranger (GemCode?) spec
 	bc_read_type string
-	fastq_mode string
+	fastq_mode   string
 	si_read_type string
 }
 
@@ -54,7 +54,7 @@ func mapIntArray(jsonDef map[string]interface{}, key string) ([]int, bool) {
 		array := iface.([]interface{})
 		if len(array) > 0 {
 			intArr = make([]int, len(array))
-			for i, num := range(array) {
+			for i, num := range array {
 				intArr[i] = int(num.(int64))
 			}
 		} else {
@@ -73,7 +73,7 @@ func mapStringArray(jsonDef map[string]interface{}, key string) ([]string, bool)
 		array := iface.([]interface{})
 		if len(array) > 0 {
 			stringArr = make([]string, len(array))
-			for i, str := range(array) {
+			for i, str := range array {
 				stringArr[i] = str.(string)
 			}
 		} else {
@@ -169,7 +169,7 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 		return allPaths, err
 	}
 	sampleOligos := []string{}
-	for _, sampleIndex := range(sampleDef.sample_indices) {
+	for _, sampleIndex := range sampleDef.sample_indices {
 		if oligos, ok := SAMPLE_INDEX_MAP[sampleIndex]; ok {
 			sampleOligos = append(sampleOligos, oligos...)
 		} else if sampleIndex == "any" {
@@ -178,7 +178,7 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 			sampleOligos = append(sampleOligos, sampleIndex)
 		}
 	}
-	for _, sampleIndex := range(sampleOligos) {
+	for _, sampleIndex := range sampleOligos {
 		var filePaths []string
 		if sampleDef.si_read_type != "" {
 			filePaths = BclProcessorCRFastqPaths(readPath, sampleIndex, sampleDef.lanes,
@@ -213,15 +213,15 @@ func FastqFilesFromInvocation(invocation Invocation) ([]string, error) {
 	sampleDefsJson := args["sample_def"].([]interface{})
 	sampleDefs := []*SampleDef{}
 	allPaths := []string{}
-	for _, sampleDefJson := range(sampleDefsJson) {
+	for _, sampleDefJson := range sampleDefsJson {
 		sampleDefs = append(sampleDefs, NewSampleDef(sampleDefJson.(map[string]interface{})))
-		// assume bclprocessor for now
-		for _, sampleDef := range(sampleDefs) {
-			if defPaths, err := FastqPathsFromSampleDef(sampleDef); err == nil {
-				allPaths = append(allPaths, defPaths...)
-			} else {
-				return []string{}, err
-			}
+	}
+	// assume bclprocessor formatted fastqs for now
+	for _, sampleDef := range sampleDefs {
+		if defPaths, err := FastqPathsFromSampleDef(sampleDef); err == nil {
+			allPaths = append(allPaths, defPaths...)
+		} else {
+			return []string{}, err
 		}
 	}
 	return allPaths, nil
