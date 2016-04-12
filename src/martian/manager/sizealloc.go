@@ -134,7 +134,7 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 			weightedSize = 13.0 * float64(inputSize)
 		} else if strings.Contains(psname, "PHASER_SVCALLER_EXOME") {
 			// JM 3-29-2016: increase ratios by 25% to handle observed delay in TRIM_READS vdrkill
-			GB_DOWNSAMPLE_RATIO := 11.7  // mean = 8.3 + 1.1 (*1.25)
+			GB_DOWNSAMPLE_RATIO := 11.7 // mean = 8.3 + 1.1 (*1.25)
 			NO_DOWNSAMPLE_RATIO := 14.5 // mean = 10.2 + 1.4 (*1.25)
 			// get downsample rate
 			weightedSize = NO_DOWNSAMPLE_RATIO * float64(inputSize)
@@ -143,11 +143,18 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 				downsample := downsample_iface.(map[string]interface{})
 				if gigabases, ok := downsample["gigabases"]; ok {
 					// mean 8.3 + 1.1
-					gb := gigabases.(int64)
-					weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
+					if gb, ok := gigabases.(int64); ok {
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024*1024*1024*gb)
+					} else if gb, ok := gigabases.(float64); ok {
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024*1024*1024) * gb
+					}
+
 				} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
-					sr := subsample_rate.(float64)
-					weightedSize *= sr
+					if sr, ok := subsample_rate.(float64); ok {
+						weightedSize *= sr
+					} else if sr, ok := subsample_rate.(int64); ok {
+						weightedSize *= float64(sr)
+					}
 				}
 			}
 		} else if strings.Contains(psname, "PHASER_SVCALLER") {
@@ -155,17 +162,23 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 			// JM 3-29-2016: increase ratios by 25% to handle observed delay in TRIM_READS vdrkill
 			GB_DOWNSAMPLE_RATIO := 9.5
 			NO_DOWNSAMPLE_RATIO := 14.5
-			NO_DOWNSAMPLE_OFFSET := 30.0 * float64(1024 * 1024 * 1024)
+			NO_DOWNSAMPLE_OFFSET := 30.0 * float64(1024*1024*1024)
 			downsample_iface := invokeArgs["downsample"]
-			weightedSize = NO_DOWNSAMPLE_OFFSET + NO_DOWNSAMPLE_RATIO * float64(inputSize)
+			weightedSize = NO_DOWNSAMPLE_OFFSET + NO_DOWNSAMPLE_RATIO*float64(inputSize)
 			if downsample_iface != nil {
 				downsample := downsample_iface.(map[string]interface{})
 				if gigabases, ok := downsample["gigabases"]; ok {
-					gb := gigabases.(int64)
-					weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024 * 1024 * 1024 * gb)
+					if gb, ok := gigabases.(int64); ok {
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024*1024*1024*gb)
+					} else if gb, ok := gigabases.(float64); ok {
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024*1024*1024) * gb
+					}
 				} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
-					sr := subsample_rate.(float64)
-					weightedSize *= sr
+					if sr, ok := subsample_rate.(float64); ok {
+						weightedSize *= sr
+					} else if sr, ok := subsample_rate.(int64); ok {
+						weightedSize *= float64(sr)
+					}
 				}
 			}
 		} else {
