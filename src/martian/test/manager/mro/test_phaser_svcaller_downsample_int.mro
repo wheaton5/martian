@@ -1,0 +1,18 @@
+@include "mock_phaser_svcaller.mro"
+
+call MOCK_PHASER_SVCALLER(
+    sample_def = [
+        {
+            "gem_group": null,
+            "lanes": null,
+            "read_path": "../test/manager/bclprocessor",
+            "sample_indices": [
+                "AAAGCATA",
+                "TCCAATAA"
+            ]
+        }
+    ],
+    downsample = {
+        "subsample_rate": 1
+    },
+)

@@ -117,6 +117,28 @@ func TestPhaserSvCallerAlloc(t *testing.T) {
 	assert.Equal(t, 6, alloc.inputSize)
 	expectedSize := 1024 * 1024 * 1024 * 10 * 9.5
 	assert.Equal(t, int64(expectedSize), alloc.weightedSize)
+
+	mro = getTestFilePath("mro/test_phaser_svcaller_downsample_float.mro")
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc, _ = GetAllocation("test_phaser_svcaller", invocation)
+	assert.Equal(t, 6, alloc.inputSize)
+	expectedSize = (30.0*1024*1024*1024 + 14.5*6) * 0.75
+	assert.Equal(t, int64(expectedSize), alloc.weightedSize)
+
+	mro = getTestFilePath("mro/test_phaser_svcaller_downsample_int.mro")
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc, _ = GetAllocation("test_phaser_svcaller", invocation)
+	assert.Equal(t, 6, alloc.inputSize)
+	expectedSize = (30.0*1024*1024*1024 + 14.5*6)
+	assert.Equal(t, int64(expectedSize), alloc.weightedSize)
 }
 
 func TestBclAlloc(t *testing.T) {
