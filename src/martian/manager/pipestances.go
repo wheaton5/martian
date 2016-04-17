@@ -60,11 +60,11 @@ func NewPipestanceQueueRecord(pkey string, size int64, src string, tags []string
 	recordTags := make([]string, len(tags))
 	copy(recordTags, tags)
 	return &PipestanceQueueRecord{
-		Name: pkey,
+		Name:      pkey,
 		InvokeSrc: src,
-		Tags: recordTags,
+		Tags:      recordTags,
 		Timestamp: core.Timestamp(),
-		Size: size}
+		Size:      size}
 }
 
 type PipestanceManager struct {
@@ -709,10 +709,10 @@ func (self *PipestanceManager) processRunningPipestances() {
 				// Email notification.
 				container, pname, psid := parsePipestanceKey(pkey)
 				invocation := pipestance.GetInvocation()
-				stage, summary, errlog, kind, errpaths := pipestance.GetFatalError()
+				stage, preflight, summary, errlog, kind, errpaths := pipestance.GetFatalError()
 
 				// Write pipestance to fail coop.
-				self.writePipestanceToFailCoop(pkey, stage, summary, errlog, kind, errpaths, invocation)
+				self.writePipestanceToFailCoop(pkey, stage, preflight, summary, errlog, kind, errpaths, invocation)
 
 				// Delete jobs for failed stage.
 				deleteJobs(stage)
@@ -764,7 +764,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 	logProcessProgress(strconv.Itoa(len(running)), "PostCycle", overallStartTime)
 }
 
-func (self *PipestanceManager) writePipestanceToFailCoop(pkey string, stage string, summary string,
+func (self *PipestanceManager) writePipestanceToFailCoop(pkey string, stage string, preflight bool, summary string,
 	errlog string, kind string, errpaths []string, invocation interface{}) {
 	now := time.Now()
 	currentDatePath := path.Join(self.failCoopPath, now.Format("2006-01-02"))
@@ -780,6 +780,7 @@ func (self *PipestanceManager) writePipestanceToFailCoop(pkey string, stage stri
 	summaryJson := map[string]interface{}{
 		"pipestance": pkey,
 		"stage":      stage,
+		"preflight":  preflight,
 		"summary":    summary,
 		"errlog":     errlog,
 		"kind":       kind,
@@ -935,17 +936,17 @@ func (self *PipestanceManager) processEnqueuedPipestances() {
 	// queue service algorithm in the future
 	numFired := 0
 	self.storageMutex.Lock()
-	for idx, pipestance := range(self.storageQueue) {
+	for idx, pipestance := range self.storageQueue {
 		// storageMaxBytes == STORAGE_UNLIMITED_BYTES: signal that the queue is disabled
-		if self.storageMaxBytes == STORAGE_UNLIMITED_BYTES || (self.storageAllocBytes + pipestance.Size <= self.storageMaxBytes) {
+		if self.storageMaxBytes == STORAGE_UNLIMITED_BYTES || (self.storageAllocBytes+pipestance.Size <= self.storageMaxBytes) {
 			if _, ok := self.storageMap[pipestance.Name]; ok {
 				core.LogInfo("storage", "pipestance already counted against cap, will be removed from queue: %s", pipestance.Name)
 			} else {
 				core.LogInfo("storage", "Cleared for takeoff: %s (%d bytes, %d remaining)",
-					pipestance.Name, pipestance.Size, self.storageMaxBytes - self.storageAllocBytes)
+					pipestance.Name, pipestance.Size, self.storageMaxBytes-self.storageAllocBytes)
 				self.Invoke(pipestance)
 			}
-			numFired = idx+1
+			numFired = idx + 1
 		} else {
 			break
 		}
@@ -966,7 +967,7 @@ func (self *PipestanceManager) allocatePipestanceStorageUnsafe(stance *Pipestanc
 	self.storageAllocBytes += stance.Size
 	self.storageMap[stance.Name] = stance.Size
 	core.LogInfo("storage", "Storage reserved: %s (%d bytes, %d remaining)",
-		stance.Name, stance.Size, self.storageMaxBytes - self.storageAllocBytes)
+		stance.Name, stance.Size, self.storageMaxBytes-self.storageAllocBytes)
 }
 
 func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
