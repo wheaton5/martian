@@ -207,7 +207,7 @@ func (self *DownloadManager) download() {
 func (self *DownloadManager) StartDownloadLoop() {
 	go func() {
 		for {
-			self.download()
+			// self.download()
 			self.sman.InventorySubmissions()
 			time.Sleep(time.Minute * time.Duration(self.downloadIntervalMin))
 		}
