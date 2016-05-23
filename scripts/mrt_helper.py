@@ -7,6 +7,7 @@
 
 import sys
 import os
+import subprocess
 
 MASTER_PATH = "/mnt/home/dstaff/mrtbase"
 
@@ -36,6 +37,22 @@ def find_basedir(baseid):
                
 def setup_dir(psid):
         os.mkdir(psid)
+        os.chdir(psid)
+
+
+def build_invocation(base):
+        p = os.path.abspath(os.path.dirname(sys.argv[0]))
+        shimulate_path = p + "/../../../../../../dev/shimulate"
+        print "MRT AT: " + shimulate_path
+        subprocess.check_call([shimulate_path, base])
+        return base + ".mro"
+
+
+def run_mrt(base_path, psid, jobmode, inv, mro_path):
+        args = ["mrt", "-mro=" + mro_path, "-psid=" + psid, "-base=" + base_path, "-inv" + inv, "-jobmode=" + jobmode]
+
+        subprocess.check_call(args)
+
 
 
 # Parse arguments.  This returns a map of "config" data.
@@ -77,12 +94,19 @@ def parse_args(args):
 def main():
         args = sys.argv
 
+        print args[0]
+        print os.path.dirname(args[0])
+        p = os.path.abspath(os.path.dirname(args[0]))
+        print p
+
         am = parse_args(args)
 
-        print am
 
-        print find_basedir(am["base"])
+        basedir = find_basedir(am["base"])
+        
+        setup_dir(am["psid"])
 
+        build_invocation(am["base"])
 
 
 
