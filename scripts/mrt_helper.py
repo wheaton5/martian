@@ -53,6 +53,11 @@ def run_mrt(base_path, psid, jobmode, inv, mro_path):
 
         subprocess.check_call(args)
 
+def run_mrp(args, psid, mro_path):
+        arglist = ["mrp", mro_path, psid]
+        arglist +=args["args_for_mrp"]
+        subprocess.check_call(arglist)
+
 
 
 # Parse arguments.  This returns a map of "config" data.
@@ -89,7 +94,18 @@ def parse_args(args):
                                 args_for_mrp += [arg]
 
         args_map["args_for_mrp"] = args_for_mrp
-        return args_map
+
+        if (args_map["psid"] && args_map["base"] && args_map["inv"]):
+                return args_map
+        else
+                print '''USAGE:
+
+mrt_helper -psid=<name_of_new_pipestance> -base=<lena_id_of_base_pipestance> -inv=<one,or,more,stages>
+
+Any other arguments we be passed unmolested to MRP.
+
+'''
+        return None
 
 def main():
         args = sys.argv
@@ -101,13 +117,20 @@ def main():
 
         am = parse_args(args)
 
+        if (!am):
+                return
 
         basedir = find_basedir(am["base"])
+
+        if (!basedir):
+                return
         
         setup_dir(am["psid"])
 
         build_invocation(am["base"])
 
+        run_mrt()
+        run_mrp()
 
 
 
