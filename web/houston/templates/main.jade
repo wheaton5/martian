@@ -20,7 +20,8 @@ html(ng-app="app")
                 .navbar-brand
                     .logo_container
                         img.logo(src="/images/10X_Logo_Reversed.png")
-                    .navbar-upper [[.InstanceName]]
+                    .navbar-upper [[.InstanceName]] &nbsp; &middot; &nbsp;
+                        a(href="#" ng-click='togglePipestanceFilter($event)') Toggle Pipestances Only
                     .navbar-lower
                         a(href="/") HOME
                         | &nbsp;&nbsp;&nbsp;&nbsp;
@@ -45,9 +46,10 @@ html(ng-app="app")
                         th Site
                         th User
                         th Content
+                        th Pipeline
                         th Path
                 tbody
-                    tr(ng-repeat="sub in subs" style="cursor: auto")
+                    tr(ng-repeat="sub in subs" style="cursor: auto" ng-class="{fileRow: sub.kind!='pipestance'}")
                         td(style="white-space: nowrap") {{sub.display_date}}
                         td.col-fixed {{sub.display_domain}}
                         td.col-fixed {{sub.display_user}}
@@ -59,6 +61,7 @@ html(ng-app="app")
                         td(ng-if="sub.kind=='file'") {{sub.fname}}
                         td(ng-if="sub.kind=='smallfile'")
                             a(href="/file/{{sub.source}}/{{sub.date}}/{{sub.name}}/{{sub.fname}}" style="color: #007dc3") {{sub.fname}}
+                        td {{sub.pname}}
                         td.col-fixed(style="white-space: nowrap") {{sub.path}}
         
     script(src="/houston.js")

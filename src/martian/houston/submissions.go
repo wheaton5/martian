@@ -28,6 +28,7 @@ type Submission struct {
 	State   string      `json:"state"`
 	Fname   string      `json:"fname"`
 	Path    string      `json:"path"`
+	Pname   string      `json:"pname"`
 	Summary interface{} `json:"summary"`
 }
 
@@ -123,6 +124,7 @@ func (self *SubmissionManager) InventorySubmissions() {
 				fname := "none"
 				kind := "unknown"
 				state := "unknown"
+				pname := ""
 				var summary interface{}
 
 				// Check if this is a pipestance by presence of HEAD symlink
@@ -133,7 +135,13 @@ func (self *SubmissionManager) InventorySubmissions() {
 					core.LogInfo("submngr", "Discovered %s %s at %s", state, kind, key)
 
 					core.LogInfo("submngr", "    Immortalizing")
-					_, _ = self.GetPipestanceSerialization(source, date, name, "finalstate")
+					serial, ok := self.GetPipestanceSerialization(source, date, name, "finalstate")
+					if ok {
+						// get pipeline name out of serialized pipestance
+						serialJson := serial.([]interface{})
+						topLevel := serialJson[0].(map[string]interface{})
+						pname = topLevel["name"].(string)
+					}
 					core.LogInfo("submngr", "    Finished immortalizing")
 
 					if state == "complete" {
@@ -176,6 +184,7 @@ func (self *SubmissionManager) InventorySubmissions() {
 					State:   state,
 					Fname:   fname,
 					Path:    p,
+					Pname:   pname,
 					Summary: summary,
 				}
 				self.cache[key] = &sub
