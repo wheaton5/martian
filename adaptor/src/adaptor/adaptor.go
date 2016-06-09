@@ -1,14 +1,11 @@
 // Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
 
-
-package main;
+package main
 
 import "core"
 
 func main() {
-        c:=core.Setup();
-        c.Dump()
-
-
+	c := core.Setup()
+	c.Dump()
 
 }
