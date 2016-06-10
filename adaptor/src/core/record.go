@@ -4,8 +4,10 @@ type ReportRecord struct {
 	SummaryJSON     string
 	SHA             string
 	Branch          string
-	Comment         string
+	Comments        string
 	SampleId        int
-	CellLine        int
+	CellLine        string
 	InterpretedJSON string
+	Project         string
+	UserId          string
 }

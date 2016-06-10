@@ -4,8 +4,11 @@ package core
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/lib/pq"
 	"log"
+	"reflect"
+	"strings"
 )
 
 type CoreConnection struct {
@@ -25,13 +28,30 @@ func Setup() *CoreConnection {
 
 }
 
-func RecordToInsert(r interface{}) string {
+func (c *CoreConnection) InsertRecord(table string, r interface{}) error {
 
-	return ""
-}
+	keys := make([]string, 0)
+	interpolator := make([]string, 0)
+	values := make([]interface{}, 0)
 
-func (c *CoreConnection) CommitRecord(r *ReportRecord) {
+	val := reflect.ValueOf(r)
+	t := val.Type()
+	for i := 0; i < val.NumField(); i++ {
+		sf := t.Field(i)
+		keys = append(keys, sf.Name)
+		values = append(values, val.Field(i).Interface())
+		interpolator = append(interpolator, fmt.Sprintf("$%v", i+1))
+	}
 
+	query := "INSERT INTO " + table + " (" + strings.Join(keys, ",") + ") VALUES (" + strings.Join(interpolator, ",") + ")"
+
+	log.Printf("Q: %v", query)
+	log.Print("V: %v", values)
+
+	_, err := c.Conn.Query(query, values...)
+
+	log.Printf("E: %v", err)
+	return err
 }
 
 func (c *CoreConnection) Dump() {
