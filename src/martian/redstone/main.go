@@ -222,7 +222,7 @@ func main() {
 	doc := `Martian Redstone cloud uploader.
 
 Usage:
-    redstone <your_email> <file> [options]
+    redstone --from=EMAIL --to=EMAIL <file> [options]
     redstone -h | --help | --version
 
 Options:
@@ -233,7 +233,6 @@ Options:
     --version               Show version.`
 	version := "2.0.1"
 	opts, _ := docopt.Parse(doc, nil, true, version, false)
-	email := opts["<your_email>"].(string)
 	fpath := opts["<file>"].(string)
 	concurrency := 0
 	if value := opts["--concurrency"]; value != nil {
@@ -243,10 +242,13 @@ Options:
 			}
 		}
 	}
+	frEmail := opts["--from"].(string)
+	toEmail := opts["--to"].(string)
 
 	// Prep runtime values to pass to Miramar.
 	parameters := url.Values{}
-	parameters.Add("email", email)
+	parameters.Add("fremail", frEmail)
+	parameters.Add("toemail", toEmail)
 	parameters.Add("fname", path.Base(fpath))
 	parameters.Add("version", version)
 	parameters.Encode()
@@ -311,6 +313,10 @@ Options:
 		Bucket: &rr.Bucket,
 		Key:    &rr.Key,
 		Body:   f,
+		Metadata: map[string]*string{
+			"from-email": &frEmail,
+			"to-email":   &toEmail,
+		},
 	})
 
 	// If the upload died (not due to CTRL-C or kill), then report the error.
