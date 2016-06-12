@@ -231,7 +231,7 @@ Options:
 
     -h --help               Show this message.
     --version               Show version.`
-	version := "2.0.1"
+	version := "2.1.0"
 	opts, _ := docopt.Parse(doc, nil, true, version, false)
 	fpath := opts["<file>"].(string)
 	concurrency := 0
