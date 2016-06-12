@@ -247,8 +247,8 @@ Options:
 
 	// Prep runtime values to pass to Miramar.
 	parameters := url.Values{}
-	parameters.Add("fremail", frEmail)
-	parameters.Add("toemail", toEmail)
+	parameters.Add("frEmail", frEmail)
+	parameters.Add("toEmail", toEmail)
 	parameters.Add("fname", path.Base(fpath))
 	parameters.Add("version", version)
 	parameters.Encode()
