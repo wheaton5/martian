@@ -3,7 +3,7 @@
 package main
 
 import (
-	"core"
+	"martian/sere2lib"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -13,10 +13,10 @@ var flag_pipestance_path = flag.String("path", "", "path to pipestance")
 var flag_sample_id = flag.Int("sample", 0, "sample id")
 
 func main() {
-	c := core.Setup()
+	c := sere2lib.Setup()
 	c.Dump()
 
-	var rr core.ReportRecord
+	var rr sere2lib.ReportRecord
 
 	flag.Parse()
 
@@ -25,12 +25,12 @@ func main() {
 		panic("bad args")
 	}
 
-	version, err := core.GetPipestanceVersion(*flag_pipestance_path)
+	version, err := sere2lib.GetPipestanceVersion(*flag_pipestance_path)
 
 	if err != nil {
 		panic(err)
 	}
-	project := core.GuessProject(*flag_pipestance_path)
+	project := sere2lib.GuessProject(*flag_pipestance_path)
 	if project == nil {
 		panic("can't figure out what kind of project this is!")
 	}

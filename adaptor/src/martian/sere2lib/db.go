@@ -1,6 +1,6 @@
 // Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
 
-package core
+package sere2lib
 
 import (
 	"database/sql"

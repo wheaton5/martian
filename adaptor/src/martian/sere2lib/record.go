@@ -1,4 +1,4 @@
-package core
+package sere2lib
 
 type ReportRecord struct {
 	SummaryJSON     string

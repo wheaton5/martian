@@ -3,7 +3,7 @@
 package main
 
 import (
-	"core"
+	"martian/sere2lib"
 	"flag"
 	"io/ioutil"
 )
@@ -18,10 +18,10 @@ var flag_project = flag.String("project", "", "project name")
 var flag_user = flag.String("user", "", "user name")
 
 func main() {
-	c := core.Setup()
+	c := sere2lib.Setup()
 	c.Dump()
 
-	var rr core.ReportRecord
+	var rr sere2lib.ReportRecord
 
 	flag.Parse()
 
