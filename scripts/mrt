@@ -9,7 +9,8 @@ import sys
 import os
 import subprocess
 
-MASTER_PATH = "/mnt/home/dstaff/mrtbase"
+# Where do we find test fixtures?
+MASTER_PATH = "/mnt/analysis/mrtfixtures/test"
 
 #
 # Find the directory to use given a id and a base dir.  We look for filenames in the format
@@ -40,10 +41,12 @@ def setup_dir(psid):
         os.chdir(psid)
 
 
+# Use shimulate to build a MRT invocation file. Return the path
+# to the file. Base is the LENA ID of the sample.
 def build_invocation(base):
         p = os.path.abspath(os.path.dirname(sys.argv[0]))
         shimulate_path = p + "/../../../../../../dev/shimulate"
-        print "MRT AT: " + shimulate_path
+        print "RUNNING SHUMULATE AT: " + shimulate_path
         subprocess.check_call([shimulate_path, base])
         return base + ".mro"
 
@@ -132,9 +135,4 @@ def main():
         run_mrt()
         run_mrp()
 
-
-
 main()
-
-
-
