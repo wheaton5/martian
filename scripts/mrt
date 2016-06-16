@@ -46,19 +46,24 @@ def setup_dir(psid):
 def build_invocation(base):
         p = os.path.abspath(os.path.dirname(sys.argv[0]))
         shimulate_path = p + "/../../../../../../dev/shimulate"
-        print "RUNNING SHUMULATE AT: " + shimulate_path
-        subprocess.check_call([shimulate_path, base])
+	shimulate_args = [shimulate_path, base];
+	
+	print "RUNNING SHIMULATE: " + str(shimulate_args)
+        subprocess.check_call(shimulate_args)
         return base + ".mro"
 
 
 def run_mrt(base_path, psid, jobmode, inv, mro_path):
         args = ["mrt_helper", "-mro=" + mro_path, "-psid=" + psid, "-base=" + base_path, "-inv=" + inv, "-jobmode=" + jobmode]
 
+	print "RUNNING MRT: " + str(args)
         subprocess.check_call(args)
 
 def run_mrp(args, psid, mro_path):
         arglist = ["mrp", psid, mro_path]
         arglist +=args["args_for_mrp"]
+
+	print "RUNNING MRP: " + str(arglist)
         subprocess.check_call(arglist)
 
 
@@ -111,28 +116,24 @@ Any other arguments we be passed unmolested to MRP.
         return None
 
 def main():
-        args = sys.argv
 
-        print args[0]
-        print os.path.dirname(args[0])
-        p = os.path.abspath(os.path.dirname(args[0]))
-        print p
+        args = parse_args(sys.argv)
 
-        am = parse_args(args)
-
-        if (not am):
+        if (not args):
                 return
 
-        basedir = find_basedir(am["base"])
+        basedir = find_basedir(args["base"])
+
+	print "FOUND MRT FIXTURE AT: " + basedir
 
         if (not basedir):
                 return
         
-        setup_dir(am["psid"])
+        setup_dir(args["psid"])
 
-        mropath = build_invocation(am["base"])
+        mropath = build_invocation(args["base"])
 
-        run_mrt(basedir, am['psid'], am['jobmode'], am['inv'], mropath)
-        run_mrp(am, mropath, am['psid'])
+        run_mrt(basedir, args['psid'], args['jobmode'], args['inv'], mropath)
+        run_mrp(args, mropath, args['psid'])
 
 main()
