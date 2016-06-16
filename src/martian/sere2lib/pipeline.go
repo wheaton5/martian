@@ -16,7 +16,7 @@ type ProjectInfo struct {
 
 var ProjectDefs = []ProjectInfo{
 	{"PHASER_SVCALLER_EXOME_PD", "longranger-exome", "PHASER_SVCALLER_EXOME_PD/SUMMARIZE_REPORTS_PD/fork0/files/summary.json"},
-	{"PHASER_SVCALLER_PD", "longranger-exome", "PHASER_SVCALLER_PD/SUMMARIZE_REPORTS_PD/fork0/files/summary.json"},
+	{"PHASER_SVCALLER_PD", "longranger-wgs", "PHASER_SVCALLER_PD/SUMMARIZE_REPORTS_PD/fork0/files/summary.json"},
 }
 
 func GuessProject(path string) *ProjectInfo {
