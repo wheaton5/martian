@@ -52,12 +52,12 @@ def build_invocation(base):
 
 
 def run_mrt(base_path, psid, jobmode, inv, mro_path):
-        args = ["mrt", "-mro=" + mro_path, "-psid=" + psid, "-base=" + base_path, "-inv" + inv, "-jobmode=" + jobmode]
+        args = ["mrt_helper", "-mro=" + mro_path, "-psid=" + psid, "-base=" + base_path, "-inv=" + inv, "-jobmode=" + jobmode]
 
         subprocess.check_call(args)
 
 def run_mrp(args, psid, mro_path):
-        arglist = ["mrp", mro_path, psid]
+        arglist = ["mrp", psid, mro_path]
         arglist +=args["args_for_mrp"]
         subprocess.check_call(arglist)
 
@@ -74,7 +74,7 @@ def parse_args(args):
         args_map = {}
 
         args_for_mrp = []
-        for arg in args:
+	for arg in args[1:]:
                       
                 fl = arg.split("=");
 
@@ -84,23 +84,23 @@ def parse_args(args):
                         first = fl[0]
                         last = fl[1]
 
-                        if (first == "-jobmode"):
+                        if (first == "--jobmode"):
                                 args_map["jobmode"] = last
                                 args_for_mrp += [arg]
-                        elif  (first == "-psid"):
+                        elif  (first == "--psid"):
                                 args_map["psid"] =last
-                        elif (first == "-base"):
+                        elif (first == "--base"):
                                 args_map["base"] = last
-                        elif (first == "-inv"):
+                        elif (first == "--inv"):
                                 args_map["inv"] = last
                         else: 
                                 args_for_mrp += [arg]
 
         args_map["args_for_mrp"] = args_for_mrp
 
-        if (args_map["psid"] && args_map["base"] && args_map["inv"]):
+        if (args_map["psid"] and  args_map["base"] and args_map["inv"]):
                 return args_map
-        else
+	else:
                 print '''USAGE:
 
 mrt_helper -psid=<name_of_new_pipestance> -base=<lena_id_of_base_pipestance> -inv=<one,or,more,stages>
@@ -120,19 +120,19 @@ def main():
 
         am = parse_args(args)
 
-        if (!am):
+        if (not am):
                 return
 
         basedir = find_basedir(am["base"])
 
-        if (!basedir):
+        if (not basedir):
                 return
         
         setup_dir(am["psid"])
 
-        build_invocation(am["base"])
+        mropath = build_invocation(am["base"])
 
-        run_mrt()
-        run_mrp()
+        run_mrt(basedir, am['psid'], am['jobmode'], am['inv'], mropath)
+        run_mrp(am, mropath, am['psid'])
 
 main()
