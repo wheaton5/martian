@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
 
-# This is a helper program for MRT. It finds the correct paths for MRT to use, 
-# builds an appropriate invocation file, runs MRT and then runs MRP. 
+# This is a helper program for MRT. It finds the correct paths for MRT to use,
+# builds an appropriate invocation file, runs MRT and then runs MRP.
 
 
 import sys
@@ -35,7 +35,7 @@ def find_basedir(baseid):
         else:
                 return MASTER_PATH + "/" + best_so_far
 
-               
+
 def setup_dir(psid):
         os.mkdir(psid)
         os.chdir(psid)
@@ -47,7 +47,7 @@ def build_invocation(base):
         p = os.path.abspath(os.path.dirname(sys.argv[0]))
         shimulate_path = p + "/../../../../../../dev/shimulate"
 	shimulate_args = [shimulate_path, base];
-	
+
 	print "RUNNING SHIMULATE: " + str(shimulate_args)
         subprocess.check_call(shimulate_args)
         return base + ".mro"
@@ -78,7 +78,7 @@ def parse_args(args):
         args_for_mrp = []
 
 	for arg in args[1:]:
-                      
+
                 fl = arg.split("=");
 
                 if (len(fl) <2):
@@ -96,7 +96,7 @@ def parse_args(args):
                                 args_map["base"] = last
                         elif (first == "--inv"):
                                 args_map["inv"] = last
-                        else: 
+                        else:
                                 args_for_mrp += [arg]
 
         args_map["args_for_mrp"] = args_for_mrp
@@ -124,7 +124,7 @@ def main():
 
         if (not basedir):
                 return
-        
+
         setup_dir(args["psid"])
 
         mropath = build_invocation(args["base"])
