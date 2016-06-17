@@ -1,5 +1,9 @@
 // Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
 
+/*
+ * This package provides basic low-level DB stuff.
+ */
+
 package sere2lib
 
 import (
@@ -15,9 +19,15 @@ type CoreConnection struct {
 	Conn *sql.DB
 }
 
+
+/*
+ * Build a connection to the SERE database.
+ * TODO: This should look at environment variables to figure out the database to connect to
+ */
 func Setup() *CoreConnection {
 	conn := new(CoreConnection)
 
+	/* FIXME: hard coded IP address and password :( */
 	db, err := sql.Open("postgres", "postgres://x10user:v3rys3cr3t@52.39.198.116/sere2?sslmode=disable")
 	if err != nil {
 		panic(err)
@@ -28,14 +38,27 @@ func Setup() *CoreConnection {
 
 }
 
+/*
+ * Insert a record into a database table.  We assume that the names of the fields
+ * in |r| (which must be a struct) correspond to the fields in the database table.
+ */
 func (c *CoreConnection) InsertRecord(table string, r interface{}) error {
 
+	/* Keys is a list of column names, extracted from the type of r*/
 	keys := make([]string, 0)
+	/* Interpolator is just a big list of "$1", "$2", "$3", ..... that we use to make the query formatter
+	 * do the right thing.
+	 */
 	interpolator := make([]string, 0)
+	/* Values is an array of values to add, in the same order as keys */
 	values := make([]interface{}, 0)
 
 	val := reflect.ValueOf(r)
 	t := val.Type()
+
+	/* Iterate over every field in |r| and append its name into keys, its value in the values, and $i into
+	 * interpolator.
+	 */
 	for i := 0; i < val.NumField(); i++ {
 		sf := t.Field(i)
 		keys = append(keys, sf.Name)
@@ -43,6 +66,7 @@ func (c *CoreConnection) InsertRecord(table string, r interface{}) error {
 		interpolator = append(interpolator, fmt.Sprintf("$%v", i+1))
 	}
 
+	/* Format the query string */
 	query := "INSERT INTO " + table + " (" + strings.Join(keys, ",") + ") VALUES (" + strings.Join(interpolator, ",") + ")"
 
 	log.Printf("Q: %v", query)
@@ -62,12 +86,76 @@ func (c *CoreConnection) Dump() {
 
 }
 
+func (c * CoreConnection) JSONExtract(table string, where string, keys []string) []map[string]interface{} {
 
+	columns := make([]string, 0, 0);
+
+	for _, path := range keys {
+		pa := strings.Split(path, "/");
+		str := ""
+		str += pa[0];
+
+		for _, p_element := range pa[1:] {
+			str += "->" + "'" + p_element + "'"
+		}
+		columns = append(columns, str);
+	}
+
+	query := "SELECT " + strings.Join(columns, ",") + " FROM " + table;
+	if (where != "") {
+		query = query + " WHERE " + where;
+	}
+
+	log.Printf("QUERY: %v", query);
+	rows, err := c.Conn.Query(query);
+
+	if (err != nil) {
+		panic(err);
+	}
+
+	results := make([]map[string]interface{}, 0, 0);
+	for rows.Next() {
+		ifaces := make([]string, len(keys));
+		x1 := make([]interface{}, len(keys));
+		for i := 0; i < len(keys); i++ {
+			x1[i] = &ifaces[i];
+		}
+
+		err = rows.Scan(x1...);
+		if (err != nil) {
+			panic(err);
+		}
+		
+		rowmap := make(map[string]interface{});
+
+		for i := 0; i < len(keys); i++ {
+			rowmap[keys[i]] = ifaces[i];
+		}
+
+		results = append(results, rowmap);
+	}
+	
+	return results;
+}
+
+/*
+ * Grab all of the records from tast_reports and interpolate them into an 
+ * array of ReportRecord structures. Like the Insert function, this dynamically
+ * inspects the type of the test_reports object. 
+ * TODO: With a bit of hacking, we can make this more generic such that it doesn't
+ * have to explicitly reference the ReportRecord type.
+ */
 func (c * CoreConnection) GrabRecords(where string) ([]ReportRecord, error) {
+
+	/* Compute the field names that we wish to extract */
 	fieldnames := ComputeSelectFields(ReportRecord{});
 	out := make([]ReportRecord, 0, 0);
 
+	/* Compute the select query */
 	query := "SELECT " + strings.Join(fieldnames, ",") + " FROM test_reports";
+	if (where != "") {
+		query = query + " WHERE " + where;
+	}
 	
 	log.Printf("QUERY: %v", query);
  	rows, err := c.Conn.Query(query);
@@ -77,6 +165,9 @@ func (c * CoreConnection) GrabRecords(where string) ([]ReportRecord, error) {
 		return []ReportRecord{}, err;
 	}
 
+	/* Iterate over each row and copy it into the out array. Note the 
+	 * re-use of nextval and deep copy of nextval into the array.
+	 */
 	for rows.Next() {
 		var nextval ReportRecord
 		err = UnpackRow(rows, &nextval);
@@ -84,11 +175,17 @@ func (c * CoreConnection) GrabRecords(where string) ([]ReportRecord, error) {
 			log.Printf("UNOHHHHHHH -- %v", err);
 			return out, err;
 		}
-		log.Printf("GOT %v %v", nextval.SampleId, *nextval.UserId);
+		log.Printf("GOT %v %v", nextval.SampleId, nextval.UserId);
 		out = append(out, nextval);
 	}
 	return out, nil;
 }
+
+/*
+ * Unpack a single row into rr. The row must have been selected using the
+ * results from ComputeSelectFields on the same type as rr. rr must 
+ * secretely be a pointer to that type of struct.
+ */
 func UnpackRow(row * sql.Rows, rr  interface{}) error{
 
 	val := reflect.ValueOf(rr);
@@ -111,6 +208,10 @@ func UnpackRow(row * sql.Rows, rr  interface{}) error{
 	return nil
 }
 
+/*
+ * Return an array of all of the field names for a struct. Note that this traverses the
+ * fields in the same order as UnpackRow does and that we rely on this fact.
+ */
 func ComputeSelectFields(str interface{}) []string {
 	output := make([]string, 0, 0);
 	val := reflect.ValueOf(str);
