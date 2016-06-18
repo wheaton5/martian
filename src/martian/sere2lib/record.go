@@ -1,13 +1,18 @@
 package sere2lib
 
 type ReportRecord struct {
-	SummaryJSON     string
 	SHA             string
 	Branch          string
 	Comments        string
 	SampleId        int
 	CellLine        string
-	InterpretedJSON string
+	TagsJSON	string
 	Project         string
 	UserId          string
+}
+
+type ReportSummaryFile struct {
+	ReportRecordId int
+	SummaryJSON string
+	StageName string
 }

@@ -12,7 +12,12 @@ func main() {
 
 	c.GrabRecords("");
 
-	r1 := c.JSONExtract("test_reports", "", []string{"summaryjson/effective_diversity_reads", "sha", "summaryjson/fraction_on_target"})
+	r1 := c.JSONExtract2("", []string{
+		"SHA",
+		"sampleid",
+		"/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased",
+		"/SUMMARIZE_REPORTS_PD/r1_q30_bases"})
+
 
 	log.Printf("R1: %v", r1);
 }

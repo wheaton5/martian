@@ -4,7 +4,6 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"martian/core"
 	"martian/sere2lib"
 	"os"
@@ -60,13 +59,20 @@ func main() {
 	rr.Project = project.Name
 	rr.UserId = os.Getenv("USER")
 
+	/*
 	jsondata, err := ioutil.ReadFile(*flag_pipestance_path + "/" + project.SummaryJSONPath)
 	if err != nil {
 		panic(err)
 	}
+	*/
 
-	rr.SummaryJSON = string(jsondata)
+	//rr.SummaryJSON = string(jsondata)
 	rr.Comments = "{}"
-	rr.InterpretedJSON = "{}"
-	c.InsertRecord("test_reports", rr)
+	rr.TagsJSON= "{}"
+	id, err :=c.InsertRecord("test_reports", rr)
+	if (err != nil) {
+		panic(err);
+	}
+
+	sere2lib.CheckinSummaries(c, id, *flag_pipestance_path);
 }
