@@ -4,11 +4,11 @@ package sere2lib
 import (
 	"encoding/json"
 
-	"strings"
-	"path/filepath"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 type ProjectInfo struct {
@@ -68,15 +68,13 @@ func GetPipestanceVersion(pipestance_path string) (string, error) {
 
 }
 
-
-
 /*
  * Grab every summary.json file from a pipestance and upload it to the database.
  */
-func CheckinSummaries(db * CoreConnection, test_report_id int, pipestance_path string) {
+func CheckinSummaries(db *CoreConnection, test_report_id int, pipestance_path string) {
 
 	filepath.Walk(pipestance_path, func(path string, info os.FileInfo, e error) error {
-		if (len(info.Name()) > 4 && info.Name()[0:4] == "chnk") {
+		if len(info.Name()) > 4 && info.Name()[0:4] == "chnk" {
 			/* Don't grab stuff that's inside a chunk. If we're in a chunk, forget
 			 * about this entire subtree
 			 */
@@ -84,42 +82,33 @@ func CheckinSummaries(db * CoreConnection, test_report_id int, pipestance_path s
 		}
 		if info.Name() == "summary.json" {
 			/* Woohoo! found a summary file.*/
-			log.Printf("Found summary at %v", path);
+			log.Printf("Found summary at %v", path)
 
 			/* Calculate the stage name for this file. XXX There should be a safer
 			 * way to do this
 			 */
-			pp := strings.Split(path, "/");
-			stage := pp[len(pp)-4];
+			pp := strings.Split(path, "/")
+			stage := pp[len(pp)-4]
 
 			/* Grab the file */
-			contents, err := ioutil.ReadFile(path);
-			if (err != nil) {
-				panic("Don't panic");
+			contents, err := ioutil.ReadFile(path)
+			if err != nil {
+				panic("Don't panic")
 			}
 
 			/* Check that the file is valid JSON. Don't try to upload invalid
 			 * JSON*/
 			var x interface{}
-			if (json.Unmarshal(contents, &x) != nil) {
-				log.Printf("file %v is not JSON!!!", path);
+			if json.Unmarshal(contents, &x) != nil {
+				log.Printf("file %v is not JSON!!!", path)
 			} else {
-				r := ReportSummaryFile{test_report_id, string(contents), stage};
-				_, err = db.InsertRecord("test_report_summaries", r);
-				if (err != nil) {
-					panic("Keep calm and carry on");
+				r := ReportSummaryFile{test_report_id, string(contents), stage}
+				_, err = db.InsertRecord("test_report_summaries", r)
+				if err != nil {
+					panic("Keep calm and carry on")
 				}
 			}
 		}
-		return nil;
+		return nil
 	})
 }
-
-
-
-
-
-
-
-
-
