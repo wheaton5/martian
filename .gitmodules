@@ -40,3 +40,6 @@
 [submodule "src/github.com/lib/pq"]
 	path = src/github.com/lib/pq
 	url = https://github.com/lib/pq
+[submodule "src/github.com/joker/jade"]
+	path = src/github.com/joker/jade
+	url = git@github.com:Joker/jade.git

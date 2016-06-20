@@ -8,9 +8,13 @@ package sere2web
 
 import (
 	"github.com/go-martini/martini"
+	"strings"
 	"log"
 	"martian/sere2lib"
 	"net/http"
+	"github.com/joker/jade"
+	"io/ioutil"
+
 )
 
 type Sere2Server struct {
@@ -55,8 +59,23 @@ func (s *Sere2Server) vv(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
+	psplit := strings.Split(r.URL.Path, "/");
 
-	w.Write([]byte("Hello!"))
+	viewfile := psplit[len(psplit)-1];
+
+	buf, err := ioutil.ReadFile(s.WebBase + "/views/" + viewfile);
+
+	if (err != nil) {
+		panic(err);
+	}
+	
+	j, err := jade.Parse("jade_tp", string(buf));
+
+	if (err != nil) {
+		panic(err);
+	}
+	
+	w.Write([]byte(j));
 }
 
 func (s *Sere2Server) Slice(w http.ResponseWriter, r *http.Request) {
