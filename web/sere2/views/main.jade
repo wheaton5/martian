@@ -6,21 +6,20 @@ html
 		script(src="/assets/scripts/10x/dynchart.js")
 		script(src="/assets/scripts/external/jquery-1.11.1.min.js")
 	body
-		h2	Hello World
+		h2	Please select data to chart
 		form
 			span X
-			input#chartx(name="x")
+			input#chartx(name="x" style="width:450px;")
 			br
 			span Y
-			input#charty(name="y")
+			input#charty(name="y" style="width:450px;")
 			br
 			span Where
-			input#chartwhere(name="where")
+			input#chartwhere(name="where" style="width:450px")
 			br
-			div(onclick="chart_update()") Do it!
-		br
+			br
+			div(onclick="chart_update()" style="border: solid black 1px; width:30px;" ) Go
 		div#chart1(style="width:800px;height:500px")
-		br
-		h2 	Yo
+		h2 	Thank you!
 
 			

@@ -32,9 +32,9 @@ function chart_update() {
 	$.getJSON(url, function(data) {
 		console.log("GOTDATA!");
 		console.log(data)
-		var data = google.visualization.arrayToDataTable(data.ChartData);
-		var options = {title:'12345'};
-		global_chart.draw(data, options);
+		var gdata = google.visualization.arrayToDataTable(data.ChartData);
+		var options = {title:data.Name};
+		global_chart.draw(gdata, options);
 
 	})
 

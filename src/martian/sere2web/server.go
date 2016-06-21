@@ -85,7 +85,7 @@ func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
 func (s * Sere2Server) XYPlot(w http.ResponseWriter, r * http.Request) {
 	params := r.URL.Query();
 	
-	plot := s.DB.XYPresenter("", params.Get("x"), params.Get("y"));
+	plot := s.DB.XYPresenter(params.Get("where"), params.Get("x"), params.Get("y"));
 
 	js, err := json.Marshal(plot);
 
