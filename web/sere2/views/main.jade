@@ -1,8 +1,26 @@
 doctype html
 
 html
-	include "header.jade"
-	
+	head
+		script(src="https://www.gstatic.com/charts/loader.js")
+		script(src="/assets/scripts/10x/dynchart.js")
+		script(src="/assets/scripts/external/jquery-1.11.1.min.js")
 	body
 		h2	Hello World
+		form
+			span X
+			input#chartx(name="x")
+			br
+			span Y
+			input#charty(name="y")
+			br
+			span Where
+			input#chartwhere(name="where")
+			br
+			div(onclick="chart_update()") Do it!
+		br
+		div#chart1(style="width:800px;height:500px")
+		br
+		h2 	Yo
+
 			

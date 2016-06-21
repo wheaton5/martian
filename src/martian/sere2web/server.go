@@ -15,6 +15,8 @@ import (
 	"github.com/joker/jade"
 	"io/ioutil"
 
+	"encoding/json"
+
 )
 
 type Sere2Server struct {
@@ -49,6 +51,8 @@ func SetupServer(port int, db *sere2lib.CoreConnection, webbase string) {
 	/* API endpoints to do useful things */
 	m.Get("/api/slice", s2s.Slice)
 
+	m.Get("/api/xyplot", s2s.XYPlot);
+
 	/* Start it up! */
 	m.Run()
 }
@@ -77,6 +81,21 @@ func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
 	
 	w.Write([]byte(j));
 }
+
+func (s * Sere2Server) XYPlot(w http.ResponseWriter, r * http.Request) {
+	params := r.URL.Query();
+	
+	plot := s.DB.XYPresenter("", params.Get("x"), params.Get("y"));
+
+	js, err := json.Marshal(plot);
+
+	if (err != nil) {
+		panic(err);
+	}
+
+	w.Write(js);
+}
+
 
 func (s *Sere2Server) Slice(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Goodbye!"))
