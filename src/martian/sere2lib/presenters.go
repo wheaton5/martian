@@ -24,16 +24,25 @@ func (c *CoreConnection) GenericPresentor(where string, fields []string) *Plot {
 	return &Plot{"A plot", ChartData}
 }
 
+/*
+ * This function converts from an array-of-maps to an array-of-arrays.
+ * We use to to format data for google charts to display.
+ *
+ * The columns argument specifies what elements to select from the map.
+ * The first element of the returned array is exactly the columns array.
+ */
 func RotateN(src []map[string]interface{}, columns []string) [][]interface{} {
 
 	res := make([][]interface{}, len(src)+1)
 
 	res[0] = make([]interface{}, len(columns))
 
+	/* Copy columns into the first row of the output */
 	for i, c := range columns {
 		res[0][i] = c
 	}
 
+	/* Iterate over src and copy data into the output */
 	for i, datum := range src {
 		newrow := make([]interface{}, len(columns))
 		for k, c := range columns {

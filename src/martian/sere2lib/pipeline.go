@@ -1,4 +1,8 @@
 // Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
+
+/*
+ * This implements functions for extracting various bits of metadata from a pipeline
+ */
 package sere2lib
 
 import (
@@ -22,6 +26,11 @@ var ProjectDefs = []ProjectInfo{
 	{"PHASER_SVCALLER_PD", "longranger-wgs", "PHASER_SVCALLER_PD/SUMMARIZE_REPORTS_PD/fork0/files/summary.json"},
 }
 
+/*
+ * Guess what kind of project this is. We look for a top-level file
+ * (or directory) that matches "TopLevel" in some project
+ * definition.
+ */
 func GuessProject(path string) *ProjectInfo {
 
 	for i := 0; i < len(ProjectDefs); i++ {
@@ -34,6 +43,9 @@ func GuessProject(path string) *ProjectInfo {
 	return nil
 }
 
+/*
+ * Load JSON from a path
+ */
 func jsonload(path string) (map[string]interface{}, error) {
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -53,6 +65,9 @@ func jsonload(path string) (map[string]interface{}, error) {
 
 }
 
+/*
+ * Get the version of a pipestance by inspecting the _versions file.
+ */
 func GetPipestanceVersion(pipestance_path string) (string, error) {
 	vf := pipestance_path + "/_versions"
 	jsondata, err := jsonload(vf)
@@ -61,6 +76,7 @@ func GetPipestanceVersion(pipestance_path string) (string, error) {
 		return "", err
 	}
 
+	/* Is this always right? What about cellranger or supernova? */
 	version := jsondata["pipelines"].(string)
 
 	log.Printf("autodetect version of (%v): %v", pipestance_path, version)
@@ -113,6 +129,9 @@ func CheckinSummaries(db *CoreConnection, test_report_id int, pipestance_path st
 	})
 }
 
+/*
+ * Grab a specific JSON file and upload that to the database.
+ */
 func CheckinOne(db *CoreConnection, test_report_id int, path string, name string) error {
 	contents, err := ioutil.ReadFile(path)
 
@@ -134,6 +153,9 @@ func CheckinOne(db *CoreConnection, test_report_id int, path string, name string
 	return nil
 }
 
+/*
+ * Get the date that the pipestance finished.
+ */
 func GetPipestanceDate(path string) time.Time {
 
 	s, err := os.Stat(path + "/_finalstate")

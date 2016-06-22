@@ -16,19 +16,23 @@ import (
 	"strings"
 )
 
+/*
+ * This encapsulates a database connection.
+ */
 type CoreConnection struct {
 	Conn *sql.DB
 }
 
 /*
- * Build a connection to the SERE database.
- * TODO: This should look at environment variables to figure out the database to connect to
+ * Build a connection to the SERE database.  TODO: This should look at
+ * environment variables to figure out the database to connect to
  */
 func Setup() *CoreConnection {
 	conn := new(CoreConnection)
 
 	/* FIXME: hard coded IP address and password :( */
-	db, err := sql.Open("postgres", "postgres://x10user:v3rys3cr3t@52.39.198.116/sere3?sslmode=disable")
+	db, err := sql.Open("postgres",
+		"postgres://x10user:v3rys3cr3t@52.39.198.116/sere3?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
@@ -39,50 +43,56 @@ func Setup() *CoreConnection {
 }
 
 /*
- * Insert a record into a database table.  We assume that the names of the fields
- * in |r| (which must be a struct) correspond to the fields in the database table.
+ * Insert a record into a database table.  We assume that the names of the
+ * fields in |r| (which must be a struct) correspond to the fields in the
+ * database table.
  */
-func (c *CoreConnection) InsertRecord(table string, r interface{}) (int, error) {
+func (c *CoreConnection) InsertRecord(table string, record interface{}) (int, error) {
 
 	/* Keys is a list of column names, extracted from the type of r*/
 	keys := make([]string, 0)
-	/* Interpolator is just a big list of "$1", "$2", "$3", ..... that we use to make the query formatter
-	 * do the right thing.
+
+	/* Interpolator is just a big list of "$1", "$2", "$3", ..... that we
+	 * use to make the query formatter do the right thing.
 	 */
 	interpolator := make([]string, 0)
+
 	/* Values is an array of values to add, in the same order as keys */
 	values := make([]interface{}, 0)
 
-	val := reflect.ValueOf(r)
-	t := val.Type()
+	val_of_r := reflect.ValueOf(record)
+	type_of_r := val_of_r.Type()
 
-	/* Iterate over every field in |r| and append its name into keys, its value in the values, and $i into
-	 * interpolator.
+	/* Iterate over every field in |record| and append its name into keys, its
+	 * value in the values, and $next into interpolator.
 	 */
-	next := 0
-	for i := 0; i < val.NumField(); i++ {
-		sf := t.Field(i)
-		tag := sf.Tag.Get("sql")
+	interpolator_index := 0
+	for i := 0; i < val_of_r.NumField(); i++ {
+		field := type_of_r.Field(i)
+		tag := field.Tag.Get("sql")
 
 		/* Don't set read-only fields. */
 		if tag == "RO" {
 			continue
 		}
 
-		keys = append(keys, sf.Name)
-		values = append(values, val.Field(i).Interface())
-		interpolator = append(interpolator, fmt.Sprintf("$%v", next+1))
-		next++
+		keys = append(keys, field.Name)
+		values = append(values, val_of_r.Field(i).Interface())
+		interpolator = append(interpolator, fmt.Sprintf("$%v", interpolator_index+1))
+		interpolator_index++
 	}
 
 	/* Format the query string */
-	query := "INSERT INTO " + table + " (" + strings.Join(keys, ",") + ") VALUES (" + strings.Join(interpolator, ",") + ") RETURNING ID"
+	query := "INSERT INTO " + table + " (" + strings.Join(keys, ",") + ")" +
+		" VALUES (" + strings.Join(interpolator, ",") + ")" +
+		" RETURNING ID"
 
 	//log.Printf("Q: %v", query)
-	//log.Print("V: %v", values)
 
+	/* Do the query */
 	result := c.Conn.QueryRow(query, values...)
 
+	/* Get the result, which will be the ID of the new row */
 	var newid int
 	err := result.Scan(&newid)
 
@@ -90,60 +100,65 @@ func (c *CoreConnection) InsertRecord(table string, r interface{}) (int, error) 
 	return newid, err
 }
 
-func (c *CoreConnection) Dump() {
-
-	res, err := c.Conn.Query("select * from test_reports;")
-
-	log.Printf("UHOH: %v %v", err, res)
-
-}
-
 /*
- * This implements the awesomeness to extract JSON queries across a join.  We expect a scheme like
- * test_reports:[id, ... other fields]
- * test_report_summaries[id, testreportid, stagename, jsonsummary]
- * with test_report_summaries.testreportid associated to test_reports.id
+ * This implements the awesomeness to extract JSON queries across a join.  We
+ * expect a scheme like test_reports:[id, ... other fields]
+ * test_report_summaries[id, testreportid, stagename, jsonsummary] with
+ * test_report_summaries.testreportid associated to test_reports.id
  *
- * We interpret each key as a path expression if it starts with /. The first element
- * of the path is considered to be the value of "stagename" in the test_report_summaries.
- * the remaining part of the path indexes into the JSON bag at test_report_summaries.jsonsummary.
+ * We interpret each key as a path expression if it starts with /. The first
+ * element of the path is considered to be the value of "stagename" in the
+ * test_report_summaries.  the remaining part of the path indexes into the JSON
+ * bag at test_report_summaries.jsonsummary.
  *
- * For example, the key "/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased" with a where clause of "sample_id=12345"
- * will return the json value of "universal_fract_snps_phased" in the SUMMARIZE_REPORTS_PD/summary.json directory
- * for every test with the sample id of 12345.
+ * For example, the key "/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased"
+ * with a where clause of "sample_id=12345" will return the json value of
+ * "universal_fract_snps_phased" in the SUMMARIZE_REPORTS_PD/summary.json
+ * directory for every test with the sample id of 12345.
  */
 func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]interface{} {
 	joins := []string{}
 	selects := []string{}
 
-	names_map := make(map[string]string)
-	next := 1
+	tref_map := make(map[string]string)
+	next_tref_index := 1
 
-	/* Transform the keys array into a bunch of join and select statements. For each report stage
-	 * that is mentioned in a key, we add a new join clause and every key adds exactly one select
-	 * expression.
+	/* Transform the keys array into a bunch of join and select statements.
+	 * For each report stage that is mentioned in a key, we add a new join
+	 * clause and every key adds exactly one select expression.
 	 */
 	for _, key := range keys {
 		if key[0] == '/' {
 			/* key is a JSON path */
 			keypath := strings.Split(key[1:], "/")
 			var join_as_name string
-			join_as_name, exists := names_map[keypath[0]]
+
+			/* Do we already have a JOIN reference for the
+			 * test_report_summaries_row that we're going to use?
+			 */
+			join_as_name, exists := tref_map[keypath[0]]
 			if !exists {
 				/* We don't have a join for this table, make one up */
-				join_as_name = fmt.Sprintf("tmp_%v", next)
-				names_map[keypath[0]] = join_as_name
+				join_as_name = fmt.Sprintf("tmp_%v", next_tref_index)
+				tref_map[keypath[0]] = join_as_name
+				next_tref_index++
+
+				/* Compute the JOIN statement for this table reference */
+				join_statement :=
+					fmt.Sprintf("LEFT JOIN test_report_summaries AS %v ON "+
+						"test_reports.id = %v.reportrecordid and %v.stagename='%v'",
+						join_as_name, join_as_name, join_as_name, keypath[0])
+
+				joins = append(joins, join_statement)
 				log.Printf("NEW: %v-->%v", keypath[0], join_as_name)
-				next++
-				joins = append(joins, fmt.Sprintf("LEFT JOIN test_report_summaries AS %v ON "+
-					"test_reports.id = %v.reportrecordid and %v.stagename='%v'",
-					join_as_name, join_as_name, join_as_name, keypath[0]))
 			} else {
 				log.Printf("OLD: %v-->%v", keypath[0], join_as_name)
 			}
 
-			str := ""
-			str = join_as_name + ".summaryjson"
+			/* Compute the postgres JSON path-like expression for this
+			 * key
+			 */
+			str := join_as_name + ".summaryjson"
 			for _, p_element := range keypath[1:] {
 				str += "->" + "'" + p_element + "'"
 			}
@@ -163,32 +178,29 @@ func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]
 
 	log.Printf("QUERY: %v", query)
 
-	/* ctually do the query */
+	/* Actually do the query */
 	rows, err := c.Conn.Query(query)
 
 	if err != nil {
 		panic(err)
 	}
 
-	/* Now collect the results. We return an array of maps. Each map associates
-	 * the specific keys from the key array with some value.
+	/* Now collect the results. We return an array of maps. Each map
+	 * associates the specific keys from the key array with some value.
 	 */
 	results := make([]map[string]interface{}, 0, 0)
 	for rows.Next() {
 
-		/* For now, we store all values in strings*/
+		/* the Scan function wants an array of pointers to interfaces
+		 * and it will unpack data into that array and set the type
+		 * decently */
 		ifaces := make([]interface{}, len(keys))
-
-		/* Make a set of interfaces that point to the strings that we just allocated.
-		 * We do this because scan only knows how to scan into interfaces that are pointers
-		 * to objects.
-		 */
-		x1 := make([]interface{}, len(keys))
+		iface_ptrs := make([]interface{}, len(keys))
 		for i := 0; i < len(keys); i++ {
-			x1[i] = &ifaces[i]
+			iface_ptrs[i] = &ifaces[i]
 		}
 
-		err = rows.Scan(x1...)
+		err = rows.Scan(iface_ptrs...)
 		if err != nil {
 			panic(err)
 		}
@@ -206,6 +218,12 @@ func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]
 	return results
 }
 
+/*
+ * Fix data type for stuff from the SQL Scan function.
+ * JSON numbers are not automatically converted to float64 so we convert
+ * anything that looks like a number to a float64. We also convert any
+ * byte arrays to strings.
+ */
 func FixType(in interface{}) interface{} {
 	switch in.(type) {
 	case []byte:
@@ -221,11 +239,11 @@ func FixType(in interface{}) interface{} {
 }
 
 /*
- * Grab all of the records from tast_reports and interpolate them into an
- * array of ReportRecord structures. Like the Insert function, this dynamically
- * inspects the type of the test_reports object.
- * TODO: With a bit of hacking, we can make this more generic such that it doesn't
- * have to explicitly reference the ReportRecord type.
+ * Grab all of the records from tast_reports and interpolate them into an array
+ * of ReportRecord structures. Like the Insert function, this dynamically
+ * inspects the type of the test_reports object.  TODO: With a bit of hacking,
+ * we can make this more generic such that it doesn't have to explicitly
+ * reference the ReportRecord type.
  */
 func (c *CoreConnection) GrabRecords(where string) ([]ReportRecord, error) {
 
@@ -266,22 +284,24 @@ func (c *CoreConnection) GrabRecords(where string) ([]ReportRecord, error) {
 /*
  * Unpack a single row into rr. The row must have been selected using the
  * results from ComputeSelectFields on the same type as rr. rr must
- * secretely be a pointer to that type of struct.
+ * secretly be a pointer to that type of struct.
  */
 func UnpackRow(row *sql.Rows, rr interface{}) error {
 
 	val := reflect.ValueOf(rr)
 	val = reflect.Indirect(val)
 
-	//t := val.Type();
+	/* Build an array of interfaces where each interface is
+	 * a pointer to the correspdoning field of rr
+	 */
 	ifaces := make([]interface{}, val.NumField())
-
 	for i := 0; i < val.NumField(); i++ {
-		//	log.Printf("VT: 1:%v 2:%v", val, val.Field(i).Value());
-
-		//structfield := t.Field(i);
 		ifaces[i] = val.Field(i).Addr().Interface()
 	}
+
+	/* Scan the row and let the SQL driver perform type
+	 * conversion
+	 */
 	err := row.Scan(ifaces...)
 	if err != nil {
 		log.Printf("ERROR: %v", err)
