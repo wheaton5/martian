@@ -58,11 +58,20 @@ func (c *CoreConnection) InsertRecord(table string, r interface{}) (int, error) 
 	/* Iterate over every field in |r| and append its name into keys, its value in the values, and $i into
 	 * interpolator.
 	 */
+	next := 0
 	for i := 0; i < val.NumField(); i++ {
 		sf := t.Field(i)
+		tag := sf.Tag.Get("sql")
+
+		/* Don't set read-only fields. */
+		if tag == "RO" {
+			continue
+		}
+
 		keys = append(keys, sf.Name)
 		values = append(values, val.Field(i).Interface())
-		interpolator = append(interpolator, fmt.Sprintf("$%v", i+1))
+		interpolator = append(interpolator, fmt.Sprintf("$%v", next+1))
+		next++
 	}
 
 	/* Format the query string */

@@ -10,7 +10,10 @@ import (
 func main() {
 	c := sere2lib.Setup()
 
-	c.GrabRecords("");
+	r, _ := c.GrabRecords("");
+
+	log.Printf("STUFF: %v", r);
+
 
 	r1 := c.JSONExtract2("", []string{
 		"SHA",

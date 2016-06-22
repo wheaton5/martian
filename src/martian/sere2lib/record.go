@@ -5,6 +5,7 @@ import (
 )
 
 type ReportRecord struct {
+	ID         int `sql:"RO"`
 	SHA        string
 	FinishDate time.Time
 	Branch     string
@@ -17,6 +18,7 @@ type ReportRecord struct {
 }
 
 type ReportSummaryFile struct {
+	ID             int `sql:"RO"`
 	ReportRecordId int
 	SummaryJSON    string
 	StageName      string

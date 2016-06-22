@@ -102,7 +102,7 @@ func CheckinSummaries(db *CoreConnection, test_report_id int, pipestance_path st
 			if json.Unmarshal(contents, &x) != nil {
 				log.Printf("file %v is not JSON!!!", path)
 			} else {
-				r := ReportSummaryFile{test_report_id, string(contents), stage}
+				r := ReportSummaryFile{0, test_report_id, string(contents), stage}
 				_, err = db.InsertRecord("test_report_summaries", r)
 				if err != nil {
 					panic("Keep calm and carry on")
@@ -125,7 +125,7 @@ func CheckinOne(db *CoreConnection, test_report_id int, path string, name string
 		panic("NOT JSON")
 	}
 
-	report := ReportSummaryFile{test_report_id, string(contents), name}
+	report := ReportSummaryFile{0, test_report_id, string(contents), name}
 
 	_, err = db.InsertRecord("test_report_summaries", report)
 	if err != nil {
