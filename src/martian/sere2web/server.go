@@ -50,11 +50,9 @@ func SetupServer(port int, db *sere2lib.CoreConnection, webbase string) {
 	/* API endpoints to do useful things */
 	m.Get("/api/slice", s2s.Slice)
 
-	m.Get("/api/xyplot", s2s.XYPlot)
+	m.Get("/api/plot", s2s.Plot)
 
 	m.Get("/api/compare", s2s.Compare)
-
-	m.Get("/api/list", s2s.List)
 
 	/* Start it up! */
 	m.Run()
@@ -85,10 +83,12 @@ func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(j))
 }
 
-func (s *Sere2Server) XYPlot(w http.ResponseWriter, r *http.Request) {
+func (s *Sere2Server) Plot(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
 
-	plot := s.DB.XYPresenter(params.Get("where"), params.Get("x"), params.Get("y"))
+	variables := strings.Split(params.Get("columns"), ",");
+
+	plot := s.DB.GenericPresentor(params.Get("where"), variables)
 
 	js, err := json.Marshal(plot)
 
@@ -127,16 +127,3 @@ func (s *Sere2Server) Compare(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s * Sere2Server) List(w http.ResponseWriter, r *http.Request) {
-
-
-	plot := s.DB.FieldsPresenter("", []string{"test_reports.ID", "FinishDate", "SHA", "SampleId", "Project", "/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased"})
-	
-	js, err := json.Marshal(plot)
-
-	if (err != nil) {
-		panic(err);
-	}
-	w.Write(js);
-
-}

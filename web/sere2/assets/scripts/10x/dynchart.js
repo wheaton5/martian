@@ -3,18 +3,40 @@
 "use strict";
 
 var global_chart;
+var global_table;
 
 function main() {
 	console.log("HELLO WORLD"); 
-	google.charts.load('current', {'packages':['corechart']});
+	google.charts.load('current', {'packages':['corechart', 'table']});
 	google.charts.setOnLoadCallback(function() {
 
-		global_chart= new google.visualization.LineChart(document.getElementById('chart1'));
+		if (document.getElementById('chart1')){
+			global_chart= new google.visualization.LineChart(document.getElementById('chart1'));
+		}
+		if (document.getElementById('table1')){
+			global_table = new google.visualization.Table(document.getElementById('table1'));
+		}
+
 	});
 
 
 }
 
+function table_update() {
+
+	var url = "/api/plot?where=&columns=test_reports.id,SHA,userid,finishdate,sampleid"
+
+	$.getJSON(url, function(data) {
+		console.log(data);
+		var gdata = google.visualization.arrayToDataTable(data.ChartData);
+		var options = {};
+		global_table.draw(gdata, options)
+
+
+	})
+
+
+}
 function chart_update() {
 	var x = document.getElementById("chartx");
 	var y = document.getElementById("charty");
@@ -25,7 +47,7 @@ function chart_update() {
 	console.log(y);
 	console.log(where);
 
-	var url = "/api/xyplot?where="+encodeURIComponent(where.value)+"&x=" + encodeURIComponent(x.value) + "&y=" +
+	var url = "/api/plot?where="+encodeURIComponent(where.value)+"&columns=" + encodeURIComponent(x.value) + "," +
 		encodeURIComponent(y.value);
 
 	console.log(url);

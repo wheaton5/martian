@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"strconv"
 )
 
 type MetricDef struct {
@@ -157,10 +156,10 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 		var mr MetricResult
 		mr.Def = (m.Metrics[one_metric])
 
-		newfloat, ok1 := strconv.ParseFloat(newval.(string), 64)
-		basefloat, ok2 := strconv.ParseFloat(baseval.(string), 64)
+		newfloat, ok1 := newval.(float64)
+		basefloat, ok2 := baseval.(float64)
 
-		if ok1 == nil && ok2 == nil {
+		if ok1 && ok2 {
 
 			mr.Diff = CheckDiff((m.Metrics[one_metric]), newfloat, basefloat)
 			mr.BaseVal = basefloat

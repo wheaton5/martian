@@ -12,6 +12,7 @@ import (
 	_ "github.com/lib/pq"
 	"log"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -134,7 +135,7 @@ func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]
 				names_map[keypath[0]] = join_as_name
 				log.Printf("NEW: %v-->%v", keypath[0], join_as_name)
 				next++
-				joins = append(joins, fmt.Sprintf("JOIN test_report_summaries AS %v ON "+
+				joins = append(joins, fmt.Sprintf("LEFT JOIN test_report_summaries AS %v ON "+
 					"test_reports.id = %v.reportrecordid and %v.stagename='%v'",
 					join_as_name, join_as_name, join_as_name, keypath[0]))
 			} else {
@@ -208,63 +209,15 @@ func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]
 func FixType(in interface{}) interface{} {
 	switch in.(type) {
 	case []byte:
-			return string(in.([]byte))
+			f, err := strconv.ParseFloat(string(in.([]byte)), 64);
+			if (err == nil) {
+				return f;
+			} else {
+				return string(in.([]byte))
+			}
 	default:
 		return in;
 	}
-}
-
-
-func (c *CoreConnection) JSONExtract(table string, where string, keys []string) []map[string]interface{} {
-
-	columns := make([]string, 0, 0)
-
-	for _, path := range keys {
-		pa := strings.Split(path, "/")
-		str := ""
-		str += pa[0]
-
-		for _, p_element := range pa[1:] {
-			str += "->" + "'" + p_element + "'"
-		}
-		columns = append(columns, str)
-	}
-
-	query := "SELECT " + strings.Join(columns, ",") + " FROM " + table
-	if where != "" {
-		query = query + " WHERE " + where
-	}
-
-	log.Printf("QUERY: %v", query)
-	rows, err := c.Conn.Query(query)
-
-	if err != nil {
-		panic(err)
-	}
-
-	results := make([]map[string]interface{}, 0, 0)
-	for rows.Next() {
-		ifaces := make([]string, len(keys))
-		x1 := make([]interface{}, len(keys))
-		for i := 0; i < len(keys); i++ {
-			x1[i] = &ifaces[i]
-		}
-
-		err = rows.Scan(x1...)
-		if err != nil {
-			panic(err)
-		}
-
-		rowmap := make(map[string]interface{})
-
-		for i := 0; i < len(keys); i++ {
-			rowmap[keys[i]] = ifaces[i]
-		}
-
-		results = append(results, rowmap)
-	}
-
-	return results
 }
 
 /*
