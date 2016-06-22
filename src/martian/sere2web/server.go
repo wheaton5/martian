@@ -54,6 +54,8 @@ func SetupServer(port int, db *sere2lib.CoreConnection, webbase string) {
 
 	m.Get("/api/compare", s2s.Compare)
 
+	m.Get("/api/list", s2s.List)
+
 	/* Start it up! */
 	m.Run()
 }
@@ -122,5 +124,19 @@ func (s *Sere2Server) Compare(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(js)
+
+}
+
+func (s * Sere2Server) List(w http.ResponseWriter, r *http.Request) {
+
+
+	plot := s.DB.FieldsPresenter("", []string{"test_reports.ID", "FinishDate", "SHA", "SampleId", "Project", "/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased"})
+	
+	js, err := json.Marshal(plot)
+
+	if (err != nil) {
+		panic(err);
+	}
+	w.Write(js);
 
 }

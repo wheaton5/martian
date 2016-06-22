@@ -36,6 +36,15 @@ func (c *CoreConnection) XYPresenter(where string, x string, y string) *Plot {
 
 }
 
+func (c * CoreConnection) FieldsPresenter(where string, fields[]string) *Plot{
+
+	data := c.JSONExtract2(where, fields);
+
+	ChartData := RotateN(data, fields);
+
+	return &Plot{"A plot", ChartData}
+}
+
 func RotateOld(src []map[string]interface{}, x string, y string) ([]interface{}, []interface{}) {
 
 	xa := make([]interface{}, len(src))
@@ -77,3 +86,25 @@ func Rotate2(src []map[string]interface{}, x string, y string) [][]interface{} {
 
 	return res
 }
+
+func RotateN(src []map[string]interface{}, columns[]string) [][]interface{} {
+
+	res := make([][]interface{}, len(src)+1);
+
+	res[0] = make([]interface{}, len(columns));
+
+	for i, c := range(columns) {
+		res[0][i] = c;
+	}
+
+	for i, datum := range(src) {
+		newrow := make([]interface{}, len(columns));
+		for k, c := range(columns) {
+			newrow[k] = datum[c];
+		}
+		res[i+1] = newrow;
+	}
+	return res;
+}
+
+

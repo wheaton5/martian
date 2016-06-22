@@ -176,7 +176,7 @@ func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]
 	for rows.Next() {
 
 		/* For now, we store all values in strings*/
-		ifaces := make([]string, len(keys))
+		ifaces := make([]interface{}, len(keys))
 
 		/* Make a set of interfaces that point to the strings that we just allocated.
 		 * We do this because scan only knows how to scan into interfaces that are pointers
@@ -196,7 +196,7 @@ func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]
 
 		/* Copy the results into an output map */
 		for i := 0; i < len(keys); i++ {
-			rowmap[keys[i]] = ifaces[i]
+			rowmap[keys[i]] = FixType(ifaces[i])
 		}
 
 		results = append(results, rowmap)
@@ -204,6 +204,16 @@ func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]
 
 	return results
 }
+
+func FixType(in interface{}) interface{} {
+	switch in.(type) {
+	case []byte:
+			return string(in.([]byte))
+	default:
+		return in;
+	}
+}
+
 
 func (c *CoreConnection) JSONExtract(table string, where string, keys []string) []map[string]interface{} {
 
