@@ -27,7 +27,7 @@ func Setup() *CoreConnection {
 	conn := new(CoreConnection)
 
 	/* FIXME: hard coded IP address and password :( */
-	db, err := sql.Open("postgres", "postgres://x10user:v3rys3cr3t@52.39.198.116/sere2?sslmode=disable")
+	db, err := sql.Open("postgres", "postgres://x10user:v3rys3cr3t@52.39.198.116/sere3?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
@@ -68,8 +68,8 @@ func (c *CoreConnection) InsertRecord(table string, r interface{}) (int, error) 
 	/* Format the query string */
 	query := "INSERT INTO " + table + " (" + strings.Join(keys, ",") + ") VALUES (" + strings.Join(interpolator, ",") + ") RETURNING ID"
 
-	log.Printf("Q: %v", query)
-	log.Print("V: %v", values)
+	//log.Printf("Q: %v", query)
+	//log.Print("V: %v", values)
 
 	result := c.Conn.QueryRow(query, values...)
 

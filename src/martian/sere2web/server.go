@@ -7,16 +7,15 @@
 package sere2web
 
 import (
+	"encoding/json"
 	"github.com/go-martini/martini"
-	"strings"
+	"github.com/joker/jade"
+	"io/ioutil"
 	"log"
 	"martian/sere2lib"
 	"net/http"
-	"github.com/joker/jade"
-	"io/ioutil"
-
-	"encoding/json"
-
+	"strconv"
+	"strings"
 )
 
 type Sere2Server struct {
@@ -51,7 +50,9 @@ func SetupServer(port int, db *sere2lib.CoreConnection, webbase string) {
 	/* API endpoints to do useful things */
 	m.Get("/api/slice", s2s.Slice)
 
-	m.Get("/api/xyplot", s2s.XYPlot);
+	m.Get("/api/xyplot", s2s.XYPlot)
+
+	m.Get("/api/compare", s2s.Compare)
 
 	/* Start it up! */
 	m.Run()
@@ -63,40 +64,63 @@ func (s *Sere2Server) vv(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
-	psplit := strings.Split(r.URL.Path, "/");
+	psplit := strings.Split(r.URL.Path, "/")
 
-	viewfile := psplit[len(psplit)-1];
+	viewfile := psplit[len(psplit)-1]
 
-	buf, err := ioutil.ReadFile(s.WebBase + "/views/" + viewfile);
+	buf, err := ioutil.ReadFile(s.WebBase + "/views/" + viewfile)
 
-	if (err != nil) {
-		panic(err);
+	if err != nil {
+		panic(err)
 	}
-	
-	j, err := jade.Parse("jade_tp", string(buf));
 
-	if (err != nil) {
-		panic(err);
+	j, err := jade.Parse("jade_tp", string(buf))
+
+	if err != nil {
+		panic(err)
 	}
-	
-	w.Write([]byte(j));
+
+	w.Write([]byte(j))
 }
 
-func (s * Sere2Server) XYPlot(w http.ResponseWriter, r * http.Request) {
-	params := r.URL.Query();
-	
-	plot := s.DB.XYPresenter(params.Get("where"), params.Get("x"), params.Get("y"));
+func (s *Sere2Server) XYPlot(w http.ResponseWriter, r *http.Request) {
+	params := r.URL.Query()
 
-	js, err := json.Marshal(plot);
+	plot := s.DB.XYPresenter(params.Get("where"), params.Get("x"), params.Get("y"))
 
-	if (err != nil) {
-		panic(err);
+	js, err := json.Marshal(plot)
+
+	if err != nil {
+		panic(err)
 	}
 
-	w.Write(js);
+	w.Write(js)
 }
-
 
 func (s *Sere2Server) Slice(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Goodbye!"))
+}
+
+func (s *Sere2Server) Compare(w http.ResponseWriter, r *http.Request) {
+
+	params := r.URL.Query()
+	id1s := params.Get("base")
+	id2s := params.Get("new")
+	id3 := params.Get("metrics_def")
+
+	id1, err := strconv.Atoi(id1s)
+	id2, err := strconv.Atoi(id2s)
+
+	m := sere2lib.LoadMetricsDef(s.WebBase + "/metrics/" + id3)
+
+	res := sere2lib.Compare2(s.DB, m, id1, id2)
+
+	js, err := json.Marshal(res)
+
+	if err != nil {
+		panic(err)
+	}
+
+	w.Write(js)
+
 }

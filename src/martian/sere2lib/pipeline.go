@@ -3,12 +3,12 @@ package sere2lib
 
 import (
 	"encoding/json"
-
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type ProjectInfo struct {
@@ -111,4 +111,36 @@ func CheckinSummaries(db *CoreConnection, test_report_id int, pipestance_path st
 		}
 		return nil
 	})
+}
+
+func CheckinOne(db *CoreConnection, test_report_id int, path string, name string) error {
+	contents, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		panic(err)
+	}
+
+	var x interface{}
+	if json.Unmarshal(contents, &x) != nil {
+		panic("NOT JSON")
+	}
+
+	report := ReportSummaryFile{test_report_id, string(contents), name}
+
+	_, err = db.InsertRecord("test_report_summaries", report)
+	if err != nil {
+		panic(err)
+	}
+	return nil
+}
+
+func GetPipestanceDate(path string) time.Time {
+
+	s, err := os.Stat(path + "/_finalstate")
+
+	if err != nil {
+		panic(err)
+	}
+
+	return s.ModTime()
 }

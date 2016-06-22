@@ -1,14 +1,19 @@
 package sere2lib
 
+import (
+	"time"
+)
+
 type ReportRecord struct {
-	SHA      string
-	Branch   string
-	Comments string
-	SampleId int
-	CellLine string
-	TagsJSON string
-	Project  string
-	UserId   string
+	SHA        string
+	FinishDate time.Time
+	Branch     string
+	Comments   string
+	SampleId   int
+	CellLine   string
+	TagsJSON   string
+	Project    string
+	UserId     string
 }
 
 type ReportSummaryFile struct {

@@ -12,9 +12,9 @@ import (
 
 var flag_pipestance_path = flag.String("path", "", "path to pipestance")
 
-func LookupCallInfo(basepath string) int {
+func LookupCallInfo(basepath string) (int, string) {
 
-	_, _, ast, err := core.Compile(basepath+"_mrosource", []string{}, false)
+	_, _, ast, err := core.Compile(basepath+"/_mrosource", []string{}, false)
 	if err != nil {
 		panic(err)
 	}
@@ -27,7 +27,13 @@ func LookupCallInfo(basepath string) int {
 	if err != nil {
 		panic(err)
 	}
-	return res
+
+	d := core.SearchPipestanceParams(ast, "sample_desc")
+	if d == nil {
+		panic("WTF3");
+	}
+
+	return res, d.(string)
 }
 
 func main() {
@@ -54,10 +60,11 @@ func main() {
 
 	rr.SHA = version
 	rr.Branch = version
-	rr.SampleId = LookupCallInfo(*flag_pipestance_path)
+	rr.SampleId, rr.Comments = LookupCallInfo(*flag_pipestance_path)
 	rr.CellLine = "blah"
 	rr.Project = project.Name
 	rr.UserId = os.Getenv("USER")
+	rr.FinishDate = sere2lib.GetPipestanceDate(*flag_pipestance_path);
 
 	/*
 	jsondata, err := ioutil.ReadFile(*flag_pipestance_path + "/" + project.SummaryJSONPath)
@@ -67,7 +74,6 @@ func main() {
 	*/
 
 	//rr.SummaryJSON = string(jsondata)
-	rr.Comments = "{}"
 	rr.TagsJSON= "{}"
 	id, err :=c.InsertRecord("test_reports", rr)
 	if (err != nil) {
@@ -75,4 +81,5 @@ func main() {
 	}
 
 	sere2lib.CheckinSummaries(c, id, *flag_pipestance_path);
+	sere2lib.CheckinOne(c, id, *flag_pipestance_path + "/_perf", "_perf");
 }
