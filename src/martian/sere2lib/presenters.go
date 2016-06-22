@@ -8,42 +8,38 @@ package sere2lib
  * to produce some part of the display.
  */
 
-import (
-)
+import ()
 
 type Plot struct {
 	Name      string
 	ChartData [][]interface{}
 }
 
-func (c * CoreConnection) GenericPresentor(where string, fields[]string) *Plot{
+func (c *CoreConnection) GenericPresentor(where string, fields []string) *Plot {
 
-	data := c.JSONExtract2(where, fields);
+	data := c.JSONExtract2(where, fields)
 
-	ChartData := RotateN(data, fields);
+	ChartData := RotateN(data, fields)
 
 	return &Plot{"A plot", ChartData}
 }
 
+func RotateN(src []map[string]interface{}, columns []string) [][]interface{} {
 
-func RotateN(src []map[string]interface{}, columns[]string) [][]interface{} {
+	res := make([][]interface{}, len(src)+1)
 
-	res := make([][]interface{}, len(src)+1);
+	res[0] = make([]interface{}, len(columns))
 
-	res[0] = make([]interface{}, len(columns));
-
-	for i, c := range(columns) {
-		res[0][i] = c;
+	for i, c := range columns {
+		res[0][i] = c
 	}
 
-	for i, datum := range(src) {
-		newrow := make([]interface{}, len(columns));
-		for k, c := range(columns) {
-			newrow[k] = datum[c];
+	for i, datum := range src {
+		newrow := make([]interface{}, len(columns))
+		for k, c := range columns {
+			newrow[k] = datum[c]
 		}
-		res[i+1] = newrow;
+		res[i+1] = newrow
 	}
-	return res;
+	return res
 }
-
-

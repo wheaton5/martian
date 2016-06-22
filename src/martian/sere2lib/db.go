@@ -209,14 +209,14 @@ func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]
 func FixType(in interface{}) interface{} {
 	switch in.(type) {
 	case []byte:
-			f, err := strconv.ParseFloat(string(in.([]byte)), 64);
-			if (err == nil) {
-				return f;
-			} else {
-				return string(in.([]byte))
-			}
+		f, err := strconv.ParseFloat(string(in.([]byte)), 64)
+		if err == nil {
+			return f
+		} else {
+			return string(in.([]byte))
+		}
 	default:
-		return in;
+		return in
 	}
 }
 
