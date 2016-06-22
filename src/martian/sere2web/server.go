@@ -88,7 +88,7 @@ func (s *Sere2Server) Plot(w http.ResponseWriter, r *http.Request) {
 
 	variables := strings.Split(params.Get("columns"), ",");
 
-	plot := s.DB.GenericPresentor(params.Get("where"), variables)
+	plot := s.DB.GenericPresentor(sere2lib.NewStringWhere(params.Get("where")), variables)
 
 	js, err := json.Marshal(plot)
 

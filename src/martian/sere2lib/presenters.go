@@ -15,7 +15,7 @@ type Plot struct {
 	ChartData [][]interface{}
 }
 
-func (c *CoreConnection) GenericPresentor(where string, fields []string) *Plot {
+func (c *CoreConnection) GenericPresentor(where WhereAble, fields []string) *Plot {
 
 	data := c.JSONExtract2(where, fields)
 

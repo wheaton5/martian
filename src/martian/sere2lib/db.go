@@ -116,7 +116,7 @@ func (c *CoreConnection) InsertRecord(table string, record interface{}) (int, er
  * "universal_fract_snps_phased" in the SUMMARIZE_REPORTS_PD/summary.json
  * directory for every test with the sample id of 12345.
  */
-func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]interface{} {
+func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string) []map[string]interface{} {
 	joins := []string{}
 	selects := []string{}
 
@@ -172,9 +172,7 @@ func (c *CoreConnection) JSONExtract2(where string, keys []string) []map[string]
 	query := "SELECT " + strings.Join(selects, ",") + " FROM test_reports " +
 		strings.Join(joins, " ")
 
-	if where != "" {
-		query += " WHERE " + where
-	}
+	query += RenderWhereClause(where)
 
 	log.Printf("QUERY: %v", query)
 
@@ -245,7 +243,7 @@ func FixType(in interface{}) interface{} {
  * we can make this more generic such that it doesn't have to explicitly
  * reference the ReportRecord type.
  */
-func (c *CoreConnection) GrabRecords(where string) ([]ReportRecord, error) {
+func (c *CoreConnection) GrabRecords(where WhereAble) ([]ReportRecord, error) {
 
 	/* Compute the field names that we wish to extract */
 	fieldnames := ComputeSelectFields(ReportRecord{})
@@ -253,9 +251,7 @@ func (c *CoreConnection) GrabRecords(where string) ([]ReportRecord, error) {
 
 	/* Compute the select query */
 	query := "SELECT " + strings.Join(fieldnames, ",") + " FROM test_reports"
-	if where != "" {
-		query = query + " WHERE " + where
-	}
+	query += RenderWhereClause(where)
 
 	log.Printf("QUERY: %v", query)
 	rows, err := c.Conn.Query(query)
