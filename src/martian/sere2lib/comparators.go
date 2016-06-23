@@ -171,9 +171,11 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 	/* Grab the metric for each pipestance */
 	log.Printf("Comparing %v and %v", base, newguy)
 	basedata := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", base)),
-		list_of_metrics)
+		list_of_metrics,
+		"")
 	newdata := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", newguy)),
-		list_of_metrics)
+		list_of_metrics,
+		"")
 
 	results := make([]MetricResult, 0, 0)
 
@@ -207,4 +209,3 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 	}
 	return results
 }
-

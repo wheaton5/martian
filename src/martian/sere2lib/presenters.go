@@ -22,7 +22,7 @@ type Plot struct {
  */
 func (c *CoreConnection) GenericChartPresenter(where WhereAble, fields []string) *Plot {
 
-	data := c.JSONExtract2(where, fields)
+	data := c.JSONExtract2(where, fields, "-finishdate")
 
 	ChartData := RotateN(data, fields)
 
@@ -32,18 +32,16 @@ func (c *CoreConnection) GenericChartPresenter(where WhereAble, fields []string)
 /*
  * Produce data suitable for plotting in a table that compares two samples.
  */
-func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, metrics_def_path string) *Plot{
-	
-	mets := LoadMetricsDef(metrics_def_path);
+func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, metrics_def_path string) *Plot {
 
-	comps := Compare2(c, mets, baseid, newid);
+	mets := LoadMetricsDef(metrics_def_path)
+
+	comps := Compare2(c, mets, baseid, newid)
 
 	data := RotateStructs(comps)
 
-	return &Plot{"A chart", data};
+	return &Plot{"A chart", data}
 }
-
-
 
 /*
  * This function converts from an array-of-maps to an array-of-arrays.
@@ -73,7 +71,6 @@ func RotateN(src []map[string]interface{}, columns []string) [][]interface{} {
 	}
 	return res
 }
-
 
 /*
  * Convert a single struct to an array

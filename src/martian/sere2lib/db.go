@@ -116,7 +116,7 @@ func (c *CoreConnection) InsertRecord(table string, record interface{}) (int, er
  * "universal_fract_snps_phased" in the SUMMARIZE_REPORTS_PD/summary.json
  * directory for every test with the sample id of 12345.
  */
-func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string) []map[string]interface{} {
+func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey string) []map[string]interface{} {
 	joins := []string{}
 	selects := []string{}
 
@@ -128,6 +128,7 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string) []map[stri
 	 * clause and every key adds exactly one select expression.
 	 */
 	for _, key := range keys {
+
 		if key[0] == '/' {
 			/* key is a JSON path */
 			keypath := strings.Split(key[1:], "/")
@@ -173,6 +174,27 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string) []map[stri
 		strings.Join(joins, " ")
 
 	query += RenderWhereClause(where)
+
+	/*
+	 * Parse the sort key.
+	 * we'd like to be able to enable arbitrary JSON paths here but its tricky.
+	 * So for now we only allow references to the test_reports table which
+	 * handles most of the cases anyways.
+	 */
+	if sortkey != "" {
+		dir := ""
+		key_to_use := sortkey
+		if sortkey[0] == '+' {
+			dir = "ASC"
+			key_to_use = sortkey[1:]
+		}
+
+		if sortkey[0] == '-' {
+			dir = "DESC"
+			key_to_use = sortkey[1:]
+		}
+		query += " ORDER BY " + key_to_use + " " + dir
+	}
 
 	log.Printf("QUERY: %v", query)
 
@@ -226,7 +248,7 @@ func FixType(in interface{}) interface{} {
 	switch in.(type) {
 	case []byte:
 		f, err := strconv.ParseFloat(string(in.([]byte)), 64)
-		if err == nil && f==f {
+		if err == nil && f == f {
 			return f
 		} else {
 			return string(in.([]byte))
