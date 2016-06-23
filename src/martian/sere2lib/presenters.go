@@ -97,7 +97,7 @@ func RotateStructs(record_array interface{}) [][]interface{} {
 	val := reflect.ValueOf(record_array)
 	ma := make([][]interface{}, 0, val.Len()+1)
 
-	keys := ComputeSelectFields(val.Index(0).Interface())
+	keys := FieldsOfStruct(val.Index(0).Interface())
 
 	firstrow := make([]interface{}, len(keys))
 

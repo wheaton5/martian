@@ -259,20 +259,25 @@ func FixType(in interface{}) interface{} {
 }
 
 /*
- * Grab all of the records from tast_reports and interpolate them into an array
- * of ReportRecord structures. Like the Insert function, this dynamically
- * inspects the type of the test_reports object.  TODO: With a bit of hacking,
- * we can make this more generic such that it doesn't have to explicitly
- * reference the ReportRecord type.
+ * Grab if a bunch of records from SQL, subject to a WHERE clause.
+ * Table is the name of the table to extract records from.
+ *
+ * outtype is a template: a single instance of a struct that defiens the schema
+ * for the table.  We return an array of instances of that struct A typical use
+ * looks like
+ *
+ * out, err := GrabRecords(NewEmptyWhere(), "test_reports", ReportRecords{})
+ * my_array = out.([]ReportRecords)
+ *
  */
-func (c *CoreConnection) GrabRecords(where WhereAble) ([]ReportRecord, error) {
+
+func (c *CoreConnection) GrabRecords(where WhereAble, table string, outtype interface{}) (interface{}, error) {
 
 	/* Compute the field names that we wish to extract */
-	fieldnames := ComputeSelectFields(ReportRecord{})
-	out := make([]ReportRecord, 0, 0)
+	fieldnames := FieldsOfStruct(outtype)
 
 	/* Compute the select query */
-	query := "SELECT " + strings.Join(fieldnames, ",") + " FROM test_reports"
+	query := "SELECT " + strings.Join(fieldnames, ",") + " FROM " + table
 	query += RenderWhereClause(where)
 
 	log.Printf("QUERY: %v", query)
@@ -283,20 +288,23 @@ func (c *CoreConnection) GrabRecords(where WhereAble) ([]ReportRecord, error) {
 		return []ReportRecord{}, err
 	}
 
-	/* Iterate over each row and copy it into the out array. Note the
-	 * re-use of nextval and deep copy of nextval into the array.
-	 */
+	elem_type := reflect.ValueOf(outtype).Type()
+	out_array_t := reflect.SliceOf(elem_type)
+	out_array := reflect.MakeSlice(out_array_t, 0, 100)
+
+	index := 0
 	for rows.Next() {
-		var nextval ReportRecord
-		err = UnpackRow(rows, &nextval)
+		out_array = reflect.Append(out_array, reflect.Zero(elem_type))
+		val_elem := out_array.Index(index)
+		err := UnpackRow(rows, elem_type, val_elem)
+
 		if err != nil {
 			log.Printf("UNOHHHHHHH -- %v", err)
-			return out, err
+			return nil, err
 		}
-		log.Printf("GOT %v %v", nextval.SampleId, nextval.UserId)
-		out = append(out, nextval)
+		index++
 	}
-	return out, nil
+	return out_array.Interface(), nil
 }
 
 /*
@@ -304,15 +312,12 @@ func (c *CoreConnection) GrabRecords(where WhereAble) ([]ReportRecord, error) {
  * results from ComputeSelectFields on the same type as rr. rr must
  * secretly be a pointer to that type of struct.
  */
-func UnpackRow(row *sql.Rows, rr interface{}) error {
-
-	val := reflect.ValueOf(rr)
-	val = reflect.Indirect(val)
+func UnpackRow(row *sql.Rows, t reflect.Type, val reflect.Value) error {
 
 	/* Build an array of interfaces where each interface is
 	 * a pointer to the correspdoning field of rr
 	 */
-	ifaces := make([]interface{}, val.NumField())
+	ifaces := make([]interface{}, t.NumField())
 	for i := 0; i < val.NumField(); i++ {
 		ifaces[i] = val.Field(i).Addr().Interface()
 	}
@@ -332,7 +337,7 @@ func UnpackRow(row *sql.Rows, rr interface{}) error {
  * Return an array of all of the field names for a struct. Note that this traverses the
  * fields in the same order as UnpackRow does and that we rely on this fact.
  */
-func ComputeSelectFields(str interface{}) []string {
+func FieldsOfStruct(str interface{}) []string {
 	output := make([]string, 0, 0)
 	val := reflect.ValueOf(str)
 
