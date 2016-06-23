@@ -13,48 +13,67 @@ html
 		script(src="/assets/scripts/10x/dynchart.js")
 
 	body
-		div.container(style="width:1500px")
-			h2 Please select data to find
-			div(class="btn-group" role="group")
-				button(type="button" class="btn btn-default" onclick="pickwindow('plot')") Plot
-				button(type="button" class="btn btn-default" onclick="pickwindow('table')") Table
-				button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
-				button(type="button" class="btn btn-default" onclick="pickwindow('help')") Help
+		div.container(style="width:auto")
 			br
+			div.panel.panel-primary
+				div.panel-heading
+					h2.panel-title Please select a mode
+				div.panel-body
+					div(class="btn-group" role="group")
+						button(type="button" class="btn btn-default" onclick="pickwindow('plot')") Plot
+						button(type="button" class="btn btn-default" onclick="pickwindow('table')") Table
+						button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
+						button(type="button" class="btn btn-default" onclick="pickwindow('help')") Help
+					br
 			span Where (empty or a SQL where clause)
 			br
 			input#where(name="where" style="width:450px")
 
 			div#table
-				h2 table
-				div(class="btn-group" role="group")
-					button(type="button" class="btn btn-default" onclick="table_update('basic')") Basic  
-					button(type="button" class="btn btn-default" onclick="table_update('metrics')") Metrics
-				div#table1(style="width:1200px;height:500px")
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Table view
+					div.panel-body
+						div(class="btn-group" role="group")
+							button(type="button" class="btn btn-default" onclick="table_update('basic')") Basic  
+							button(type="button" class="btn btn-default" onclick="table_update('metrics')") Metrics
+						div#table1(style="width:1200px;height:500px")
 			div#compare
-				h2 comp
-				div#compare1(style="width:1200px; height:500px")
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Comparison view
+					div.panel-body
+						div#compare1(style="width:1200px; height:500px")
 			div#plot
-				h2 plot
-				form
-					span X
-					input#chartx(name="x" style="width:850px;" value="SHA")
-					br
-					span Y
-					input#charty(name="y" style="width:850px;")
-					br
-					br
-					button(type="button" class="btn btn-default" onclick="chart_update()") Go
-				div(style="float:right;")
-					h2 Metrics I know about
-					div#list1(style="width:600px;height:500px")
-				div#plot1(style="width:800px;height:500px")
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Plot view
+					div.panel-body
+						form
+							span X
+							input#chartx(name="x" style="width:850px;" value="SHA")
+							br
+							span Y
+							input#charty(name="y" style="width:850px;")
+							br
+							br
+							button(type="button" class="btn btn-default" onclick="chart_update()") Go
+						div(style="float:right;")
+							h2 Metrics I know about
+							div#list1(style="width:600px;height:500px")
+						div#plot1(style="width:800px;height:500px")
 			div#help
-				p
-					| Use the table view to see available datums for inspection. 
-					| Select two rows from the table view and click "compare" two
-					| compare two pipestances. 
-					| To plot a pipestance summary paremeter, select "plot" and select
-					| the metrics to plot on the X and Y axis. For example:
-					| X: SHA, y: /SUMMARIZE_REPORTS_PD/universal_N50_phase_block
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Halp!
+					div.panel-body
+						p
+							| Use the table view to see available datums for inspection. 
+							| Select two rows from the table view and click "compare" two
+							| compare two pipestances. 
+							| To plot a pipestance summary paremeter, select "plot" and select
+							| the metrics to plot on the X and Y axis. For example:
+							| X: SHA, y: /SUMMARIZE_REPORTS_PD/universal_N50_phase_block.
+							| You can use the 'where' field to force subselection. For example,
+							| "userid='dstaff'" or "sampleid=20486".
 				
