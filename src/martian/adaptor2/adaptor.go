@@ -38,7 +38,7 @@ func LookupCallInfo(basepath string) (int, string) {
 
 func main() {
 	c := sere2lib.Setup()
-	c.Dump()
+	//c.Dump()
 
 	var rr sere2lib.ReportRecord
 
