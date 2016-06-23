@@ -8,14 +8,16 @@ package sere2lib
  * to produce some part of the display.
  */
 
-import ()
+import (
+	"reflect"
+)
 
 type Plot struct {
 	Name      string
 	ChartData [][]interface{}
 }
 
-func (c *CoreConnection) GenericPresentor(where WhereAble, fields []string) *Plot {
+func (c *CoreConnection) GenericChartPresenter(where WhereAble, fields []string) *Plot {
 
 	data := c.JSONExtract2(where, fields)
 
@@ -23,6 +25,19 @@ func (c *CoreConnection) GenericPresentor(where WhereAble, fields []string) *Plo
 
 	return &Plot{"A plot", ChartData}
 }
+
+func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, metrics_def_path string) *Plot{
+	
+	mets := LoadMetricsDef(metrics_def_path);
+
+	comps := Compare2(c, mets, baseid, newid);
+
+	data := RotateStructs(comps)
+
+	return &Plot{"A chart", data};
+}
+
+
 
 /*
  * This function converts from an array-of-maps to an array-of-arrays.
@@ -51,4 +66,37 @@ func RotateN(src []map[string]interface{}, columns []string) [][]interface{} {
 		res[i+1] = newrow
 	}
 	return res
+}
+
+
+func RotateStruct(record interface{}) []interface{} {
+	val_of_r := reflect.ValueOf(record)
+	outmap := make([]interface{}, val_of_r.NumField())
+
+	for i := 0; i < val_of_r.NumField(); i++ {
+		outmap[i] = val_of_r.Field(i).Interface()
+	}
+	return outmap
+}
+
+func RotateStructs(record_array interface{}) [][]interface{} {
+
+	val := reflect.ValueOf(record_array)
+	ma := make([][]interface{}, 0, val.Len()+1)
+
+	keys := ComputeSelectFields(val.Index(0).Interface())
+
+	firstrow := make([]interface{}, len(keys))
+
+	for i, k := range keys {
+		firstrow[i] = k
+	}
+
+	ma = append(ma, firstrow)
+
+	for i := 0; i < val.Len(); i++ {
+		v_here := val.Index(i).Interface()
+		ma = append(ma, RotateStruct(v_here))
+	}
+	return ma
 }

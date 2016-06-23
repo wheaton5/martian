@@ -226,7 +226,7 @@ func FixType(in interface{}) interface{} {
 	switch in.(type) {
 	case []byte:
 		f, err := strconv.ParseFloat(string(in.([]byte)), 64)
-		if err == nil {
+		if err == nil && f==f {
 			return f
 		} else {
 			return string(in.([]byte))

@@ -88,7 +88,7 @@ func (s *Sere2Server) Plot(w http.ResponseWriter, r *http.Request) {
 
 	variables := strings.Split(params.Get("columns"), ",");
 
-	plot := s.DB.GenericPresentor(sere2lib.NewStringWhere(params.Get("where")), variables)
+	plot := s.DB.GenericChartPresenter(sere2lib.NewStringWhere(params.Get("where")), variables)
 
 	js, err := json.Marshal(plot)
 
@@ -113,11 +113,9 @@ func (s *Sere2Server) Compare(w http.ResponseWriter, r *http.Request) {
 	id1, err := strconv.Atoi(id1s)
 	id2, err := strconv.Atoi(id2s)
 
-	m := sere2lib.LoadMetricsDef(s.WebBase + "/metrics/" + id3)
+	res := s.DB.GenericComparePresenter(id1, id2, s.WebBase + "/metrics/" + id3);
 
-	res := sere2lib.Compare2(s.DB, m, id1, id2)
-
-	js, err := json.Marshal(sere2lib.RotateStructs(res))
+	js, err := json.Marshal(res)
 
 	if err != nil {
 		panic(err)

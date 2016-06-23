@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"reflect"
 )
 
 /*
@@ -42,8 +41,8 @@ type MetricsDef struct {
  */
 type MetricResult struct {
 	/* The old and new values */
-	BaseVal float64
-	NewVal  float64
+	BaseVal interface{}
+	NewVal  interface{}
 
 	/* OK is true iff both values were successfully extracted.*/
 	OK bool
@@ -191,12 +190,12 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 		/* We expect all values that we compare to be floats */
 		newfloat, ok1 := newval.(float64)
 		basefloat, ok2 := baseval.(float64)
+		mr.BaseVal = baseval
+		mr.NewVal = newval
 
 		if ok1 && ok2 {
 			/* If we got the data, then compare them */
 			mr.Diff = CheckDiff((m.Metrics[one_metric]), newfloat, basefloat)
-			mr.BaseVal = basefloat
-			mr.NewVal = newfloat
 			mr.OK = true
 		} else {
 			/* Something went wrong (missing metric? Not a float64?) */
@@ -209,34 +208,3 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 	return results
 }
 
-func RotateStruct(record interface{}) []interface{} {
-	val_of_r := reflect.ValueOf(record)
-	outmap := make([]interface{}, val_of_r.NumField())
-
-	for i := 0; i < val_of_r.NumField(); i++ {
-		outmap[i] = val_of_r.Field(i).Interface()
-	}
-	return outmap
-}
-
-func RotateStructs(record_array interface{}) [][]interface{} {
-
-	val := reflect.ValueOf(record_array)
-	ma := make([][]interface{}, 0, val.Len()+1)
-
-	keys := ComputeSelectFields(val.Index(0).Interface())
-
-	firstrow := make([]interface{}, len(keys))
-
-	for i, k := range keys {
-		firstrow[i] = k
-	}
-
-	ma = append(ma, firstrow)
-
-	for i := 0; i < val.Len(); i++ {
-		v_here := val.Index(i).Interface()
-		ma = append(ma, RotateStruct(v_here))
-	}
-	return ma
-}
