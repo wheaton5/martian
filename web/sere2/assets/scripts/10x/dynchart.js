@@ -22,6 +22,22 @@ function main() {
 
 }
 
+function compare_update() {
+	var url = "/api/compare?base=" + document.getElementById("idold").value +
+		"&new=" + document.getElementById("idnew").value +
+		"&metrics_def=met1.json"
+
+	$.getJSON(url, function(data) {
+		console.log(data);
+		var gdata = google.visualization.arrayToDataTable(data);
+		var options = {};
+		global_table.draw(gdata, options)
+
+
+	})
+
+
+}
 function table_update() {
 
 	var url = "/api/plot?where=&columns=test_reports.id,SHA,userid,finishdate,sampleid"

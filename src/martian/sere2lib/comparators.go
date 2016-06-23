@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"reflect"
 )
 
 /*
@@ -51,7 +52,10 @@ type MetricResult struct {
 	Diff bool
 
 	/* The definition of this metric */
-	Def *MetricDef
+	//Def *MetricDef
+
+	HumanName string
+	JSONPath  string
 }
 
 /*
@@ -180,7 +184,9 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 		baseval := newdata[0][one_metric]
 
 		var mr MetricResult
-		mr.Def = (m.Metrics[one_metric])
+		//mr.Def = (m.Metrics[one_metric])
+		mr.HumanName = m.Metrics[one_metric].HumanName
+		mr.JSONPath = m.Metrics[one_metric].JSONPath
 
 		/* We expect all values that we compare to be floats */
 		newfloat, ok1 := newval.(float64)
@@ -201,4 +207,36 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 		results = append(results, mr)
 	}
 	return results
+}
+
+func RotateStruct(record interface{}) []interface{} {
+	val_of_r := reflect.ValueOf(record)
+	outmap := make([]interface{}, val_of_r.NumField())
+
+	for i := 0; i < val_of_r.NumField(); i++ {
+		outmap[i] = val_of_r.Field(i).Interface()
+	}
+	return outmap
+}
+
+func RotateStructs(record_array interface{}) [][]interface{} {
+
+	val := reflect.ValueOf(record_array)
+	ma := make([][]interface{}, 0, val.Len()+1)
+
+	keys := ComputeSelectFields(val.Index(0).Interface())
+
+	firstrow := make([]interface{}, len(keys))
+
+	for i, k := range keys {
+		firstrow[i] = k
+	}
+
+	ma = append(ma, firstrow)
+
+	for i := 0; i < val.Len(); i++ {
+		v_here := val.Index(i).Interface()
+		ma = append(ma, RotateStruct(v_here))
+	}
+	return ma
 }

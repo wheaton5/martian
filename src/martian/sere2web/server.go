@@ -117,7 +117,7 @@ func (s *Sere2Server) Compare(w http.ResponseWriter, r *http.Request) {
 
 	res := sere2lib.Compare2(s.DB, m, id1, id2)
 
-	js, err := json.Marshal(res)
+	js, err := json.Marshal(sere2lib.RotateStructs(res))
 
 	if err != nil {
 		panic(err)
