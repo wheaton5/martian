@@ -2,38 +2,45 @@ doctype html
 
 html
 	head
+		link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous")
+
+		link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous")
+
+		script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous")
+
+		script(src="/assets/scripts/external/jquery-1.11.1.min.js")
 		script(src="https://www.gstatic.com/charts/loader.js")
 		script(src="/assets/scripts/10x/dynchart.js")
-		script(src="/assets/scripts/external/jquery-1.11.1.min.js")
 
 	body
-		h2 Please select data to find
-		span(onclick="pickwindow('plot')") Plot
-		span(onclick="pickwindow('table')") Table
-		span(onclick="pickwindow('compare')") Compare
+		div.container
+			h2 Please select data to find
+			div(class="btn-group" role="group")
+				button(type="button" class="btn btn-default" onclick="pickwindow('plot')") Plot
+				button(type="button" class="btn btn-default" onclick="pickwindow('table')") Table
+				button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
 
 
-		div#table
-			h2 table
-			div#table1(style="width:800px;height:500px")
-		div#compare
-			h2 comp
-			div#compare1(style="width:800px; height:500px")
-		h2 good
-		div#plot
-			h2 plot
-			form
-				span X
-				input#chartx(name="x" style="width:450px;")
-				br
-				span Y
-				input#charty(name="y" style="width:450px;")
-				br
-				span Where
-				input#chartwhere(name="where" style="width:450px")
-				br
-				div(onclick="chart_update()" style="border: solid black 1px; width:30px;" ) Go
-			div#plot1(style="width:800px;height:500px")
-		h2 	Thank you!
+			div#table
+				h2 table
+				div#table1(style="width:1200px;height:500px")
+			div#compare
+				h2 comp
+				div#compare1(style="width:1200px; height:500px")
+			div#plot
+				h2 plot
+				form
+					span X
+					input#chartx(name="x" style="width:450px;")
+					br
+					span Y
+					input#charty(name="y" style="width:450px;")
+					br
+					span Where
+					input#chartwhere(name="where" style="width:450px")
+					br
+					button(type="button" class="btn btn-default" onclick="chart_update()") Go
+				div#plot1(style="width:800px;height:500px")
+			h2 	Thank you!
 
-			
+				
