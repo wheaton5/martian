@@ -161,7 +161,16 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 			 */
 			str := join_as_name + ".summaryjson"
 			for _, p_element := range keypath[1:] {
-				str += "->" + "'" + p_element + "'"
+				_, ok := strconv.Atoi(p_element)
+
+				/* If p_element looks like an integer, write it as an
+				 * integer. Otherwise quote it as a string.
+				 */
+				if ok == nil {
+					str += "->" + p_element
+				} else {
+					str += "->" + "'" + p_element + "'"
+				}
 			}
 			selects = append(selects, str)
 		} else {
