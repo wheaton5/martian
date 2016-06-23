@@ -17,6 +17,9 @@ type Plot struct {
 	ChartData [][]interface{}
 }
 
+/*
+ * Produce data suitable for plotting in a table or chart.
+ */
 func (c *CoreConnection) GenericChartPresenter(where WhereAble, fields []string) *Plot {
 
 	data := c.JSONExtract2(where, fields)
@@ -26,6 +29,9 @@ func (c *CoreConnection) GenericChartPresenter(where WhereAble, fields []string)
 	return &Plot{"A plot", ChartData}
 }
 
+/*
+ * Produce data suitable for plotting in a table that compares two samples.
+ */
 func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, metrics_def_path string) *Plot{
 	
 	mets := LoadMetricsDef(metrics_def_path);
@@ -69,6 +75,9 @@ func RotateN(src []map[string]interface{}, columns []string) [][]interface{} {
 }
 
 
+/*
+ * Convert a single struct to an array
+ */
 func RotateStruct(record interface{}) []interface{} {
 	val_of_r := reflect.ValueOf(record)
 	outmap := make([]interface{}, val_of_r.NumField())
@@ -78,6 +87,13 @@ func RotateStruct(record interface{}) []interface{} {
 	}
 	return outmap
 }
+
+/*
+ * This converts an array of structs to an array of arrays similarly
+ * to RotateN.
+ * NOTE: This does the XXX WRONG XXX thing for pointers or nested
+ * structs.
+ */
 
 func RotateStructs(record_array interface{}) [][]interface{} {
 
