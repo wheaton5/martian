@@ -16,8 +16,7 @@
 			"Owner": "dstaff",
 			"AbsDiffAllow": 0.0000000001
 		},
-		"sampleid": {
-		},
+		"sampleid": {},
 		"SHA":{},
 		"finishdate":{},
 		"/SUMMARIZE_REPORTS_PD/universal_N50_phase_block": {},

@@ -1,0 +1,39 @@
+doctype html
+
+html
+	head
+		script(src="https://www.gstatic.com/charts/loader.js")
+		script(src="/assets/scripts/10x/dynchart.js")
+		script(src="/assets/scripts/external/jquery-1.11.1.min.js")
+
+	body
+		h2 Please select data to find
+		span(onclick="pickwindow('plot')") Plot
+		span(onclick="pickwindow('table')") Table
+		span(onclick="pickwindow('compare')") Compare
+
+
+		div#table
+			h2 table
+			div#table1(style="width:800px;height:500px")
+		div#compare
+			h2 comp
+			div#compare1(style="width:800px; height:500px")
+		h2 good
+		div#plot
+			h2 plot
+			form
+				span X
+				input#chartx(name="x" style="width:450px;")
+				br
+				span Y
+				input#charty(name="y" style="width:450px;")
+				br
+				span Where
+				input#chartwhere(name="where" style="width:450px")
+				br
+				div(onclick="chart_update()" style="border: solid black 1px; width:30px;" ) Go
+			div#plot1(style="width:800px;height:500px")
+		h2 	Thank you!
+
+			
