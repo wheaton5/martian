@@ -9,6 +9,7 @@ package sere2lib
  */
 
 import (
+	"fmt"
 	"reflect"
 )
 
@@ -37,6 +38,23 @@ func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, metrics_
 	mets := LoadMetricsDef(metrics_def_path)
 
 	comps := Compare2(c, mets, baseid, newid)
+
+	/*
+	 * This is a hack to render numbers on teh server-side for float-like data.
+	 * We do this to prevent obnoxious behavior for mixed-type columns in
+	 * google charts.
+	 */
+	for i := range comps {
+		f, ok := comps[i].BaseVal.(float64)
+		if ok {
+			comps[i].BaseVal = fmt.Sprintf("%.5f", f)
+		}
+
+		f, ok = comps[i].NewVal.(float64)
+		if ok {
+			comps[i].NewVal = fmt.Sprintf("%.5f", f)
+		}
+	}
 
 	data := RotateStructs(comps)
 
