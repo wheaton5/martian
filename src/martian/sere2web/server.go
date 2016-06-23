@@ -54,6 +54,11 @@ func SetupServer(port int, db *sere2lib.CoreConnection, webbase string) {
 
 	m.Get("/api/compare", s2s.Compare)
 
+	m.Get("/api/plotall", s2s.PlotAll);
+
+	m.Get("/api/list_metrics", s2s.ListMetrics)
+
+
 	/* Start it up! */
 	m.Run()
 }
@@ -81,6 +86,37 @@ func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(j))
+}
+
+func (s *Sere2Server) ListMetrics(w http.ResponseWriter, r * http.Request) {
+
+	params := r.URL.Query();
+
+	plot := s.DB.ListAllMetrics(s.WebBase + "/metrics/" + params.Get("metrics_def"));
+
+	js, err := json.Marshal(plot)
+
+	if err != nil {
+		panic(err)
+	}
+
+	w.Write(js)
+}
+
+func (s *Sere2Server) PlotAll(w http.ResponseWriter, r * http.Request) {
+
+	params := r.URL.Query();
+
+	plot := s.DB.PresentAllMetrics(sere2lib.NewStringWhere(params.Get("where")),
+		s.WebBase + "/metrics/" + params.Get("metrics_def"))
+
+	js, err := json.Marshal(plot)
+
+	if err != nil {
+		panic(err)
+	}
+
+	w.Write(js)
 }
 
 func (s *Sere2Server) Plot(w http.ResponseWriter, r *http.Request) {

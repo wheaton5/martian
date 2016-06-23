@@ -11,11 +11,57 @@ package sere2lib
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type Plot struct {
 	Name      string
 	ChartData [][]interface{}
+}
+
+func (c *CoreConnection) ListAllMetrics(metrics_path string) *Plot {
+	mets := LoadMetricsDef(metrics_path)
+
+	fields := make([][]interface{}, 0, 0)
+	fields = append(fields, []interface{}{"Metric Name"})
+	for k := range mets.Metrics {
+		fields = append(fields, []interface{}{k})
+	}
+
+	return &Plot{"Some stuff", fields}
+}
+
+func (c *CoreConnection) PresentAllMetrics(where WhereAble, metrics_path string) *Plot {
+	mets := LoadMetricsDef(metrics_path)
+
+	fields := make([]string, 0, 0)
+	fields = append(fields, "test_reports.id")
+
+	for k := range mets.Metrics {
+		fields = append(fields, k)
+	}
+
+	r := c.GenericChartPresenter(where, fields)
+	gendata := r.ChartData
+
+	for i := 0; i < len(gendata[0]); i++ {
+		str := gendata[0][i].(string)
+		m := mets.Metrics[str]
+		if m != nil && m.HumanName != "" {
+			str = m.HumanName
+		} else {
+			ma := strings.Split(str, "/")
+			str = ma[len(ma)-1]
+		}
+
+		if len(str) > 16 {
+			str = str[0:16]
+		}
+
+		gendata[0][i] = str
+	}
+
+	return r
 }
 
 /*

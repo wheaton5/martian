@@ -6,6 +6,9 @@ var global_chart;
 var global_table;
 var global_table_data;
 var global_compare;
+var global_metrics_db;
+var global_metrics_table;
+
 
 function main() {
 	console.log("HELLO WORLD"); 
@@ -15,14 +18,22 @@ function main() {
 		global_chart= new google.visualization.LineChart(document.getElementById('plot1'));
 		global_table = new google.visualization.Table(document.getElementById('table1'));
 		global_compare = new google.visualization.Table(document.getElementById('compare1'));
+		global_metrics_table= new google.visualization.Table(document.getElementById('list1'));
+		google.visualization.events.addListener(global_metrics_table, 'select', metrics_list_click);
 
+		pickwindow("table")
 	});
 	
 	$("#table").hide();
 	$("#compare").hide();
 	$("#plot").hide();
+	$("#help").hide();
+
+	$.getJSON("/api/list_metrics?metrics_def=met1.json", function(data) {
+		global_metrics_db = data.ChartData;
 
 
+	})
 
 }
 
@@ -31,6 +42,7 @@ function pickwindow(w) {
 	$("#table").hide();
 	$("#compare").hide();
 	$("#plot").hide();
+	$("#help").hide();
 
 	$("#" + w).show();
 
@@ -43,6 +55,8 @@ function pickwindow(w) {
 	}
 
 	if (w == "plot") {
+		var mdata = google.visualization.arrayToDataTable(global_metrics_db);
+		global_metrics_table.draw(mdata, {})
 
 	}
 }
@@ -75,9 +89,17 @@ function compare_update() {
 
 
 }
-function table_update() {
 
-	var url = "/api/plot?where=&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
+
+function table_update(mode) {
+	var where = encodeURIComponent(document.getElementById("where").value);
+
+
+	if (mode=="metrics") {
+		var url = "/api/plotall?where=" + where + "&metrics_def=met1.json"
+	} else {
+		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
+	}
 
 	$.getJSON(url, function(data) {
 		global_table_data = data;
@@ -88,11 +110,16 @@ function table_update() {
 	})
 }
 
+function metrics_list_click() {
+	var y = document.getElementById("charty");
+	var idx = global_metrics_table.getSelection()[0].row;
+	y.value = global_metrics_db[idx + 1];
+}
 
 function chart_update() {
 	var x = document.getElementById("chartx");
 	var y = document.getElementById("charty");
-	var where = document.getElementById("chartwhere");
+	var where = document.getElementById("where");
 
 	console.log(x.value);
 	console.log(x);
@@ -109,6 +136,7 @@ function chart_update() {
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
 		var options = {title:data.Name};
 		global_chart.draw(gdata, options);
+
 
 	})
 }
