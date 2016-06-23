@@ -105,7 +105,7 @@ function table_update(mode) {
 		global_table_data = data;
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
-		var options = {};
+		var options = {width: 1200};
 		global_table.draw(gdata, options)
 	})
 }
