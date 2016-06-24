@@ -197,12 +197,13 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 
 		if ok1 && ok2 {
 			/* If we got the data, then compare them */
-			mr.Diff = CheckDiff((m.Metrics[one_metric]), newfloat, basefloat)
+			mr.Diff = !CheckDiff((m.Metrics[one_metric]), newfloat, basefloat)
 			mr.OK = true
 		} else {
 			/* Something went wrong (missing metric? Not a float64?) */
 			log.Printf("Trouble at %v %v (%v %v)", newval, baseval, ok1, ok2)
 			mr.OK = false
+			mr.Diff = false;
 		}
 
 		results = append(results, mr)

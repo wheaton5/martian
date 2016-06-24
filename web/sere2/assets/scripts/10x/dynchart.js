@@ -81,7 +81,8 @@ function compare_update() {
 	$.getJSON(url, function(data) {
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
-		var options = {};
+		var options = {allowHtml:true};
+		colorize_table(data.ChartData,gdata)
 		global_compare.draw(gdata, options)
 
 
@@ -146,13 +147,34 @@ function get_data_at_row(data, columnname, rownumber) {
 
 	var index;
 	for (var i = 0; i < labels.length; i++) {
-		if (labels[i] = columnname) {
+		if (labels[i] == columnname) {
 			index = i;
 			break;
 		}
 	}
 
 	return data.ChartData[rownumber+1][index];
+}
+
+function colorize_table(data, datatable) {
+	var diff_index;
+	var labels = data[0];
+	for (var i = 0; i < labels.length; i++) {
+		if (labels[i] == 'Diff') {
+			diff_index= i;
+			break;
+		}
+	}
+
+	for (var i = 1; i < data.length; i++) {
+		var di = i - 1;
+		
+		if (data[i][diff_index] === false) {
+			for (var j = 0; j < labels.length; j++) {
+				datatable.setProperty(di, j, 'style', 'color:red;')
+			}
+		}
+	}
 }
 
 main();

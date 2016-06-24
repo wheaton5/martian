@@ -1,21 +1,9 @@
 
 {
 	"Metrics": {
-		"/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased": {
-			"HumanName": "Davids Metric",
-			"Low": 80.0,
-			"High": 90.0,
-			"Owner": "dstaff"
-		},
-		"/SUMMARIZE_REPORTS_PD/r1_q30_bases": {
-			"HumanName": "Davids Other Metric",
-			"Owner": "dstaff"
-		},
-		"/ANALYZE_KNOWN_BREAKS_PD/sv_sensitivity_5.0to10.0K_Q100": {
-			"HUmanName": "More metris!!!!!",
-			"Owner": "dstaff",
-			"AbsDiffAllow": 0.0000000001
-		},
+		"/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased": { },
+		"/SUMMARIZE_REPORTS_PD/r1_q30_bases": { },
+		"/ANALYZE_KNOWN_BREAKS_PD/sv_sensitivity_5.0to10.0K_Q100": { },
 		"sampleid": {},
 		"SHA":{},
 		"finishdate":{},
