@@ -41,6 +41,9 @@ func SetupServer(port int, db *sere2lib.CoreConnection, webbase string) {
 	m := martini.Classic()
 	//s2s.WebService = m;
 
+	m.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/views/unified.jade", 302)
+	})
 	/* Serve static assets ouf of the assets directory */
 	m.Get("/assets/**", http.StripPrefix("/assets/", http.FileServer(http.Dir(webbase+"/assets"))))
 
@@ -88,11 +91,16 @@ func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(j))
 }
 
+func(s * Sere2Server) ResolveMetricsPath(name string) string {
+	return s.WebBase + "/metrics/" + name;
+}
+
+
 func (s *Sere2Server) ListMetrics(w http.ResponseWriter, r * http.Request) {
 
 	params := r.URL.Query();
 
-	plot := s.DB.ListAllMetrics(s.WebBase + "/metrics/" + params.Get("metrics_def"));
+	plot := s.DB.ListAllMetrics(s.ResolveMetricsPath(params.Get("metrics_def")));
 
 	js, err := json.Marshal(plot)
 
@@ -108,7 +116,7 @@ func (s *Sere2Server) PlotAll(w http.ResponseWriter, r * http.Request) {
 	params := r.URL.Query();
 
 	plot := s.DB.PresentAllMetrics(sere2lib.NewStringWhere(params.Get("where")),
-		s.WebBase + "/metrics/" + params.Get("metrics_def"))
+		s.ResolveMetricsPath(params.Get("metrics_def")))
 
 	js, err := json.Marshal(plot)
 
@@ -149,7 +157,8 @@ func (s *Sere2Server) Compare(w http.ResponseWriter, r *http.Request) {
 	id1, err := strconv.Atoi(id1s)
 	id2, err := strconv.Atoi(id2s)
 
-	res := s.DB.GenericComparePresenter(id1, id2, s.WebBase + "/metrics/" + id3);
+	res := s.DB.GenericComparePresenter(id1, id2, s.ResolveMetricsPath(id3))
+	
 
 	js, err := json.Marshal(res)
 

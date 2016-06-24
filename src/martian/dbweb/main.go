@@ -3,6 +3,7 @@
 package main
 
 import (
+	"os"
 	"martian/sere2lib"
 	"martian/sere2web"
 )
@@ -10,6 +11,7 @@ import (
 func main() {
 	c := sere2lib.Setup()
 
-	sere2web.SetupServer(3000, c, "/mnt/home/dstaff/code/mars2/web/sere2")
+	
+	sere2web.SetupServer(3000, c, os.Getenv("SERE2_WEBDIR"))
 
 }

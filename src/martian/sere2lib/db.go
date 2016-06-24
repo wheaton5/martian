@@ -96,7 +96,9 @@ func (c *CoreConnection) InsertRecord(table string, record interface{}) (int, er
 	var newid int
 	err := result.Scan(&newid)
 
-	log.Printf("E: %v %v", err, newid)
+	if (err != nil) {
+		log.Printf("E: %v %v", err, newid)
+	}
 	return newid, err
 }
 
