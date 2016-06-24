@@ -10,6 +10,7 @@ var global_metrics_db;
 var global_metrics_table;
 
 
+
 function main() {
 	console.log("HELLO WORLD"); 
 	google.charts.load('current', {'packages':['corechart', 'table']});
@@ -28,6 +29,7 @@ function main() {
 	$("#compare").hide();
 	$("#plot").hide();
 	$("#help").hide();
+	clear_error_box();
 
 	$.getJSON("/api/list_metrics?metrics_def=met1.json", function(data) {
 		global_metrics_db = data.ChartData;
@@ -37,30 +39,55 @@ function main() {
 
 }
 
+
+/*
+ * This is called on a click to any of the main navication buttons. |w| is the name
+ * of the nav button that was clicked.
+ */
 function pickwindow(w) {
 	console.log(w)
 	$("#table").hide();
 	$("#compare").hide();
 	$("#plot").hide();
 	$("#help").hide();
+	clear_error_box();
 
-	$("#" + w).show();
-
+	/* Special logic for handling the compare button. If you don't have exactly two
+	 * rows selected, don't compare. If you have run row selected, redo the table view
+	 * with selecting rows with the same sampleid
+	 */
 	if (w == "compare") {
-		compare_update();
+		var selected = global_table.getSelection();
+		if (selected.length!=2) {
+			set_error_box("Please select two rows to compare. Then click compare again.")
+			var wc=(get_data_at_row(global_table_data, "sampleid", selected[0].row));
+			document.getElementById("where").value="sampleid =" + wc;
+
+			table_update();
+			$("#table").show();
+		} else if (selected.length == 2){
+			compare_update();
+			$("#compare").show();
+		}
 	}
+	else {
 
-	if (w == "table") {
-		table_update();
-	}
+		$("#" + w).show();
 
-	if (w == "plot") {
-		var mdata = google.visualization.arrayToDataTable(global_metrics_db);
-		global_metrics_table.draw(mdata, {})
+		if (w == "table") {
+			table_update();
+		}
 
+		if (w == "plot") {
+			var mdata = google.visualization.arrayToDataTable(global_metrics_db);
+			global_metrics_table.draw(mdata, {})
+
+		}
 	}
 }
 
+/*
+ * Render the compare view */
 function compare_update() {
 
 	var selected = global_table.getSelection();
@@ -91,7 +118,7 @@ function compare_update() {
 
 }
 
-
+/* Render the metric view */
 function table_update(mode) {
 	var where = encodeURIComponent(document.getElementById("where").value);
 
@@ -111,12 +138,30 @@ function table_update(mode) {
 	})
 }
 
+/*
+ * Handle a click on the table of metrics in the chart page
+ */
 function metrics_list_click() {
 	var y = document.getElementById("charty");
-	var idx = global_metrics_table.getSelection()[0].row;
-	y.value = global_metrics_db[idx + 1];
+	
+	var sel = global_metrics_table.getSelection();
+	var v = "";
+	for (var i = 0; i < sel.length; i++) {
+		if (v != "") {
+			v = v + ",";
+		}
+		var idx = global_metrics_table.getSelection()[i].row;
+
+		v = v  +global_metrics_db[idx+1];
+	}
+
+
+	y.value = v;
 }
 
+/*
+ * Update the chart.
+ */
 function chart_update() {
 	var x = document.getElementById("chartx");
 	var y = document.getElementById("charty");
@@ -142,6 +187,10 @@ function chart_update() {
 	})
 }
 
+/*
+ * Extract data from a specific row and a named columns from a chartdata-like
+ * object.
+ */
 function get_data_at_row(data, columnname, rownumber) {
 	var labels = data.ChartData[0];
 
@@ -156,9 +205,14 @@ function get_data_at_row(data, columnname, rownumber) {
 	return data.ChartData[rownumber+1][index];
 }
 
+/*
+ * Set colorization for the comparison page.
+ */
 function colorize_table(data, datatable) {
 	var diff_index;
 	var labels = data[0];
+
+	/* Figure out which column is called "diff" */
 	for (var i = 0; i < labels.length; i++) {
 		if (labels[i] == 'Diff') {
 			diff_index= i;
@@ -166,6 +220,9 @@ function colorize_table(data, datatable) {
 		}
 	}
 
+	/* Look at every row, if its diff column is falst, then color
+	 * everything in that row red.
+	 */
 	for (var i = 1; i < data.length; i++) {
 		var di = i - 1;
 		
@@ -175,6 +232,15 @@ function colorize_table(data, datatable) {
 			}
 		}
 	}
+}
+
+function set_error_box(s) {
+	$("#errortext").text(s);
+	$("#errorbox").show();
+}
+
+function clear_error_box() {
+	$("#errorbox").hide();
 }
 
 main();
