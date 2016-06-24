@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"sort"
+	"reflect"
 )
 
 /*
@@ -207,10 +208,12 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 			mr.Diff = !CheckDiff((m.Metrics[one_metric]), newfloat, basefloat)
 			mr.OK = true
 		} else {
+			mr.Diff = reflect.DeepEqual(newval, baseval)
+			
+
 			/* Something went wrong (missing metric? Not a float64?) */
 			log.Printf("Trouble at %v %v (%v %v)", newval, baseval, ok1, ok2)
-			mr.OK = false
-			mr.Diff = false
+			mr.OK= false
 		}
 
 		results = append(results, mr)
