@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"sort"
 )
 
 /*
@@ -56,6 +57,12 @@ type MetricResult struct {
 	HumanName string
 	JSONPath  string
 }
+
+type MetricResultSorter []MetricResult
+
+func (m MetricResultSorter) Len() int           { return len(m) }
+func (m MetricResultSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m MetricResultSorter) Less(i, j int) bool { return m[i].JSONPath < m[j].JSONPath }
 
 /*
  * Load a metrics file from disk and return a MetricsDef structure that
@@ -203,10 +210,11 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 			/* Something went wrong (missing metric? Not a float64?) */
 			log.Printf("Trouble at %v %v (%v %v)", newval, baseval, ok1, ok2)
 			mr.OK = false
-			mr.Diff = false;
+			mr.Diff = false
 		}
 
 		results = append(results, mr)
 	}
+	sort.Sort((MetricResultSorter)(results))
 	return results
 }
