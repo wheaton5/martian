@@ -23,6 +23,7 @@ type Sere2Server struct {
 	//WebService * martini.Martini
 	WebBase string
 	v       http.Handler
+	Metrics *sere2lib.MetricsCache
 }
 
 /*
@@ -36,6 +37,7 @@ func SetupServer(port int, db *sere2lib.CoreConnection, webbase string) {
 	s2s := new(Sere2Server)
 	s2s.DB = db
 	s2s.WebBase = webbase
+	s2s.Metrics = sere2lib.LoadAllMetrics(webbase + "/metrics")
 
 	martini.Root = webbase
 	m := martini.Classic()
@@ -57,10 +59,11 @@ func SetupServer(port int, db *sere2lib.CoreConnection, webbase string) {
 
 	m.Get("/api/compare", s2s.Compare)
 
-	m.Get("/api/plotall", s2s.PlotAll);
+	m.Get("/api/plotall", s2s.PlotAll)
 
 	m.Get("/api/list_metrics", s2s.ListMetrics)
 
+	m.Get("/api/list_metric_sets", s2s.ListMetricSets)
 
 	/* Start it up! */
 	m.Run()
@@ -91,16 +94,15 @@ func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(j))
 }
 
-func(s * Sere2Server) ResolveMetricsPath(name string) string {
-	return s.WebBase + "/metrics/" + name;
+func (s *Sere2Server) ResolveMetricsPath(name string) string {
+	return s.WebBase + "/metrics/" + name
 }
 
+func (s *Sere2Server) ListMetrics(w http.ResponseWriter, r *http.Request) {
 
-func (s *Sere2Server) ListMetrics(w http.ResponseWriter, r * http.Request) {
+	params := r.URL.Query()
 
-	params := r.URL.Query();
-
-	plot := s.DB.ListAllMetrics(s.ResolveMetricsPath(params.Get("metrics_def")));
+	plot := s.DB.ListAllMetrics(s.Metrics.Get(params.Get("metrics_def")))
 
 	js, err := json.Marshal(plot)
 
@@ -111,12 +113,12 @@ func (s *Sere2Server) ListMetrics(w http.ResponseWriter, r * http.Request) {
 	w.Write(js)
 }
 
-func (s *Sere2Server) PlotAll(w http.ResponseWriter, r * http.Request) {
+func (s *Sere2Server) PlotAll(w http.ResponseWriter, r *http.Request) {
 
-	params := r.URL.Query();
+	params := r.URL.Query()
 
 	plot := s.DB.PresentAllMetrics(sere2lib.NewStringWhere(params.Get("where")),
-		s.ResolveMetricsPath(params.Get("metrics_def")))
+		s.Metrics.Get(params.Get("metrics_def")))
 
 	js, err := json.Marshal(plot)
 
@@ -130,7 +132,7 @@ func (s *Sere2Server) PlotAll(w http.ResponseWriter, r * http.Request) {
 func (s *Sere2Server) Plot(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
 
-	variables := strings.Split(params.Get("columns"), ",");
+	variables := strings.Split(params.Get("columns"), ",")
 
 	plot := s.DB.GenericChartPresenter(sere2lib.NewStringWhere(params.Get("where")), variables)
 
@@ -157,8 +159,7 @@ func (s *Sere2Server) Compare(w http.ResponseWriter, r *http.Request) {
 	id1, err := strconv.Atoi(id1s)
 	id2, err := strconv.Atoi(id2s)
 
-	res := s.DB.GenericComparePresenter(id1, id2, s.ResolveMetricsPath(id3))
-	
+	res := s.DB.GenericComparePresenter(id1, id2, s.Metrics.Get(id3))
 
 	js, err := json.Marshal(res)
 
@@ -170,3 +171,15 @@ func (s *Sere2Server) Compare(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (s *Sere2Server) ListMetricSets(w http.ResponseWriter, r *http.Request) {
+	lst := s.Metrics.List()
+
+	js, err := json.Marshal(lst)
+
+	if err != nil {
+		panic(err)
+	}
+
+	w.Write(js)
+
+}

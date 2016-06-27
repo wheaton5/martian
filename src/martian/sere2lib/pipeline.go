@@ -89,7 +89,7 @@ func GetPipestanceVersion(pipestance_path string) (string, error) {
  */
 func CheckinSummaries(db *CoreConnection, test_report_id int, pipestance_path string) {
 
-	filepath.Walk(pipestance_path + "/", func(path string, info os.FileInfo, e error) error {
+	filepath.Walk(pipestance_path+"/", func(path string, info os.FileInfo, e error) error {
 		if len(info.Name()) > 4 && info.Name()[0:4] == "chnk" {
 			/* Don't grab stuff that's inside a chunk. If we're in a chunk, forget
 			 * about this entire subtree

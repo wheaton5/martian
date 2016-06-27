@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"sort"
 	"reflect"
+	"sort"
 )
 
 /*
@@ -35,7 +35,14 @@ type MetricDef struct {
  * A collection of metrics
  */
 type MetricsDef struct {
-	Metrics map[string]*MetricDef
+	Metrics   map[string]*MetricDef
+	Where     string
+	WhereAble WhereAble
+}
+
+type MetricsCache struct {
+	MetricSets map[string]*MetricsDef
+	BasePath   string
 }
 
 /*
@@ -92,7 +99,51 @@ func LoadMetricsDef(path string) *MetricsDef {
 	}
 
 	log.Printf("Loading metric from %v: %v", path, len(m.Metrics))
+	m.WhereAble = NewStringWhere(m.Where)
 	return &m
+}
+
+func LoadAllMetrics(basepath string) *MetricsCache {
+
+	paths, err := ioutil.ReadDir(basepath)
+
+	if err != nil {
+		panic(err)
+	}
+
+	m := make(map[string]*MetricsDef)
+
+	for _, p := range paths {
+		/* Error handling here totally wrong XXX*/
+		mdt := LoadMetricsDef(basepath + "/" + p.Name())
+		if mdt != nil {
+			m[p.Name()] = mdt
+		}
+
+	}
+
+	mc := new(MetricsCache)
+	mc.MetricSets = m
+	mc.BasePath = basepath
+	return mc
+}
+
+func (mc *MetricsCache) Get(path string) *MetricsDef {
+	m := mc.MetricSets[path]
+	if m == nil {
+		panic("NOT FOUND")
+	}
+	return m
+}
+
+func (mc *MetricsCache) List() []string {
+
+	res := []string{}
+
+	for k, _ := range mc.MetricSets {
+		res = append(res, k)
+	}
+	return res
 }
 
 func Abs(x float64) float64 {
@@ -209,11 +260,10 @@ func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricR
 			mr.OK = true
 		} else {
 			mr.Diff = reflect.DeepEqual(newval, baseval)
-			
 
 			/* Something went wrong (missing metric? Not a float64?) */
 			log.Printf("Trouble at %v %v (%v %v)", newval, baseval, ok1, ok2)
-			mr.OK= false
+			mr.OK = false
 		}
 
 		results = append(results, mr)

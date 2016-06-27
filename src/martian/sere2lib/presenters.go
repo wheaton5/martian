@@ -19,8 +19,7 @@ type Plot struct {
 	ChartData [][]interface{}
 }
 
-func (c *CoreConnection) ListAllMetrics(metrics_path string) *Plot {
-	mets := LoadMetricsDef(metrics_path)
+func (c *CoreConnection) ListAllMetrics(mets *MetricsDef) *Plot {
 
 	fields := make([][]interface{}, 0, 0)
 	fields = append(fields, []interface{}{"Metric Name"})
@@ -31,8 +30,7 @@ func (c *CoreConnection) ListAllMetrics(metrics_path string) *Plot {
 	return &Plot{"Some stuff", fields}
 }
 
-func (c *CoreConnection) PresentAllMetrics(where WhereAble, metrics_path string) *Plot {
-	mets := LoadMetricsDef(metrics_path)
+func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *MetricsDef) *Plot {
 
 	fields := make([]string, 0, 0)
 	fields = append(fields, "test_reports.id")
@@ -79,9 +77,7 @@ func (c *CoreConnection) GenericChartPresenter(where WhereAble, fields []string)
 /*
  * Produce data suitable for plotting in a table that compares two samples.
  */
-func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, metrics_def_path string) *Plot {
-
-	mets := LoadMetricsDef(metrics_def_path)
+func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, mets *MetricsDef) *Plot {
 
 	comps := Compare2(c, mets, baseid, newid)
 
