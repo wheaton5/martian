@@ -59,7 +59,7 @@ func NewStringWhere(s string) WhereAble {
 /*
  * Merge multiple where clauses together.
  */
-func MergeWhereClauses(wa []WhereAble) WhereAble {
+func MergeWhereClauses(wa ...WhereAble) WhereAble {
 	empty := true
 	clause := ""
 
@@ -68,10 +68,10 @@ func MergeWhereClauses(wa []WhereAble) WhereAble {
 			empty = false
 			if clause != "" {
 				/* XXX! Need to add some parens here! */
-				clause = clause + " AND " + w.Stringify()
+				clause = clause + " AND (" + w.Stringify() + ")"
 			} else {
 				/* XXX! And here */
-				clause = w.Stringify()
+				clause = "(" + w.Stringify() + ")"
 			}
 		}
 	}
@@ -98,6 +98,6 @@ func TestWhereable() {
 	a := NewStringWhere("a=b")
 	b := NewEmptyWhere()
 
-	MergeWhereClauses([]WhereAble{a, b})
+	MergeWhereClauses(a, b)
 
 }

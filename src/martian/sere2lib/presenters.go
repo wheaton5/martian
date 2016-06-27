@@ -39,7 +39,7 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *MetricsDef) *P
 		fields = append(fields, k)
 	}
 
-	r := c.GenericChartPresenter(where, fields)
+	r := c.GenericChartPresenter(where, mets, fields)
 	gendata := r.ChartData
 
 	for i := 0; i < len(gendata[0]); i++ {
@@ -65,9 +65,9 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *MetricsDef) *P
 /*
  * Produce data suitable for plotting in a table or chart.
  */
-func (c *CoreConnection) GenericChartPresenter(where WhereAble, fields []string) *Plot {
+func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *MetricsDef, fields []string) *Plot {
 
-	data := c.JSONExtract2(where, fields, "-finishdate")
+	data := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate")
 
 	ChartData := RotateN(data, fields)
 

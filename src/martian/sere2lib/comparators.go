@@ -98,7 +98,7 @@ func LoadMetricsDef(path string) *MetricsDef {
 		m.Metrics[k].JSONPath = k
 	}
 
-	log.Printf("Loading metric from %v: %v", path, len(m.Metrics))
+	log.Printf("Loading metric from %v: %v (%v)", path, len(m.Metrics), m.Where)
 	m.WhereAble = NewStringWhere(m.Where)
 	return &m
 }

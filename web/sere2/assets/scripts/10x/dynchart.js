@@ -125,10 +125,12 @@ function table_update(mode) {
 
 
 	if (mode=="metrics") {
-		var url = "/api/plotall?where=" + where + "&metrics_def=met1.json"
+		var url = "/api/plotall?where=" + where 
 	} else {
 		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
 	}
+
+	url += "&metrics_def=" + getmet();
 
 	$.getJSON(url, function(data) {
 		global_table_data = data;
@@ -173,8 +175,9 @@ function chart_update() {
 	console.log(y);
 	console.log(where);
 
-	var url = "/api/plot?where="+encodeURIComponent(where.value)+"&columns=" + encodeURIComponent(x.value) + "," +
-		encodeURIComponent(y.value);
+	var url = "/api/plot?where="+encodeURIComponent(where.value)+
+		"&columns=" + encodeURIComponent(x.value) + "," + encodeURIComponent(y.value) +
+		"&metrics_def=" + getmet();
 
 	console.log(url);
 	$.getJSON(url, function(data) {
