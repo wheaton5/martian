@@ -8,6 +8,7 @@ var global_table_data;
 var global_compare;
 var global_metrics_db;
 var global_metrics_table;
+var global_project_name="Default.json"
 
 
 
@@ -31,11 +32,38 @@ function main() {
 	$("#help").hide();
 	clear_error_box();
 
+	setup_project_dropdown();
+}
+
+function project_dropdown_click(x) {
+	console.log(this);
+	console.log(event)
+
+	//document.getElementById("metricset").value = event.target.textContent
+	global_project_name = event.target.textContent;
+	$("#project_cur").text(event.target.textContent);
 
 }
 
+
+function setup_project_dropdown() {
+	$.getJSON("/api/list_metric_sets", function(data) {
+		var pd = $("#projects_dropdown")
+
+		for (var i = 0; i < data.length; i++) {
+
+			var ng = document.createElement('li');
+			var zz = data[i];
+			ng.textContent = data[i];
+			ng.onclick = project_dropdown_click;
+			console.log(ng.textContent);
+			pd.append(ng);
+		}
+	})
+}
+
 function getmet() {
-	return document.getElementById("metricset").value;
+	return global_project_name;
 }
 
 /*

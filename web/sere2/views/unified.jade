@@ -24,9 +24,10 @@ html
 						button(type="button" class="btn btn-default" onclick="pickwindow('table')") Table
 						button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
 						button(type="button" class="btn btn-default" onclick="pickwindow('help')") Help
-						span(style="width:50px") &nbsp;Metric:
-						span
-							input#metricset(name="mettricset" value="met1.json")
+						div(class="btn-group")
+							button#project_cur(class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false")  Select a project
+								span(class="caret")
+							ul#projects_dropdown(class="dropdown-menu")
 					br
 			span Where (empty or a SQL where clause)
 			br
