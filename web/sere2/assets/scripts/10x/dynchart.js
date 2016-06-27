@@ -31,14 +31,12 @@ function main() {
 	$("#help").hide();
 	clear_error_box();
 
-	$.getJSON("/api/list_metrics?metrics_def=met1.json", function(data) {
-		global_metrics_db = data.ChartData;
-
-
-	})
 
 }
 
+function getmet() {
+	return document.getElementById("metricset").value;
+}
 
 /*
  * This is called on a click to any of the main navication buttons. |w| is the name
@@ -79,8 +77,11 @@ function pickwindow(w) {
 		}
 
 		if (w == "plot") {
-			var mdata = google.visualization.arrayToDataTable(global_metrics_db);
-			global_metrics_table.draw(mdata, {})
+			$.getJSON("/api/list_metrics?metrics_def=" + getmet(), function(data) {
+				global_metrics_db = data.ChartData;
+				var mdata = google.visualization.arrayToDataTable(global_metrics_db);
+				global_metrics_table.draw(mdata, {})
+			})
 
 		}
 	}
@@ -102,7 +103,7 @@ function compare_update() {
 		*/
 	var url = "/api/compare?base=" + idold + 
 		"&new=" + idnew + 
-		"&metrics_def=met1.json"
+		"&metrics_def=" + getmet();
 	
 	console.log(url)
 	$.getJSON(url, function(data) {
