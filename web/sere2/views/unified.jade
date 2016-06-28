@@ -25,7 +25,8 @@ html
 						button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
 						button(type="button" class="btn btn-default" onclick="pickwindow('help')") Help
 						div(class="btn-group")
-							button#project_cur(class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false")  Select a project
+							button(class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false")  
+								span#project_cur
 								span(class="caret")
 							ul#projects_dropdown(class="dropdown-menu")
 					br
@@ -45,8 +46,8 @@ html
 						h2.panel-title Table view
 					div.panel-body
 						div(class="btn-group" role="group")
-							button(type="button" class="btn btn-default" onclick="table_update('basic')") Basic  
-							button(type="button" class="btn btn-default" onclick="table_update('metrics')") Metrics
+							button(type="button" class="btn btn-default" onclick="changetablemode('basic')") Basic  
+							button(type="button" class="btn btn-default" onclick="changetablemode('metrics')") Metrics
 						div#table1(style="width:1200px;height:500px")
 			div#compare
 				div.panel.panel-primary
@@ -67,7 +68,7 @@ html
 							input#charty(name="y" style="width:850px;")
 							br
 							br
-							button(type="button" class="btn btn-default" onclick="chart_update()") Go
+							button(type="button" class="btn btn-default" onclick="update()") Go
 						div(style="float:right;")
 							h2 Metrics I know about
 							div#list1(style="width:600px;height:500px")
@@ -86,4 +87,12 @@ html
 							| X: SHA, y: /SUMMARIZE_REPORTS_PD/universal_N50_phase_block.
 							| You can use the 'where' field to force subselection. For example,
 							| "userid='dstaff'" or "sampleid=20486".
+							| Use the rightmost button to select which project you want to look at
+							| a project defines a set of metrics as well as a set of datums to
+							| consider.
+							| Use the tiny URL at the bottom of the page for a permanent link
+							| to what you're currently looking at.
 				
+			span Stable url
+			br
+			span#myurl(style="font-size:6px")
