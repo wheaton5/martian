@@ -14,12 +14,26 @@ import (
 	"strings"
 )
 
+/*
+ * This is the data structure that we use for almost everything
+ * that we return for the front-end to render.
+ */
 type Plot struct {
-	Name      string
+	/* A name for this plot (currently unused) */
+	Name string
+
+	/* A 2-d array of data in the format for google charts to
+	 * injest.  The first row contains the column labels and
+	 * subsequent rows contain the column data.
+	 */
 	ChartData [][]interface{}
 }
 
-func (c *CoreConnection) ListAllMetrics(mets *MetricsDef) *Plot {
+/*
+ * Product a plot that just lists all of the metrics for this
+ * project.
+ */
+func (c *CoreConnection) ListAllMetrics(mets *Project) *Plot {
 
 	fields := make([][]interface{}, 0, 0)
 	fields = append(fields, []interface{}{"Metric Name"})
@@ -30,18 +44,31 @@ func (c *CoreConnection) ListAllMetrics(mets *MetricsDef) *Plot {
 	return &Plot{"Some stuff", fields}
 }
 
-func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *MetricsDef) *Plot {
+/*
+ * Produce a plot that lists all of the metrics for a subset of the data
+ * for this project.
+ */
+func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot {
 
+	/* Create an array with every field of interest */
 	fields := make([]string, 0, 0)
+
+	/* We are always interested in test_reports.id!  The UI expects
+	 * it.*/
 	fields = append(fields, "test_reports.id")
 
+	/* And of course get all of the metrics defined by the project */
 	for k := range mets.Metrics {
 		fields = append(fields, k)
 	}
 
-	r := c.GenericChartPresenter(where, mets, fields)
-	gendata := r.ChartData
+	plot := c.GenericChartPresenter(where, mets, fields)
+	gendata := plot.ChartData
 
+	/* Now iterate through the column names in the first row
+	 * of plot.ChartData and munge them.  Swap the key name with
+	 * a human readable name when possible and truncate the length.
+	 */
 	for i := 0; i < len(gendata[0]); i++ {
 		str := gendata[0][i].(string)
 		m := mets.Metrics[str]
@@ -59,30 +86,27 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *MetricsDef) *P
 		gendata[0][i] = str
 	}
 
-	return r
+	return plot
 }
 
 /*
  * Produce data suitable for plotting in a table or chart.
  */
-func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *MetricsDef, fields []string) *Plot {
-
+func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, fields []string) *Plot {
 	data := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate")
-
 	ChartData := RotateN(data, fields)
-
 	return &Plot{"A plot", ChartData}
 }
 
 /*
  * Produce data suitable for plotting in a table that compares two samples.
  */
-func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, mets *MetricsDef) *Plot {
+func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, mets *Project) *Plot {
 
 	comps := Compare2(c, mets, baseid, newid)
 
 	/*
-	 * This is a hack to render numbers on teh server-side for float-like data.
+	 * This is a hack to render numbers on the server-side for float-like data.
 	 * We do this to prevent obnoxious behavior for mixed-type columns in
 	 * google charts.
 	 */
@@ -116,7 +140,7 @@ func RotateN(src []map[string]interface{}, columns []string) [][]interface{} {
 
 	res[0] = make([]interface{}, len(columns))
 
-	/* Copy columns into the first row of the output */
+	/* Copy column names into the first row of the output */
 	for i, c := range columns {
 		res[0][i] = c
 	}
@@ -124,8 +148,8 @@ func RotateN(src []map[string]interface{}, columns []string) [][]interface{} {
 	/* Iterate over src and copy data into the output */
 	for i, datum := range src {
 		newrow := make([]interface{}, len(columns))
-		for k, c := range columns {
-			newrow[k] = datum[c]
+		for keyname, column_datum := range columns {
+			newrow[keyname] = datum[column_datum]
 		}
 		res[i+1] = newrow
 	}

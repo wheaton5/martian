@@ -23,7 +23,7 @@ type Sere2Server struct {
 	//WebService * martini.Martini
 	WebBase string
 	v       http.Handler
-	Metrics *sere2lib.MetricsCache
+	Metrics *sere2lib.ProjectsCache
 }
 
 /*

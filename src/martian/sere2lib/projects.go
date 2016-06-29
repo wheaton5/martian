@@ -1,3 +1,5 @@
+// Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
+
 package sere2lib
 
 import (
@@ -34,15 +36,15 @@ type MetricDef struct {
 /*
  * A collection of metrics
  */
-type MetricsDef struct {
+type Project struct {
 	Metrics   map[string]*MetricDef
 	Where     string
 	WhereAble WhereAble
 }
 
-type MetricsCache struct {
-	MetricSets map[string]*MetricsDef
-	BasePath   string
+type ProjectsCache struct {
+	Projects map[string]*Project
+	BasePath string
 }
 
 /*
@@ -66,6 +68,9 @@ type MetricResult struct {
 	JSONPath  string
 }
 
+/*
+ * How to order metric results in a stable way. (Just use JSON path)
+ */
 type MetricResultSorter []MetricResult
 
 func (m MetricResultSorter) Len() int           { return len(m) }
@@ -73,37 +78,41 @@ func (m MetricResultSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m MetricResultSorter) Less(i, j int) bool { return m[i].JSONPath < m[j].JSONPath }
 
 /*
- * Load a metrics file from disk and return a MetricsDef structure that
+ * Load a metrics file from disk and return a Project structure that
  * describes the listed metrics.
  * The loads a file in the prescribed JSON format and then munges the result.
  */
-func LoadMetricsDef(path string) *MetricsDef {
+func LoadProject(path string) (*Project, error) {
 
 	/* Load file and parse JSON */
 	file_contents, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	var m MetricsDef
+	var project Project
 
-	json.Unmarshal(file_contents, &m)
+	err = json.Unmarshal(file_contents, &project)
+
+	if err != nil {
+		return nil, err
+	}
 
 	/*
 	 * Munge the result so that metricdef also knows the path to the metric
 	 * (which is the key in the map that it is in
 	 */
-	for k, _ := range m.Metrics {
-		m.Metrics[k].JSONPath = k
+	for k, _ := range project.Metrics {
+		project.Metrics[k].JSONPath = k
 	}
 
-	log.Printf("Loading metric from %v: %v (%v)", path, len(m.Metrics), m.Where)
-	m.WhereAble = NewStringWhere(m.Where)
-	return &m
+	log.Printf("Loading metric from %v: %v (%v)", path, len(project.Metrics), project.Where)
+	project.WhereAble = NewStringWhere(project.Where)
+	return &project, nil
 }
 
-func LoadAllMetrics(basepath string) *MetricsCache {
+func LoadAllMetrics(basepath string) *ProjectsCache {
 
 	paths, err := ioutil.ReadDir(basepath)
 
@@ -111,39 +120,41 @@ func LoadAllMetrics(basepath string) *MetricsCache {
 		panic(err)
 	}
 
-	m := make(map[string]*MetricsDef)
+	projects := make(map[string]*Project)
 
 	for _, p := range paths {
 		/* Error handling here totally wrong XXX*/
-		mdt := LoadMetricsDef(basepath + "/" + p.Name())
+		mdt, err := LoadProject(basepath + "/" + p.Name())
 		if mdt != nil {
-			m[p.Name()] = mdt
+			projects[p.Name()] = mdt
+		} else {
+			log.Printf("Failed to load project %v: %v", p.Name(), err)
 		}
 
 	}
 
-	mc := new(MetricsCache)
-	mc.MetricSets = m
+	mc := new(ProjectsCache)
+	mc.Projects = projects
 	mc.BasePath = basepath
 	return mc
 }
 
-func (mc *MetricsCache) Get(path string) *MetricsDef {
-	m := mc.MetricSets[path]
-	if m == nil {
+func (mc *ProjectsCache) Get(path string) *Project {
+	project := mc.Projects[path]
+	if project == nil {
 		panic("NOT FOUND")
 	}
-	return m
+	return project
 }
 
-func (mc *MetricsCache) List() []string {
+func (mc *ProjectsCache) List() []string {
 
-	res := []string{}
+	plist := []string{}
 
-	for k, _ := range mc.MetricSets {
-		res = append(res, k)
+	for k, _ := range mc.Projects {
+		plist = append(plist, k)
 	}
-	return res
+	return plist
 }
 
 func Abs(x float64) float64 {
@@ -219,12 +230,12 @@ func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 /*
  * Compare two pipestance invocations, specified by pipestance invocation ID.
  */
-func Compare2(db *CoreConnection, m *MetricsDef, base int, newguy int) []MetricResult {
+func Compare2(db *CoreConnection, m *Project, base int, newguy int) []MetricResult {
 
 	/* Flatten the list of metrics */
 	list_of_metrics := make([]string, 0, len(m.Metrics))
-	for k, _ := range m.Metrics {
-		list_of_metrics = append(list_of_metrics, k)
+	for metric_name, _ := range m.Metrics {
+		list_of_metrics = append(list_of_metrics, metric_name)
 	}
 
 	/* Grab the metric for each pipestance */

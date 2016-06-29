@@ -119,15 +119,23 @@ func (c *CoreConnection) InsertRecord(table string, record interface{}) (int, er
  * directory for every test with the sample id of 12345.
  */
 func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey string) []map[string]interface{} {
+
+	/* List of all the JOIN statements we need */
 	joins := []string{}
+
+	/* List of all the select clauses we need */
 	selects := []string{}
 
+	/* mapping from the first element of a keypath to the join-name for that
+	 * JSON blob*/
 	tref_map := make(map[string]string)
+
+	/* Index to make temporary unique names for joins */
 	next_tref_index := 1
 
-	/* Transform the keys array into a bunch of join and select statements.
-	 * For each report stage that is mentioned in a key, we add a new join
-	 * clause and every key adds exactly one select expression.
+	/* STEP 1: Transform the keys array into a bunch of join and select
+	 * statements.  For each report stage that is mentioned in a key, we add
+	 * a new join clause and every key adds exactly one select expression.
 	 */
 	for _, key := range keys {
 
@@ -187,7 +195,7 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 	query += RenderWhereClause(where)
 
 	/*
-	 * Parse the sort key.
+	 * STEP 2: Parse the sort key.
 	 * we'd like to be able to enable arbitrary JSON paths here but its tricky.
 	 * So for now we only allow references to the test_reports table which
 	 * handles most of the cases anyways.
@@ -209,14 +217,14 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 
 	log.Printf("QUERY: %v", query)
 
-	/* Actually do the query */
+	/* STEP 3: Actually do the query */
 	rows, err := c.Conn.Query(query)
 
 	if err != nil {
 		panic(err)
 	}
 
-	/* Now collect the results. We return an array of maps. Each map
+	/* STEP 4: Now collect the results. We return an array of maps. Each map
 	 * associates the specific keys from the key array with some value.
 	 */
 	results := make([]map[string]interface{}, 0, 0)

@@ -69,8 +69,8 @@ func jsonload(path string) (map[string]interface{}, error) {
  * Get the version of a pipestance by inspecting the _versions file.
  */
 func GetPipestanceVersion(pipestance_path string) (string, error) {
-	vf := pipestance_path + "/_versions"
-	jsondata, err := jsonload(vf)
+	versions_file_path := pipestance_path + "/_versions"
+	jsondata, err := jsonload(versions_file_path)
 
 	if err != nil {
 		return "", err
@@ -103,25 +103,25 @@ func CheckinSummaries(db *CoreConnection, test_report_id int, pipestance_path st
 			/* Calculate the stage name for this file. XXX There should be a safer
 			 * way to do this
 			 */
-			pp := strings.Split(path, "/")
-			stage := pp[len(pp)-4]
+			stagepath_array := strings.Split(path, "/")
+			stage := stagepath_array[len(stagepath_array)-4]
 
 			/* Grab the file */
 			contents, err := ioutil.ReadFile(path)
 			if err != nil {
-				panic("Don't panic")
+				panic("Can't read a file that I found from filepath.Walk")
 			}
 
 			/* Check that the file is valid JSON. Don't try to upload invalid
 			 * JSON*/
-			var x interface{}
-			if json.Unmarshal(contents, &x) != nil {
+			var data_as_json interface{}
+			if json.Unmarshal(contents, &data_as_json) != nil {
 				log.Printf("file %v is not JSON!!!", path)
 			} else {
 				r := ReportSummaryFile{0, test_report_id, string(contents), stage}
 				_, err = db.InsertRecord("test_report_summaries", r)
 				if err != nil {
-					panic("Keep calm and carry on")
+					panic("Trouble uploading file to DB")
 				}
 			}
 		}
@@ -139,9 +139,11 @@ func CheckinOne(db *CoreConnection, test_report_id int, path string, name string
 		panic(err)
 	}
 
-	var x interface{}
-	if json.Unmarshal(contents, &x) != nil {
-		panic("NOT JSON")
+	var as_json interface{}
+	err = json.Unmarshal(contents, &as_json)
+
+	if err != nil {
+		return err
 	}
 
 	report := ReportSummaryFile{0, test_report_id, string(contents), name}
@@ -158,11 +160,11 @@ func CheckinOne(db *CoreConnection, test_report_id int, path string, name string
  */
 func GetPipestanceDate(path string) time.Time {
 
-	s, err := os.Stat(path + "/_finalstate")
+	file_info, err := os.Stat(path + "/_finalstate")
 
 	if err != nil {
 		panic(err)
 	}
 
-	return s.ModTime()
+	return file_info.ModTime()
 }

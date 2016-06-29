@@ -1,6 +1,8 @@
 // Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
 package sere2lib
 
+import "log"
+
 /*
  * This implements a simple mechanism for managing WHERE clauses.
  */
@@ -38,7 +40,8 @@ type StringWhere struct {
 }
 
 func (w *StringWhere) Empty() bool {
-	return w.WhereClause == ""
+	log.Printf("WARNING: Trying to stringify an empty WHERE clause!")
+	return w.WhereClause == "1==1"
 }
 
 func (w *StringWhere) Stringify() string {
@@ -63,15 +66,13 @@ func MergeWhereClauses(wa ...WhereAble) WhereAble {
 	empty := true
 	clause := ""
 
-	for _, w := range wa {
-		if !w.Empty() {
+	for _, partial_clause := range wa {
+		if !partial_clause.Empty() {
 			empty = false
 			if clause != "" {
-				/* XXX! Need to add some parens here! */
-				clause = clause + " AND (" + w.Stringify() + ")"
+				clause = clause + " AND (" + partial_clause.Stringify() + ")"
 			} else {
-				/* XXX! And here */
-				clause = "(" + w.Stringify() + ")"
+				clause = "(" + partial_clause.Stringify() + ")"
 			}
 		}
 	}
