@@ -16,11 +16,18 @@ import (
 	"strings"
 )
 
+type Queryable interface {
+	Query(q string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(q string, args ...interface{}) *sql.Row
+}
+
 /*
  * This encapsulates a database connection.
  */
 type CoreConnection struct {
 	Conn *sql.DB
+	Tx   *sql.Tx
+	Q    Queryable
 }
 
 /*
@@ -38,8 +45,31 @@ func Setup() *CoreConnection {
 	}
 
 	conn.Conn = db
+	conn.Tx = nil
+	conn.Q = db
+
 	return conn
 
+}
+
+func (db *CoreConnection) Begin() error {
+	if db.Tx != nil {
+		panic("TX in TX")
+	}
+
+	tx, err := db.Conn.Begin()
+	db.Tx = tx
+	db.Q = tx
+
+	return err
+}
+
+func (db *CoreConnection) Commit() error {
+	err := db.Tx.Commit()
+	db.Q = db.Conn
+	db.Tx = nil
+
+	return err
 }
 
 /*
@@ -90,7 +120,7 @@ func (c *CoreConnection) InsertRecord(table string, record interface{}) (int, er
 	//log.Printf("Q: %v", query)
 
 	/* Do the query */
-	result := c.Conn.QueryRow(query, values...)
+	result := c.Q.QueryRow(query, values...)
 
 	/* Get the result, which will be the ID of the new row */
 	var newid int
@@ -218,7 +248,7 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 	log.Printf("QUERY: %v", query)
 
 	/* STEP 3: Actually do the query */
-	rows, err := c.Conn.Query(query)
+	rows, err := c.Q.Query(query)
 
 	if err != nil {
 		panic(err)
@@ -300,7 +330,7 @@ func (c *CoreConnection) GrabRecords(where WhereAble, table string, outtype inte
 	query += RenderWhereClause(where)
 
 	log.Printf("QUERY: %v", query)
-	rows, err := c.Conn.Query(query)
+	rows, err := c.Q.Query(query)
 
 	if err != nil {
 		log.Printf("UHOHL %v", err)

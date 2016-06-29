@@ -62,6 +62,17 @@ func GetPipestanceVersion(pipestance_path string) (string, error) {
 
 }
 
+func FindStageNameFromPath(path string) string {
+	path_array := strings.Split(path, "/")
+
+	for i := 0; i < len(path_array); i++ {
+		if path_array[i][0:4] == "fork" {
+			return path_array[i-1]
+		}
+	}
+	return path_array[len(path_array)-1]
+}
+
 /*
  * Grab every summary.json file from a pipestance and upload it to the database.
  */
@@ -78,11 +89,7 @@ func CheckinSummaries(db *CoreConnection, test_report_id int, pipestance_path st
 			/* Woohoo! found a summary file.*/
 			log.Printf("Found summary at %v", path)
 
-			/* Calculate the stage name for this file. XXX There should be a safer
-			 * way to do this
-			 */
-			stagepath_array := strings.Split(path, "/")
-			stage := stagepath_array[len(stagepath_array)-4]
+			stage := FindStageNameFromPath(path)
 
 			/* Grab the file */
 			contents, err := ioutil.ReadFile(path)

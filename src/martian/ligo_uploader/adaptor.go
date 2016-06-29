@@ -8,9 +8,11 @@ import (
 	"martian/core"
 	"martian/ligolib"
 	"os"
+	"strings"
 )
 
 var flag_pipestance_path = flag.String("path", "", "path to pipestance")
+var flag_extras = flag.String("extras", "", "extra data to upload NAME:path,NAME:path...")
 
 func LookupCallInfo(basepath string) (string, string, string) {
 
@@ -28,7 +30,7 @@ func LookupCallInfo(basepath string) (string, string, string) {
 
 	desc := core.SearchPipestanceParams(ast, "sample_desc")
 	if desc == nil {
-		panic("WTF3")
+		desc = ""
 	}
 
 	return sampleid.(string), desc.(string), call
@@ -67,6 +69,8 @@ func main() {
 	*/
 
 	//rr.SummaryJSON = string(jsondata)
+
+	c.Begin()
 	id, err := c.InsertRecord("test_reports", rr)
 	if err != nil {
 		panic(err)
@@ -75,4 +79,16 @@ func main() {
 	ligolib.CheckinSummaries(c, id, *flag_pipestance_path)
 	ligolib.CheckinOne(c, id, *flag_pipestance_path+"/_perf", "_perf")
 	ligolib.CheckinOne(c, id, *flag_pipestance_path+"/_tags", "_tags")
+
+	if *flag_extras != "" {
+		extras_list := strings.Split(*flag_extras, ",")
+		for _, e := range extras_list {
+			parts := strings.Split(e, ":")
+			name := parts[0]
+			path := parts[1]
+			ligolib.CheckinOne(c, id, *flag_pipestance_path+"/"+path, name)
+		}
+	}
+
+	c.Commit()
 }
