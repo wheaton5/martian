@@ -61,6 +61,9 @@ type MetricResult struct {
 	/* Are the values different (according to Def)*/
 	Diff bool
 
+	NewOK bool
+	OldOK bool
+
 	/* The definition of this metric */
 	//Def *MetricDef
 
@@ -165,20 +168,36 @@ func Abs(x float64) float64 {
 	}
 }
 
-func CHeckOK(m *MetricDef, value float64) bool {
+/*
+ * Does a metric meet the specification?
+ */
+func CheckOK(m *MetricDef, value interface{}) bool {
 
+	log.Printf("CHECK %v %v", *m, value)
+	asfloat, ok := value.(float64)
+
+	/* No specification. Metric auto-passes.
+	 */
+	if m.High == nil && m.Low == nil {
+		return true
+	}
+
+	/* Specification but no metric. Metric auto-fails */
+	if !ok {
+		return false
+	}
 
 	/* If the new value is outside of an prescribed range, we claim it
 	 * is different (Regardless of the old value).
 	 */
-	if m.High != nil && newguy > *m.High {
-		return true
+	if m.High != nil && asfloat > *m.High {
+		return false
 	}
-	if m.Low != nil && newguy < *m.Low {
-		return true
+	if m.Low != nil && asfloat < *m.Low {
+		return false
 	}
 
-	return false;
+	return true
 
 }
 
@@ -201,7 +220,7 @@ func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 	 * 1.0.
 	 */
 	if m.RelDiffAllow == nil {
-		if m.AbsDiffAllow == nil && m.Low == nil && m.High == nil {
+		if m.AbsDiffAllow == nil {
 			max_percent = 1.0
 		} else {
 			/* If something else was specified, and RedDiffAllow was not
@@ -276,11 +295,13 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) []MetricResu
 			mr.OK = true
 		} else {
 			mr.Diff = reflect.DeepEqual(newval, baseval)
-
 			/* Something went wrong (missing metric? Not a float64?) */
 			log.Printf("Trouble at %v %v (%v %v)", newval, baseval, ok1, ok2)
 			mr.OK = false
 		}
+
+		mr.NewOK = CheckOK(m.Metrics[one_metric], newval)
+		mr.OldOK = CheckOK(m.Metrics[one_metric], baseval)
 
 		results = append(results, mr)
 	}

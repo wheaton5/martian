@@ -10,6 +10,7 @@ package ligolib
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 )
@@ -47,6 +48,11 @@ func (c *CoreConnection) ListAllMetrics(mets *Project) *Plot {
 /*
  * Produce a plot that lists all of the metrics for a subset of the data
  * for this project.
+ *
+ * The output includes two "virtual" datums: test_reports.id and ok.
+ * test_reports.id is simply the row in of the test_report in the DB.
+ * ok is true if the row passes all specifications.
+ *
  */
 func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot {
 
@@ -62,8 +68,37 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot
 		fields = append(fields, k)
 	}
 
-	plot := c.GenericChartPresenter(where, mets, fields)
-	gendata := plot.ChartData
+	data := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate")
+
+	/*
+	 * Iterate over all of the data and see if it meets the required metrics.
+	 */
+	for i := 0; i < len(data); i++ {
+
+		row := data[i]
+
+		all_ok := true
+		for metric_name, val := range row {
+			metric := mets.Metrics[metric_name]
+			if metric != nil {
+
+				log.Printf("D: %v %v", metric_name, mets.Metrics[metric_name])
+				ok := CheckOK(mets.Metrics[metric_name], val)
+				if !ok {
+					all_ok = false
+				}
+			}
+		}
+		data[i]["OK"] = all_ok
+	}
+
+	var plot Plot
+	fields = append(fields, "OK")
+	gendata := RotateN(data, fields)
+	log.Printf("GG: %v", gendata[0])
+	log.Printf("GG: %v", gendata[1])
+	plot.ChartData = gendata
+	plot.Name = "cats"
 
 	/* Now iterate through the column names in the first row
 	 * of plot.ChartData and munge them.  Swap the key name with
@@ -86,7 +121,7 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot
 		gendata[0][i] = str
 	}
 
-	return plot
+	return &plot
 }
 
 /*

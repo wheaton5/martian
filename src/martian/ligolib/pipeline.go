@@ -65,8 +65,8 @@ func GetPipestanceVersion(pipestance_path string) (string, error) {
 func FindStageNameFromPath(path string) string {
 	path_array := strings.Split(path, "/")
 
-	for i := len(path_array)-1; i >0;   i-- {
-		if (len(path_array[i]) >3) && path_array[i][0:4] == "fork" {
+	for i := len(path_array) - 1; i > 0; i-- {
+		if (len(path_array[i]) > 3) && path_array[i][0:4] == "fork" {
 			return path_array[i-1]
 		}
 	}

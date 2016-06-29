@@ -3,8 +3,6 @@
 	"Metrics": {
 		"/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased": {
 			"HumanName": "Davids Metric",
-			"Low": 80.0,
-			"High": 90.0,
 			"Owner": "dstaff"
 		},
 		"/SUMMARIZE_REPORTS_PD/r1_q30_bases": {
@@ -26,7 +24,7 @@
 		"/SUMMARIZE_REPORTS_PD/universal_ppv_filtered_snp_conf_regions": {},
 		"/SUMMARIZE_REPORTS_PD/universal_novel_calls_filtered_degen_regions": {},
 		"/SUMMARIZE_REPORTS_PD/universal_novel_validate_ppv_filtered_degen_regions": {},
-		"/_perf/0/forks/0/fork_stats/core_hours": {}
+		"/_perf/0/forks/0/fork_stats/core_hours": { "Low": 500}
 	}
 }
 

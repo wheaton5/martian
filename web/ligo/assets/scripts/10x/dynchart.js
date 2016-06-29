@@ -199,7 +199,9 @@ ViewState.prototype.compare_update = function() {
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
 		var options = {allowHtml:true};
-		colorize_table(data.ChartData,gdata)
+		colorize_table(data.ChartData,gdata, "Diff", "color:red;")
+		colorize_table2(data.ChartData,gdata, "OldOK" ,"BaseVal", "background: #FFDDDD");
+		colorize_table2(data.ChartData,gdata, "NewOK" ,"NewVal", "background: #FFDDDD");
 		global_compare.draw(gdata, options)
 
 
@@ -223,8 +225,10 @@ ViewState.prototype.table_update = function()  {
 		global_table_data = data;
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
-		var options = {width: 1200};
+		var options = {width: 1200, allowHtml:true};
+		colorize_table(data.ChartData, gdata, "OK", "background: #FFDDDD ")
 		global_table.draw(gdata, options)
+
 	})
 }
 
@@ -310,16 +314,30 @@ function get_data_at_row(data, columnname, rownumber) {
 	return data.ChartData[rownumber+1][index];
 }
 
+function find_column_index(data, name) {
+
+	var labels = data[0];
+
+	/* Figure out which column is called "diff" */
+	for (var i = 0; i < labels.length; i++) {
+		if (labels[i] == name) {
+			return i
+		}
+	}
+	console.log("Sorry. cant find: " + name);
+
+}
+
 /*
  * Set colorization for the comparison page.
  */
-function colorize_table(data, datatable) {
+function colorize_table(data, datatable, column_name, style) {
 	var diff_index;
 	var labels = data[0];
 
 	/* Figure out which column is called "diff" */
 	for (var i = 0; i < labels.length; i++) {
-		if (labels[i] == 'Diff') {
+		if (labels[i] == column_name) {
 			diff_index= i;
 			break;
 		}
@@ -333,11 +351,34 @@ function colorize_table(data, datatable) {
 		
 		if (data[i][diff_index] === false) {
 			for (var j = 0; j < labels.length; j++) {
-				datatable.setProperty(di, j, 'style', 'color:red;')
+				datatable.setProperty(di, j, 'style', style)
 			}
 		}
 	}
 }
+
+function colorize_table2(data, datatable, column_from, column_to, style) {
+	var from = find_column_index(data, column_from);
+	var to = find_column_index(data, column_to);
+
+	console.log("T: " + to + " F: " + from);
+
+	for (var i = 0; i < data.length; i++) {
+		if (data[i][from] === false) {
+			var old = datatable.getProperty(i - 1, to, 'style', style);
+			var ns = "";
+			if (old != null) {
+				ns = old + ";";
+			}
+			ns += style;
+			console.log("ADJ: " + style + "TO: " + ns);
+
+			datatable.setProperty(i - 1, to, 'style', ns);
+		}
+	}
+}
+
+
 
 function set_error_box(s) {
 	$("#errortext").text(s);
