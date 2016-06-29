@@ -1,6 +1,6 @@
 
 {
-	"Where": "project='longranger-exome'",
+	"Where": "project='PHASER_SVCALLER_EXOME_PD'",
 	"Metrics": {
 		"/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased": { },
 		"/SUMMARIZE_REPORTS_PD/r1_q30_bases": { },

@@ -3,15 +3,14 @@
 package main
 
 import (
-	"os"
 	"martian/ligolib"
 	"martian/ligoweb"
+	"os"
 )
 
 func main() {
 	c := ligolib.Setup()
 
-	
 	ligoweb.SetupServer(3000, c, os.Getenv("LIGO_WEBDIR"))
 
 }

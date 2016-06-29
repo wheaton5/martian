@@ -4,36 +4,34 @@ package main
 
 import (
 	"flag"
+	"log"
 	"martian/core"
 	"martian/ligolib"
 	"os"
-	"strconv"
 )
 
 var flag_pipestance_path = flag.String("path", "", "path to pipestance")
 
-func LookupCallInfo(basepath string) (int, string) {
+func LookupCallInfo(basepath string) (string, string, string) {
 
 	_, _, ast, err := core.Compile(basepath+"/_mrosource", []string{}, false)
 	if err != nil {
 		panic(err)
 	}
 
-	s := core.SearchPipestanceParams(ast, "sample_id")
-	if s == nil {
+	call := ast.Call.Id
+
+	sampleid := core.SearchPipestanceParams(ast, "sample_id")
+	if sampleid == nil {
 		panic("WTF2")
 	}
-	res, err := strconv.Atoi(s.(string))
-	if err != nil {
-		panic(err)
+
+	desc := core.SearchPipestanceParams(ast, "sample_desc")
+	if desc == nil {
+		panic("WTF3")
 	}
 
-	d := core.SearchPipestanceParams(ast, "sample_desc")
-	if d == nil {
-		panic("WTF3");
-	}
-
-	return res, d.(string)
+	return sampleid.(string), desc.(string), call
 }
 
 func main() {
@@ -53,33 +51,28 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	project := ligolib.GuessProject(*flag_pipestance_path)
-	if project == nil {
-		panic("can't figure out what kind of project this is!")
-	}
 
 	rr.SHA = version
 	rr.Branch = version
-	rr.SampleId, rr.Comments = LookupCallInfo(*flag_pipestance_path)
-	rr.CellLine = "blah"
-	rr.Project = project.Name
+	rr.SampleId, rr.Comments, rr.Project = LookupCallInfo(*flag_pipestance_path)
 	rr.UserId = os.Getenv("USER")
-	rr.FinishDate = ligolib.GetPipestanceDate(*flag_pipestance_path);
+	rr.FinishDate = ligolib.GetPipestanceDate(*flag_pipestance_path)
+	log.Printf("%v", rr)
 
 	/*
-	jsondata, err := ioutil.ReadFile(*flag_pipestance_path + "/" + project.SummaryJSONPath)
-	if err != nil {
-		panic(err)
-	}
+		jsondata, err := ioutil.ReadFile(*flag_pipestance_path + "/" + project.SummaryJSONPath)
+		if err != nil {
+			panic(err)
+		}
 	*/
 
 	//rr.SummaryJSON = string(jsondata)
-	rr.TagsJSON= "{}"
-	id, err :=c.InsertRecord("test_reports", rr)
-	if (err != nil) {
-		panic(err);
+	id, err := c.InsertRecord("test_reports", rr)
+	if err != nil {
+		panic(err)
 	}
 
-	ligolib.CheckinSummaries(c, id, *flag_pipestance_path);
-	ligolib.CheckinOne(c, id, *flag_pipestance_path + "/_perf", "_perf");
+	ligolib.CheckinSummaries(c, id, *flag_pipestance_path)
+	ligolib.CheckinOne(c, id, *flag_pipestance_path+"/_perf", "_perf")
+	ligolib.CheckinOne(c, id, *flag_pipestance_path+"/_tags", "_tags")
 }

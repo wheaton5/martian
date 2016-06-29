@@ -28,7 +28,8 @@ func (e *EmptyWhere) Empty() bool {
 }
 
 func (e *EmptyWhere) Stringify() string {
-	return ""
+	log.Printf("WARNING: Trying to stringify an empty WHERE clause!")
+	return "1==1"
 }
 
 /*
@@ -40,8 +41,7 @@ type StringWhere struct {
 }
 
 func (w *StringWhere) Empty() bool {
-	log.Printf("WARNING: Trying to stringify an empty WHERE clause!")
-	return w.WhereClause == "1==1"
+	return w.WhereClause == ""
 }
 
 func (w *StringWhere) Stringify() string {

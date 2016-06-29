@@ -1,6 +1,6 @@
 
 {
-	"Where": "project='longranger-wgs'",
+	"Where": "project='PHASER_SVCALLER_PD'",
 	"Metrics": {
 		"/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased": { },
 		"/SUMMARIZE_REPORTS_PD/r1_q30_bases": { },

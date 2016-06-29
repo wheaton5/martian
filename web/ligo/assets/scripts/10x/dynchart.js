@@ -142,7 +142,7 @@ ViewState.prototype.render = function() {
 			set_error_box("Please select two rows to compare. Then click compare again.")
 			//var wc=(get_data_at_row(global_table_data, "sampleid", selected[0].row));
 			if (this.compareidold) {
-				this.where = "sampleid=" + this.sample_search
+				this.where = "sampleid='" + this.sample_search+"'"
 				console.log(this.where);
 			}
 

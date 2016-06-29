@@ -5,16 +5,15 @@ import (
 )
 
 type ReportRecord struct {
-	ID         int `sql:"RO"`
-	SHA        string
-	FinishDate time.Time
-	Branch     string
-	Comments   string
-	SampleId   int
-	CellLine   string
-	TagsJSON   string
-	Project    string
-	UserId     string
+	ID            int `sql:"RO"`
+	SHA           string
+	FinishDate    time.Time
+	Branch        string
+	Comments      string
+	SampleId      string
+	SampleDefHash string
+	Project       string
+	UserId        string
 }
 
 type ReportSummaryFile struct {

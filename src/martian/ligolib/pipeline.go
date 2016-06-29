@@ -21,28 +21,6 @@ type ProjectInfo struct {
 	SummaryJSONPath string
 }
 
-var ProjectDefs = []ProjectInfo{
-	{"PHASER_SVCALLER_EXOME_PD", "longranger-exome", "PHASER_SVCALLER_EXOME_PD/SUMMARIZE_REPORTS_PD/fork0/files/summary.json"},
-	{"PHASER_SVCALLER_PD", "longranger-wgs", "PHASER_SVCALLER_PD/SUMMARIZE_REPORTS_PD/fork0/files/summary.json"},
-}
-
-/*
- * Guess what kind of project this is. We look for a top-level file
- * (or directory) that matches "TopLevel" in some project
- * definition.
- */
-func GuessProject(path string) *ProjectInfo {
-
-	for i := 0; i < len(ProjectDefs); i++ {
-		try := &ProjectDefs[i]
-		_, err := os.Stat(path + "/" + try.TopLevel)
-		if err == nil {
-			return try
-		}
-	}
-	return nil
-}
-
 /*
  * Load JSON from a path
  */
