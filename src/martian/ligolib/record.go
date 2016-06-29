@@ -1,4 +1,4 @@
-package sere2lib
+package ligolib
 
 import (
 	"time"

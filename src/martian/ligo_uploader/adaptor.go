@@ -5,7 +5,7 @@ package main
 import (
 	"flag"
 	"martian/core"
-	"martian/sere2lib"
+	"martian/ligolib"
 	"os"
 	"strconv"
 )
@@ -37,10 +37,10 @@ func LookupCallInfo(basepath string) (int, string) {
 }
 
 func main() {
-	c := sere2lib.Setup()
+	c := ligolib.Setup()
 	//c.Dump()
 
-	var rr sere2lib.ReportRecord
+	var rr ligolib.ReportRecord
 
 	flag.Parse()
 
@@ -48,12 +48,12 @@ func main() {
 		panic("bad args")
 	}
 
-	version, err := sere2lib.GetPipestanceVersion(*flag_pipestance_path)
+	version, err := ligolib.GetPipestanceVersion(*flag_pipestance_path)
 
 	if err != nil {
 		panic(err)
 	}
-	project := sere2lib.GuessProject(*flag_pipestance_path)
+	project := ligolib.GuessProject(*flag_pipestance_path)
 	if project == nil {
 		panic("can't figure out what kind of project this is!")
 	}
@@ -64,7 +64,7 @@ func main() {
 	rr.CellLine = "blah"
 	rr.Project = project.Name
 	rr.UserId = os.Getenv("USER")
-	rr.FinishDate = sere2lib.GetPipestanceDate(*flag_pipestance_path);
+	rr.FinishDate = ligolib.GetPipestanceDate(*flag_pipestance_path);
 
 	/*
 	jsondata, err := ioutil.ReadFile(*flag_pipestance_path + "/" + project.SummaryJSONPath)
@@ -80,6 +80,6 @@ func main() {
 		panic(err);
 	}
 
-	sere2lib.CheckinSummaries(c, id, *flag_pipestance_path);
-	sere2lib.CheckinOne(c, id, *flag_pipestance_path + "/_perf", "_perf");
+	ligolib.CheckinSummaries(c, id, *flag_pipestance_path);
+	ligolib.CheckinOne(c, id, *flag_pipestance_path + "/_perf", "_perf");
 }

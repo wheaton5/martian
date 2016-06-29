@@ -1,10 +1,10 @@
 // Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
 
 /*
- * This implements the core of the "sere2" webserver for viewing information
- * int he sere2 db.
+ * This implements the core of the "ligo" webserver for viewing information
+ * in the ligo db.
  */
-package sere2web
+package ligoweb
 
 import (
 	"encoding/json"
@@ -12,18 +12,18 @@ import (
 	"github.com/joker/jade"
 	"io/ioutil"
 	"log"
-	"martian/sere2lib"
+	"martian/ligolib"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
 type Sere2Server struct {
-	DB *sere2lib.CoreConnection
+	DB *ligolib.CoreConnection
 	//WebService * martini.Martini
 	WebBase string
 	v       http.Handler
-	Metrics *sere2lib.ProjectsCache
+	Metrics *ligolib.ProjectsCache
 }
 
 /*
@@ -31,13 +31,13 @@ type Sere2Server struct {
  * |port| is the port to run on
  * db is an instance of the database connection (and other config)
  * webbase is the root directory of the web routes and assets.  Relative to the
- *   git root, it is web/sere2
+ *   git root, it is web/ligo
  */
-func SetupServer(port int, db *sere2lib.CoreConnection, webbase string) {
+func SetupServer(port int, db *ligolib.CoreConnection, webbase string) {
 	s2s := new(Sere2Server)
 	s2s.DB = db
 	s2s.WebBase = webbase
-	s2s.Metrics = sere2lib.LoadAllMetrics(webbase + "/metrics")
+	s2s.Metrics = ligolib.LoadAllMetrics(webbase + "/metrics")
 
 	martini.Root = webbase
 	m := martini.Classic()
@@ -117,7 +117,7 @@ func (s *Sere2Server) PlotAll(w http.ResponseWriter, r *http.Request) {
 
 	params := r.URL.Query()
 
-	plot := s.DB.PresentAllMetrics(sere2lib.NewStringWhere(params.Get("where")),
+	plot := s.DB.PresentAllMetrics(ligolib.NewStringWhere(params.Get("where")),
 		s.Metrics.Get(params.Get("metrics_def")))
 
 	js, err := json.Marshal(plot)
@@ -134,7 +134,7 @@ func (s *Sere2Server) Plot(w http.ResponseWriter, r *http.Request) {
 
 	variables := strings.Split(params.Get("columns"), ",")
 
-	plot := s.DB.GenericChartPresenter(sere2lib.NewStringWhere(params.Get("where")),
+	plot := s.DB.GenericChartPresenter(ligolib.NewStringWhere(params.Get("where")),
 		s.Metrics.Get(params.Get("metrics_def")),
 		variables)
 

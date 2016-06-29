@@ -3,7 +3,7 @@
 /*
  * This implements functions for extracting various bits of metadata from a pipeline
  */
-package sere2lib
+package ligolib
 
 import (
 	"encoding/json"

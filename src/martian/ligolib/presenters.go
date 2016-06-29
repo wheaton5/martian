@@ -1,6 +1,6 @@
 // Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
 
-package sere2lib
+package ligolib
 
 /*
  * This file implements several "presenters". A presenter takes a

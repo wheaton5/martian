@@ -4,7 +4,7 @@
  * This package provides basic low-level DB stuff.
  */
 
-package sere2lib
+package ligolib
 
 import (
 	"database/sql"

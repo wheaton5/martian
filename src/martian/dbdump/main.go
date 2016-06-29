@@ -3,21 +3,21 @@
 package main
 
 import (
-	"martian/sere2lib"
+	"martian/ligolib"
 	"log"
 )
 
 func main() {
-	c := sere2lib.Setup()
+	c := ligolib.Setup()
 
-	r, _ := c.GrabRecords(sere2lib.NewEmptyWhere(), "test_reports", sere2lib.ReportRecord{});
+	r, _ := c.GrabRecords(ligolib.NewEmptyWhere(), "test_reports", ligolib.ReportRecord{});
 
-	rt := r.([]sere2lib.ReportRecord)
+	rt := r.([]ligolib.ReportRecord)
 
 	log.Printf("STUFF: %v", rt);
 
 
-	r1 := c.JSONExtract2(sere2lib.NewEmptyWhere(), []string{
+	r1 := c.JSONExtract2(ligolib.NewEmptyWhere(), []string{
 		"SHA",
 		"sampleid",
 		"/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased",
