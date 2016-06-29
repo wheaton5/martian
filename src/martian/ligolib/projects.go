@@ -165,12 +165,8 @@ func Abs(x float64) float64 {
 	}
 }
 
-/*
- * Decide if two numbers are different given a metric definition.
- */
-func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
+func CHeckOK(m *MetricDef, value float64) bool {
 
-	log.Printf("Compare %v %v (%v)", oldguy, newguy, *m)
 
 	/* If the new value is outside of an prescribed range, we claim it
 	 * is different (Regardless of the old value).
@@ -181,6 +177,15 @@ func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 	if m.Low != nil && newguy < *m.Low {
 		return true
 	}
+
+	return false;
+
+}
+
+/*
+ * Decide if two numbers are different given a metric definition.
+ */
+func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 
 	/* If an absolute different threshhold is specified, use it */
 	if m.AbsDiffAllow != nil {
