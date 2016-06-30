@@ -115,9 +115,9 @@ func LoadProject(path string) (*Project, error) {
 	return &project, nil
 }
 
-func LoadAllMetrics(basepath string) *ProjectsCache {
+func (mc *ProjectsCache) Reload() {
 
-	paths, err := ioutil.ReadDir(basepath)
+	paths, err := ioutil.ReadDir(mc.BasePath)
 
 	if err != nil {
 		panic(err)
@@ -127,7 +127,7 @@ func LoadAllMetrics(basepath string) *ProjectsCache {
 
 	for _, p := range paths {
 		/* Error handling here totally wrong XXX*/
-		mdt, err := LoadProject(basepath + "/" + p.Name())
+		mdt, err := LoadProject(mc.BasePath + "/" + p.Name())
 		if mdt != nil {
 			projects[p.Name()] = mdt
 		} else {
@@ -135,10 +135,14 @@ func LoadAllMetrics(basepath string) *ProjectsCache {
 		}
 
 	}
-
-	mc := new(ProjectsCache)
 	mc.Projects = projects
+
+}
+
+func LoadAllMetrics(basepath string) *ProjectsCache {
+	mc := new(ProjectsCache)
 	mc.BasePath = basepath
+	mc.Reload()
 	return mc
 }
 

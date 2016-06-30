@@ -65,6 +65,8 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string) {
 
 	m.Get("/api/list_metric_sets", s2s.ListMetricSets)
 
+	m.Get("/api/reload_metrics", s2s.Reload)
+
 	/* Start it up! */
 	m.Run()
 }
@@ -183,5 +185,11 @@ func (s *Sere2Server) ListMetricSets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(js)
+
+}
+
+func (s *Sere2Server) Reload(w http.ResponseWriter, r *http.Request) {
+	s.Metrics.Reload()
+	http.Redirect(w, r, "/views/unified.jade", 302)
 
 }

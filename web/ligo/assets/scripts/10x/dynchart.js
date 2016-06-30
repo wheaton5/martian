@@ -378,7 +378,10 @@ function colorize_table2(data, datatable, column_from, column_to, style) {
 	}
 }
 
+function reload() {
+	document.location="/api/reload_metrics"
 
+}
 
 function set_error_box(s) {
 	$("#errortext").text(s);
