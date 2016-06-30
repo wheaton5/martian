@@ -1,7 +1,7 @@
 \connect postgres
-drop database sere3;
-create database sere3;
-\connect sere3;
+drop database ligo;
+create database ligo;
+\connect ligo;
 create table test_reports(
 	id    	SERIAL PRIMARY KEY,
 	SHA   	varchar(80) NOT NULL,

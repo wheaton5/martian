@@ -34,12 +34,11 @@ type CoreConnection struct {
  * Build a connection to the SERE database.  TODO: This should look at
  * environment variables to figure out the database to connect to
  */
-func Setup() *CoreConnection {
+func Setup(dbspec string) *CoreConnection {
 	conn := new(CoreConnection)
 
 	/* FIXME: hard coded IP address and password :( */
-	db, err := sql.Open("postgres",
-		"postgres://x10user:v3rys3cr3t@52.39.198.116/sere3?sslmode=disable")
+	db, err := sql.Open("postgres", dbspec)
 	if err != nil {
 		panic(err)
 	}

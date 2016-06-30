@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	c := ligolib.Setup()
+	c := ligolib.Setup(os.Getenv("LIGO_DB"))
 
 	ligoweb.SetupServer(3000, c, os.Getenv("LIGO_WEBDIR"))
 

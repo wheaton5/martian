@@ -14,7 +14,8 @@
 		"/SUMMARIZE_REPORTS_PD/universal_ppv_filtered_snp_conf_regions": {},
 		"/SUMMARIZE_REPORTS_PD/universal_novel_calls_filtered_degen_regions": {},
 		"/SUMMARIZE_REPORTS_PD/universal_novel_validate_ppv_filtered_degen_regions": {},
-		"/_perf/0/forks/0/fork_stats/core_hours": {}
+		"/_perf/0/forks/0/fork_stats/core_hours": {},
+		"/_lena/sample_bag/cell_line/name": {}
 	}
 }
 

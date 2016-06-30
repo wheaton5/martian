@@ -3,11 +3,16 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"martian/core"
 	"martian/ligolib"
+	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -36,8 +41,37 @@ func LookupCallInfo(basepath string) (string, string, string) {
 	return sampleid.(string), desc.(string), call
 }
 
+func GrabFromLena(host string, lena_id int) string {
+
+	req, err := http.Get("http://" + host + "/api/shimulate/" + fmt.Sprintf("%v", lena_id))
+	defer req.Body.Close()
+
+	if err != nil {
+		log.Printf("ERR: %v", err)
+		return ""
+	}
+
+	data, err := ioutil.ReadAll(req.Body)
+
+	if err != nil {
+		log.Printf("ERR: %v", err)
+		return ""
+	}
+
+	var as_json interface{}
+
+	err = json.Unmarshal(data, &as_json)
+
+	if err != nil {
+		log.Printf("ERR: %v", err)
+		return ""
+	}
+
+	return string(data)
+}
+
 func main() {
-	c := ligolib.Setup()
+	c := ligolib.Setup(os.Getenv("LIGO_DB"))
 	//c.Dump()
 
 	var rr ligolib.ReportRecord
@@ -54,33 +88,54 @@ func main() {
 		panic(err)
 	}
 
+	/* Fill out a test record structure from the data we can find in the pipestance */
 	rr.SHA = version
 	rr.Branch = version
 	rr.SampleId, rr.Comments, rr.Project = LookupCallInfo(*flag_pipestance_path)
 	rr.UserId = os.Getenv("USER")
 	rr.FinishDate = ligolib.GetPipestanceDate(*flag_pipestance_path)
-	rr.Success = true;
+	rr.Success = true
 	log.Printf("%v", rr)
 
-	/*
-		jsondata, err := ioutil.ReadFile(*flag_pipestance_path + "/" + project.SummaryJSONPath)
-		if err != nil {
-			panic(err)
-		}
-	*/
+	/* Start a database transaction */
+	err = c.Begin()
+	if err != nil {
+		panic(err)
+	}
 
-	//rr.SummaryJSON = string(jsondata)
-
-	c.Begin()
+	/* insert the test_report. Then link a bunch of report sumamries to it*/
 	id, err := c.InsertRecord("test_reports", rr)
 	if err != nil {
 		panic(err)
 	}
 
+	/* Upload every summary.json file from the whole pipestance. */
 	ligolib.CheckinSummaries(c, id, *flag_pipestance_path)
+
+	/* upload the _perf and _tags files */
 	ligolib.CheckinOne(c, id, *flag_pipestance_path+"/_perf", "_perf")
 	ligolib.CheckinOne(c, id, *flag_pipestance_path+"/_tags", "_tags")
 
+	/* Does this look like it came from LENA? Try to upload the LENA sample
+	 * info.
+	 */
+	sampleid_int, err := strconv.Atoi(rr.SampleId)
+	if err == nil {
+
+		lena_invocation_data_as_str := GrabFromLena("marsoc", sampleid_int)
+		if lena_invocation_data_as_str == "" {
+			log.Printf("Didn't get any decent LENA data.")
+		} else {
+			_, err = c.InsertRecord("test_report_summaries",
+				ligolib.ReportSummaryFile{0, id, lena_invocation_data_as_str, "_lena"})
+			if err != nil {
+				panic(err)
+			}
+		}
+
+	}
+
+	/* Upload any extra files */
 	if *flag_extras != "" {
 		extras_list := strings.Split(*flag_extras, ",")
 		for _, e := range extras_list {
