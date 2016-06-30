@@ -7,6 +7,7 @@
 		"sampleid": {},
 		"SHA":{},
 		"finishdate":{},
+		"success": {},
 		"/SUMMARIZE_REPORTS_PD/universal_N50_phase_block": {},
 		"/SUMMARIZE_REPORTS_PD/universal_long_switch_error": {},
 		"/SUMMARIZE_REPORTS_PD/universal_fract_genes_lt_100kb_phased": {},

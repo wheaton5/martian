@@ -94,7 +94,7 @@ func main() {
 	rr.SampleId, rr.Comments, rr.Project = LookupCallInfo(*flag_pipestance_path)
 	rr.UserId = os.Getenv("USER")
 	rr.FinishDate = ligolib.GetPipestanceDate(*flag_pipestance_path)
-	rr.Success = true
+	rr.Success = ligolib.GetPipestanceSuccess(*flag_pipestance_path);
 	log.Printf("%v", rr)
 
 	/* Start a database transaction */

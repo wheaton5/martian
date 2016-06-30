@@ -121,7 +121,7 @@ func CheckinOne(db *CoreConnection, test_report_id int, path string, name string
 	contents, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	var as_json interface{}
@@ -145,11 +145,19 @@ func CheckinOne(db *CoreConnection, test_report_id int, path string, name string
  */
 func GetPipestanceDate(path string) time.Time {
 
-	file_info, err := os.Stat(path + "/_finalstate")
+	file_info, err := os.Stat(path + "/_timestamp")
 
 	if err != nil {
 		panic(err)
 	}
 
 	return file_info.ModTime()
+}
+
+/*
+ * Did the pipestance complete?
+ */
+func GetPipestanceSuccess(path string) bool {
+	_, err := os.Stat(path + "/_finalstate")
+	return err == nil
 }
