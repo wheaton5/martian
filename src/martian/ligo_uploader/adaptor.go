@@ -59,6 +59,7 @@ func main() {
 	rr.SampleId, rr.Comments, rr.Project = LookupCallInfo(*flag_pipestance_path)
 	rr.UserId = os.Getenv("USER")
 	rr.FinishDate = ligolib.GetPipestanceDate(*flag_pipestance_path)
+	rr.Success = true;
 	log.Printf("%v", rr)
 
 	/*

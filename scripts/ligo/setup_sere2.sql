@@ -11,7 +11,8 @@ create table test_reports(
 	UserId varchar(80) NOT NULL,
 	SampleDefHash varchar(80) NOT NULL,
 	FinishDate timestamp NOT NULL,
-	Project varchar(80) NOT NULL);
+	Project varchar(80) NOT NULL,
+	Success boolean NOT NULL);
 
 create table test_report_summaries(
 	id 	SERIAL PRIMARY KEY,
@@ -20,6 +21,11 @@ create table test_report_summaries(
 	SummaryJSON jsonb NOT NULL);
 
 
+create index on test_report_summaries (ReportRecordId, StageName);
+create index on test_reports (SampleId);
+create index on test_reports (FinishDate);
+create index on test_reports (Project);
+create index on test_report_summaries USING gin (SummaryJSON);
 	
 create user x10user with password 'v3rys3cr3t';
 

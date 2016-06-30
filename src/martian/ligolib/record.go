@@ -4,6 +4,9 @@ import (
 	"time"
 )
 
+/*
+ * These structures reflect the schema of the database
+ */
 type ReportRecord struct {
 	ID            int `sql:"RO"`
 	SHA           string
@@ -14,6 +17,7 @@ type ReportRecord struct {
 	SampleDefHash string
 	Project       string
 	UserId        string
+	Success       bool
 }
 
 type ReportSummaryFile struct {
