@@ -41,6 +41,10 @@ func LookupCallInfo(basepath string) (string, string, string) {
 	return sampleid.(string), desc.(string), call
 }
 
+/*
+ * Connect to the lena server (via MARSOC) and get the sample def to incorporate
+ * into our upload to lig9.
+ */
 func GrabFromLena(host string, lena_id int) string {
 
 	req, err := http.Get("http://" + host + "/api/shimulate/" + fmt.Sprintf("%v", lena_id))
@@ -52,16 +56,14 @@ func GrabFromLena(host string, lena_id int) string {
 	}
 
 	data, err := ioutil.ReadAll(req.Body)
-
 	if err != nil {
 		log.Printf("ERR: %v", err)
 		return ""
 	}
 
+	/* Check that we got valid JSON back (but don't do anything with it.)*/
 	var as_json interface{}
-
 	err = json.Unmarshal(data, &as_json)
-
 	if err != nil {
 		log.Printf("ERR: %v", err)
 		return ""
@@ -71,8 +73,8 @@ func GrabFromLena(host string, lena_id int) string {
 }
 
 func main() {
+	/* Connect to the ligo database */
 	c := ligolib.Setup(os.Getenv("LIGO_DB"))
-	//c.Dump()
 
 	var rr ligolib.ReportRecord
 
@@ -95,7 +97,7 @@ func main() {
 	rr.UserId = os.Getenv("USER")
 	rr.FinishDate = ligolib.GetPipestanceDate(*flag_pipestance_path)
 	rr.Success = ligolib.GetPipestanceSuccess(*flag_pipestance_path);
-	log.Printf("%v", rr)
+	log.Printf("SAMPLE DEFINITION: %v", rr)
 
 	/* Start a database transaction */
 	err = c.Begin()
