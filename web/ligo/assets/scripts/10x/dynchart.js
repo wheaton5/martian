@@ -200,9 +200,9 @@ ViewState.prototype.compare_update = function() {
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
 		var options = {allowHtml:true};
-		colorize_table(data.ChartData,gdata, "Diff", "color:red;")
-		colorize_table2(data.ChartData,gdata, "OldOK" ,"BaseVal", "background: #FFDDDD");
-		colorize_table2(data.ChartData,gdata, "NewOK" ,"NewVal", "background: #FFDDDD");
+		colorize_table(data.ChartData,gdata, "Diff", "different")
+		colorize_table2(data.ChartData,gdata, "OldOK" ,"BaseVal", "out-of-spec");
+		colorize_table2(data.ChartData,gdata, "NewOK" ,"NewVal", "out-of-spec");
 		global_compare.draw(gdata, options)
 
 
@@ -227,8 +227,8 @@ ViewState.prototype.table_update = function()  {
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
 		//var options = {width: 1200, allowHtml:true};
-		var options = {allowHtml:true};
-		colorize_table(data.ChartData, gdata, "OK", "background: #FFDDDD ")
+		var options = {allowHtml:true, cssClassNames: {tableCell:"chart-cell", selectedTableRow: "chart-hl"}};
+		colorize_table(data.ChartData, gdata, "OK", "out-of-spec")
 		global_table.draw(gdata, options)
 
 	})
@@ -356,7 +356,14 @@ function colorize_table(data, datatable, column_name, style) {
 		
 		if (data[i][diff_index] === false) {
 			for (var j = 0; j < labels.length; j++) {
-				datatable.setProperty(di, j, 'style', style)
+			var old = datatable.getProperty(i - 1, j, 'className');
+			var ns = "";
+			if (old != null) {
+				ns = old + " ";
+			}
+			ns += style;
+			datatable.setProperty(i - 1, j, 'className', ns);
+	//				datatable.setProperty(di, j, 'className', style)
 			}
 		}
 	}
@@ -366,19 +373,17 @@ function colorize_table2(data, datatable, column_from, column_to, style) {
 	var from = find_column_index(data, column_from);
 	var to = find_column_index(data, column_to);
 
-	console.log("T: " + to + " F: " + from);
 
 	for (var i = 0; i < data.length; i++) {
 		if (data[i][from] === false) {
-			var old = datatable.getProperty(i - 1, to, 'style', style);
+			var old = datatable.getProperty(i - 1, to, 'className');
 			var ns = "";
 			if (old != null) {
-				ns = old + ";";
+				ns = old + " ";
 			}
 			ns += style;
-			console.log("ADJ: " + style + "TO: " + ns);
 
-			datatable.setProperty(i - 1, to, 'style', ns);
+			datatable.setProperty(i - 1, to, 'className', ns);
 		}
 	}
 }
