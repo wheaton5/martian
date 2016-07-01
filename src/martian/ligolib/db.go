@@ -277,7 +277,13 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 
 		/* Copy the results into an output map */
 		for i := 0; i < len(keys); i++ {
-			rowmap[keys[i]] = FixType(ifaces[i])
+			if keys[i][0] == '/' {
+				/* Fix types from JSON */
+				rowmap[keys[i]] = FixTypeJSON(ifaces[i])
+			} else {
+				/* Fix tupes fro non-JSON */
+				rowmap[keys[i]] = FixType(ifaces[i])
+			}
 		}
 
 		results = append(results, rowmap)
@@ -292,7 +298,7 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
  * anything that looks like a number to a float64. We also convert any
  * byte arrays to strings.
  */
-func FixType(in interface{}) interface{} {
+func FixTypeJSON(in interface{}) interface{} {
 	switch in.(type) {
 	case []byte:
 		f, err := strconv.ParseFloat(string(in.([]byte)), 64)
@@ -301,6 +307,20 @@ func FixType(in interface{}) interface{} {
 		} else {
 			return string(in.([]byte))
 		}
+	default:
+		return in
+	}
+}
+
+/*
+ * Fix data type for results of SQL scan that didn't come from a JSON blob.
+ * The big difference is that we don't try to coerce strings-that-look-like-nums
+ * back to nums.
+ */
+func FixType(in interface{}) interface{} {
+	switch in.(type) {
+	case []byte:
+		return string(in.([]byte))
 	default:
 		return in
 	}
