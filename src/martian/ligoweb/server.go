@@ -136,9 +136,15 @@ func (s *Sere2Server) Plot(w http.ResponseWriter, r *http.Request) {
 
 	variables := strings.Split(params.Get("columns"), ",")
 
+	sortby := params.Get("sortby");
+	if (sortby == "") {
+		sortby = "-finishdate"
+	}
+
 	plot := s.DB.GenericChartPresenter(ligolib.NewStringWhere(params.Get("where")),
 		s.Metrics.Get(params.Get("metrics_def")),
-		variables)
+		variables,
+		sortby)
 
 	js, err := json.Marshal(plot)
 

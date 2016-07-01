@@ -127,8 +127,8 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot
 /*
  * Produce data suitable for plotting in a table or chart.
  */
-func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, fields []string) *Plot {
-	data := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate")
+func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, fields []string, sortby string) *Plot {
+	data := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, sortby)
 	ChartData := RotateN(data, fields)
 	return &Plot{"A plot", ChartData}
 }

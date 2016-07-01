@@ -99,6 +99,7 @@ function ViewState() {
 	this.chartx = null;
 	this.charty = null;
 	this.sample_search = null;
+	this.sortby = null;
 
 	return this;
 }
@@ -257,6 +258,7 @@ function update_model_from_ui() {
 	v.chartx = document.getElementById("chartx").value;
 	v.charty = document.getElementById("charty").value;
 	v.where = document.getElementById("where").value;
+	v.sortby= document.getElementById("sortby").value;
 	var selected = global_table.getSelection();
 	if (selected[0]) {
 		v.sample_search=(get_data_at_row(global_table_data, "sampleid", selected[0].row));
@@ -280,10 +282,12 @@ ViewState.prototype.chart_update = function() {
 	var x = this.chartx;
 	var y = this.charty;
 	var where = this.where
+	var sortby = this.sortby || ""
 
 	var url = "/api/plot?where="+encodeURIComponent(where)+
 		"&columns=" + encodeURIComponent(x) + "," + encodeURIComponent(y) +
-		"&metrics_def=" + this.project;
+		"&metrics_def=" + this.project +
+		"&sortby=" + sortby ;
 
 	console.log(url);
 	$.getJSON(url, function(data) {

@@ -301,11 +301,15 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 func FixTypeJSON(in interface{}) interface{} {
 	switch in.(type) {
 	case []byte:
-		f, err := strconv.ParseFloat(string(in.([]byte)), 64)
-		if err == nil && f == f {
+		as_s := string(in.([]byte))
+		if as_s == "\"NaN\"" || as_s == "\"+Inf\"" || as_s == "\"-Inf\"" {
+			return nil
+		}
+		f, err := strconv.ParseFloat(as_s, 64)
+		if err == nil {
 			return f
 		} else {
-			return string(in.([]byte))
+			return as_s
 		}
 	default:
 		return in
