@@ -184,12 +184,12 @@ func RotateN(src []map[string]interface{}, columns []string) [][]interface{} {
 	for i, datum := range src {
 		newrow := make([]interface{}, len(columns))
 		for keyname, column_datum := range columns {
-			d := datum[column_datum];
+			d := datum[column_datum]
 			f, ok := d.(float64)
-			if (ok) {
-				newrow[keyname] = fmt.Sprintf("%.5f", f);
+			if ok {
+				newrow[keyname] = fmt.Sprintf("%.5f", f)
 			} else {
-				newrow[keyname] = d;
+				newrow[keyname] = d
 			}
 		}
 		res[i+1] = newrow
