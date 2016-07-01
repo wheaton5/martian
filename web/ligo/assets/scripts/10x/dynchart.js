@@ -227,7 +227,7 @@ ViewState.prototype.table_update = function()  {
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
 		//var options = {width: 1200, allowHtml:true};
-		var options = {allowHtml:true, cssClassNames: {tableCell:"chart-cell", selectedTableRow: "chart-hl"}};
+		var options = {allowHtml:true, cssClassNames: {tableCell:"chart-cell"}};
 		colorize_table(data.ChartData, gdata, "OK", "out-of-spec")
 		global_table.draw(gdata, options)
 
