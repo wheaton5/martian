@@ -225,7 +225,8 @@ ViewState.prototype.table_update = function()  {
 		global_table_data = data;
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
-		var options = {width: 1200, allowHtml:true};
+		//var options = {width: 1200, allowHtml:true};
+		var options = {allowHtml:true};
 		colorize_table(data.ChartData, gdata, "OK", "background: #FFDDDD ")
 		global_table.draw(gdata, options)
 
