@@ -8,7 +8,7 @@ CREATE TABLE test_reports(
 	Branch	VARCHAR(80) NOT NULL,
 	SampleId VARCHAR(80) NOT NULL,
 	Comments TEXT NOT NULL,
-	UserId CARCHAR(80) NOT NULL,
+	UserId VARCHAR(80) NOT NULL,
 	SampleDefHash VARCHAR(80) NOT NULL,
 	FinishDate TIMESTAMP NOT NULL,
 	Project VARCHAR(80) NOT NULL,
@@ -27,7 +27,7 @@ CREATE INDEX ON test_reports (FinishDate);
 CREATE INDEX ON test_reports (Project);
 CREATE INDEX ON test_report_summaries USING gin (SummaryJSON);
 	
-CREATE USER x10user WITH password 'v3rys3cr3t';
+CREATE USER x10user;
 
 GRANT ALL ON TABLE test_report_summaries to x10user;
 GRANT ALL ON SEQUENCE test_report_summaries_id_seq to x10user;
