@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"martian/core"
-	"martian/ligolib"
+	"ligo/ligolib"
 	"net/http"
 	"os"
 	"strconv"

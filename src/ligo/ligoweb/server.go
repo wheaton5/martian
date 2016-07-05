@@ -12,7 +12,7 @@ import (
 	"github.com/joker/jade"
 	"io/ioutil"
 	"log"
-	"martian/ligolib"
+	"ligo/ligolib"
 	"net/http"
 	"strconv"
 	"strings"
