@@ -4,8 +4,8 @@
 # Build a Go package with git version embedding.
 #
 
-GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone rsincoming websoc
-GOTESTS=$(addprefix test-, $(GOBINS) core)
+GOBINS=martian/marsoc martian/mrc martian/mre martian/mrf martian/mrg martian/mrp martian/mrs martian/mrv martian/kepler martian/sere martian/houston martian/redstone martian/rsincoming martian/websoc ligo/ligo_server ligo/ligo_uploader
+GOTESTS=$(addprefix test-, $(GOBINS) martian/core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
 
@@ -15,7 +15,7 @@ export GOPATH=$(shell pwd)
 
 # Default rule to make it easier to git pull deploy for now.
 # Remove this when we switch to package deployment.
-marsoc-deploy: marsoc
+marsoc-deploy: martian/marsoc
 
 #
 # Targets for development builds.
@@ -26,7 +26,7 @@ grammar:
 	go tool yacc -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
 
 $(GOBINS):
-	go install -ldflags "-X martian/core.__VERSION__ '$(VERSION)' -X martian/core.__RELEASE__ '$(RELEASE)'" martian/$@
+	go install -ldflags "-X martian/core.__VERSION__ '$(VERSION)' -X martian/core.__RELEASE__ '$(RELEASE)'" $@
 
 web:
 	cd web/martian; npm install; gulp; cd $(GOPATH)
@@ -36,7 +36,7 @@ web:
 	cd web/houston; npm install; gulp; cd $(GOPATH)
 
 $(GOTESTS): test-%:
-	go test -v martian/$*
+	go test -v $*
 
 test: $(GOTESTS)
 
