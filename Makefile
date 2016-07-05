@@ -71,6 +71,9 @@ sake-strip:
 	rm -f web/*/client/*.coffee
 	rm -f web/*/templates/*.jade
 
+	# Remove ligo
+	rm -Rf src/ligo
+
 	# Remove build intermediates and dev-only files.
 	rm -rf pkg
 	rm -rf src
