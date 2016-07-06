@@ -18,6 +18,7 @@ import (
 
 var flag_pipestance_path = flag.String("path", "", "path to pipestance")
 var flag_extras = flag.String("extras", "", "extra data to upload NAME:path,NAME:path...")
+var flag_test_group = flag.String("testgroup", "", "Set the testgroup column in the database")
 
 func LookupCallInfo(basepath string) (string, string, string) {
 
@@ -96,7 +97,8 @@ func main() {
 	rr.SampleId, rr.Comments, rr.Project = LookupCallInfo(*flag_pipestance_path)
 	rr.UserId = os.Getenv("USER")
 	rr.FinishDate = ligolib.GetPipestanceDate(*flag_pipestance_path)
-	rr.Success = ligolib.GetPipestanceSuccess(*flag_pipestance_path);
+	rr.Success = ligolib.GetPipestanceSuccess(*flag_pipestance_path)
+	rr.TestGroup = *flag_test_group
 	log.Printf("SAMPLE DEFINITION: %v", rr)
 
 	/* Start a database transaction */

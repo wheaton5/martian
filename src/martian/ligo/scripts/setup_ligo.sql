@@ -12,6 +12,7 @@ CREATE TABLE test_reports(
 	SampleDefHash VARCHAR(80) NOT NULL,
 	FinishDate TIMESTAMP NOT NULL,
 	Project VARCHAR(80) NOT NULL,
+	TestGroup VARCHAR(80) NOT NULL,
 	Success BOOLEAN NOT NULL);
 
 CREATE TABLE test_report_summaries(
@@ -22,10 +23,13 @@ CREATE TABLE test_report_summaries(
 
 
 CREATE INDEX ON test_report_summaries (ReportRecordId, StageName);
+CREATE INDEX ON test_report_summaries USING gin (SummaryJSON);
 CREATE INDEX ON test_reports (SampleId);
 CREATE INDEX ON test_reports (FinishDate);
 CREATE INDEX ON test_reports (Project);
-CREATE INDEX ON test_report_summaries USING gin (SummaryJSON);
+CREATE INDEX ON test_reports (TestGroup);
+CREATE INDEX ON test_reports (UserId);
+CREATE INDEX ON test_reports (SHA);
 	
 CREATE USER x10user;
 

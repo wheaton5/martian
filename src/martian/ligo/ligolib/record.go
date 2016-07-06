@@ -18,6 +18,7 @@ type ReportRecord struct {
 	Project       string
 	UserId        string
 	Success       bool
+	TestGroup     string
 }
 
 type ReportSummaryFile struct {
