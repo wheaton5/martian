@@ -115,9 +115,9 @@ func LoadProject(path string) (*Project, error) {
 	return &project, nil
 }
 
-func (mc *ProjectsCache) Reload() {
+func (pc *ProjectsCache) Reload() {
 
-	paths, err := ioutil.ReadDir(mc.BasePath)
+	paths, err := ioutil.ReadDir(pc.BasePath)
 
 	if err != nil {
 		panic(err)
@@ -127,7 +127,7 @@ func (mc *ProjectsCache) Reload() {
 
 	for _, p := range paths {
 		/* Error handling here totally wrong XXX*/
-		mdt, err := LoadProject(mc.BasePath + "/" + p.Name())
+		mdt, err := LoadProject(pc.BasePath + "/" + p.Name())
 		if mdt != nil {
 			projects[p.Name()] = mdt
 		} else {
@@ -135,30 +135,27 @@ func (mc *ProjectsCache) Reload() {
 		}
 
 	}
-	mc.Projects = projects
+	pc.Projects = projects
 
 }
 
-func LoadAllMetrics(basepath string) *ProjectsCache {
-	mc := new(ProjectsCache)
-	mc.BasePath = basepath
-	mc.Reload()
-	return mc
+func LoadAllProjects(basepath string) *ProjectsCache {
+	pc := new(ProjectsCache)
+	pc.BasePath = basepath
+	pc.Reload()
+	return pc
 }
 
-func (mc *ProjectsCache) Get(path string) *Project {
-	project := mc.Projects[path]
-	if project == nil {
-		panic("NOT FOUND")
-	}
+func (pc *ProjectsCache) Get(path string) *Project {
+	project := pc.Projects[path]
 	return project
 }
 
-func (mc *ProjectsCache) List() []string {
+func (pc *ProjectsCache) List() []string {
 
 	plist := []string{}
 
-	for k, _ := range mc.Projects {
+	for k, _ := range pc.Projects {
 		plist = append(plist, k)
 	}
 	return plist

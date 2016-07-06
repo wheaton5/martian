@@ -11,19 +11,20 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/joker/jade"
 	"io/ioutil"
-	"log"
 	"ligo/ligolib"
+	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 )
 
-type Sere2Server struct {
+type LigoServer struct {
 	DB *ligolib.CoreConnection
 	//WebService * martini.Martini
-	WebBase string
-	v       http.Handler
-	Metrics *ligolib.ProjectsCache
+	WebBase  string
+	v        http.Handler
+	Projects *ligolib.ProjectsCache
 }
 
 /*
@@ -34,14 +35,14 @@ type Sere2Server struct {
  *   git root, it is web/ligo
  */
 func SetupServer(port int, db *ligolib.CoreConnection, webbase string) {
-	s2s := new(Sere2Server)
-	s2s.DB = db
-	s2s.WebBase = webbase
-	s2s.Metrics = ligolib.LoadAllMetrics(webbase + "/metrics")
+	ls := new(LigoServer)
+	ls.DB = db
+	ls.WebBase = webbase
+	ls.Projects = ligolib.LoadAllProjects(webbase + "/metrics")
 
 	martini.Root = webbase
 	m := martini.Classic()
-	//s2s.WebService = m;
+	//ls.WebService = m;
 
 	m.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/views/unified.jade", 302)
@@ -50,33 +51,32 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string) {
 	m.Get("/assets/**", http.StripPrefix("/assets/", http.FileServer(http.Dir(webbase+"/assets"))))
 
 	/* Process and serve views from here. We match view names to file names */
-	m.Get("/views/**", s2s.Viewer)
+	m.Get("/views/**", ls.Viewer)
 
 	/* API endpoints to do useful things */
-	m.Get("/api/slice", s2s.Slice)
 
-	m.Get("/api/plot", s2s.Plot)
+	m.Get("/api/plot", ls.MakeWrapper(ls.Plot))
 
-	m.Get("/api/compare", s2s.Compare)
+	m.Get("/api/compare", ls.MakeWrapper(ls.Compare))
 
-	m.Get("/api/plotall", s2s.PlotAll)
+	m.Get("/api/plotall", ls.MakeWrapper(ls.PlotAll))
 
-	m.Get("/api/list_metrics", s2s.ListMetrics)
+	//m.Get("/api/list_metrics", ls.ListProjects)
+	m.Get("/api/list_metrics", ls.MakeWrapper(ls.ListMetrics))
 
-	m.Get("/api/list_metric_sets", s2s.ListMetricSets)
+	m.Get("/api/list_metric_sets", ls.MakeWrapper(ls.ListProjects))
 
-	m.Get("/api/reload_metrics", s2s.Reload)
+	m.Get("/api/reload_metrics", ls.Reload)
 
 	/* Start it up! */
 	m.Run()
 }
 
-func (s *Sere2Server) vv(w http.ResponseWriter, r *http.Request) {
-	log.Printf("TRY: %v", r)
-	s.v.ServeHTTP(w, r)
-}
-
-func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
+/*
+ * This is a simple interface to serve jade templates out of the "views"
+ * directory.
+ */
+func (s *LigoServer) Viewer(w http.ResponseWriter, r *http.Request) {
 	psplit := strings.Split(r.URL.Path, "/")
 
 	viewfile := psplit[len(psplit)-1]
@@ -96,106 +96,98 @@ func (s *Sere2Server) Viewer(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(j))
 }
 
-func (s *Sere2Server) ResolveMetricsPath(name string) string {
-	return s.WebBase + "/metrics/" + name
+/* This makes a closure suitable for passing to the martini framework */
+func (s *LigoServer) MakeWrapper(method func(p *ligolib.Project, v url.Values) (interface{}, error)) func(w http.ResponseWriter, r *http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.APIWrapper(method, w, r)
+	}
 }
 
-func (s *Sere2Server) ListMetrics(w http.ResponseWriter, r *http.Request) {
+/*
+ * This is a wrapper function useful for most of the API endpoints:
+ * it parses the "metrics_def" CGI parameter and grabs tries to grab the
+ * right project object for the metric. This it calls |method| as a callback
+ * and translates the results of |method| into JSON.
+ */
+func (s *LigoServer) APIWrapper(method func(p *ligolib.Project, v url.Values) (interface{}, error),
+	w http.ResponseWriter, r *http.Request) {
 
 	params := r.URL.Query()
 
-	plot := s.DB.ListAllMetrics(s.Metrics.Get(params.Get("metrics_def")))
+	project := s.Projects.Get(params.Get("metrics_def"))
 
-	js, err := json.Marshal(plot)
+	result, err := method(project, params)
 
-	if err != nil {
-		panic(err)
+	if err == nil {
+		js, err := json.Marshal(result)
+
+		if err != nil {
+			panic(err)
+		}
+		w.Write(js)
+	} else {
+		w.Write([]byte(""))
+		log.Printf("ERROR: %v", err)
 	}
 
-	w.Write(js)
 }
 
-func (s *Sere2Server) PlotAll(w http.ResponseWriter, r *http.Request) {
+/*
+ * List ever metric in a given project.
+ */
 
-	params := r.URL.Query()
-
-	plot := s.DB.PresentAllMetrics(ligolib.NewStringWhere(params.Get("where")),
-		s.Metrics.Get(params.Get("metrics_def")))
-
-	js, err := json.Marshal(plot)
-
-	if err != nil {
-		panic(err)
-	}
-
-	w.Write(js)
+func (s *LigoServer) ListMetrics(p *ligolib.Project, v url.Values) (interface{}, error) {
+	return s.DB.ListAllMetrics(p), nil
 }
 
-func (s *Sere2Server) Plot(w http.ResponseWriter, r *http.Request) {
-	params := r.URL.Query()
+/* Produce a table for every defined metric */
+func (s *LigoServer) PlotAll(p *ligolib.Project, params url.Values) (interface{}, error) {
+	return s.DB.PresentAllMetrics(ligolib.NewStringWhere(params.Get("where")), p), nil
+}
+
+/* Produce data (suitable for table or plot) for a given set of metrics. */
+func (s *LigoServer) Plot(p *ligolib.Project, params url.Values) (interface{}, error) {
 
 	variables := strings.Split(params.Get("columns"), ",")
 
-	sortby := params.Get("sortby");
-	if (sortby == "") {
+	sortby := params.Get("sortby")
+	if sortby == "" {
 		sortby = "-finishdate"
 	}
 
 	plot := s.DB.GenericChartPresenter(ligolib.NewStringWhere(params.Get("where")),
-		s.Metrics.Get(params.Get("metrics_def")),
+		s.Projects.Get(params.Get("metrics_def")),
 		variables,
 		sortby)
 
-	js, err := json.Marshal(plot)
-
-	if err != nil {
-		panic(err)
-	}
-
-	w.Write(js)
+	return plot, nil
 }
 
-func (s *Sere2Server) Slice(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Goodbye!"))
-}
+/*
+ * Produce comparison data for two pipestances
+ */
+func (s *LigoServer) Compare(p *ligolib.Project, params url.Values) (interface{}, error) {
 
-func (s *Sere2Server) Compare(w http.ResponseWriter, r *http.Request) {
-
-	params := r.URL.Query()
 	id1s := params.Get("base")
 	id2s := params.Get("new")
 	id3 := params.Get("metrics_def")
 
-	id1, err := strconv.Atoi(id1s)
-	id2, err := strconv.Atoi(id2s)
+	id1, _ := strconv.Atoi(id1s)
+	id2, _ := strconv.Atoi(id2s)
 
-	res := s.DB.GenericComparePresenter(id1, id2, s.Metrics.Get(id3))
-
-	js, err := json.Marshal(res)
-
-	if err != nil {
-		panic(err)
-	}
-
-	w.Write(js)
-
+	res := s.DB.GenericComparePresenter(id1, id2, s.Projects.Get(id3))
+	return res, nil
 }
 
-func (s *Sere2Server) ListMetricSets(w http.ResponseWriter, r *http.Request) {
-	lst := s.Metrics.List()
-
-	js, err := json.Marshal(lst)
-
-	if err != nil {
-		panic(err)
-	}
-
-	w.Write(js)
-
+/* List every project. */
+func (s *LigoServer) ListProjects(p *ligolib.Project, params url.Values) (interface{}, error) {
+	return s.Projects.List(), nil
 }
 
-func (s *Sere2Server) Reload(w http.ResponseWriter, r *http.Request) {
-	s.Metrics.Reload()
+/* Reload projects from disk */
+func (s *LigoServer) Reload(w http.ResponseWriter, r *http.Request) {
+	s.Projects.Reload()
 	http.Redirect(w, r, "/views/unified.jade", 302)
 
 }

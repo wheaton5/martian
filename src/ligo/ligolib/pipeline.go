@@ -15,12 +15,6 @@ import (
 	"time"
 )
 
-type ProjectInfo struct {
-	TopLevel        string
-	Name            string
-	SummaryJSONPath string
-}
-
 /*
  * Load JSON from a path
  */
@@ -76,7 +70,7 @@ func FindStageNameFromPath(path string) string {
 /*
  * Grab every summary.json file from a pipestance and upload it to the database.
  */
-func CheckinSummaries(db *CoreConnection, test_report_id int, pipestance_path string) {
+func InsertPipestanceSummaries(db *CoreConnection, test_report_id int, pipestance_path string) {
 
 	filepath.Walk(pipestance_path+"/", func(path string, info os.FileInfo, e error) error {
 		if len(info.Name()) > 4 && info.Name()[0:4] == "chnk" {
@@ -117,7 +111,7 @@ func CheckinSummaries(db *CoreConnection, test_report_id int, pipestance_path st
 /*
  * Grab a specific JSON file and upload that to the database.
  */
-func CheckinOne(db *CoreConnection, test_report_id int, path string, name string) error {
+func InsertSummary(db *CoreConnection, test_report_id int, path string, name string) error {
 	contents, err := ioutil.ReadFile(path)
 
 	if err != nil {

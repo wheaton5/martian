@@ -112,11 +112,11 @@ func main() {
 	}
 
 	/* Upload every summary.json file from the whole pipestance. */
-	ligolib.CheckinSummaries(c, id, *flag_pipestance_path)
+	ligolib.InsertPipestanceSummaries(c, id, *flag_pipestance_path)
 
 	/* upload the _perf and _tags files */
-	ligolib.CheckinOne(c, id, *flag_pipestance_path+"/_perf", "_perf")
-	ligolib.CheckinOne(c, id, *flag_pipestance_path+"/_tags", "_tags")
+	ligolib.InsertSummary(c, id, *flag_pipestance_path+"/_perf", "_perf")
+	ligolib.InsertSummary(c, id, *flag_pipestance_path+"/_tags", "_tags")
 
 	/* Does this look like it came from LENA? Try to upload the LENA sample
 	 * info.
@@ -144,7 +144,7 @@ func main() {
 			parts := strings.Split(e, ":")
 			name := parts[0]
 			path := parts[1]
-			ligolib.CheckinOne(c, id, *flag_pipestance_path+"/"+path, name)
+			ligolib.InsertSummary(c, id, *flag_pipestance_path+"/"+path, name)
 		}
 	}
 
