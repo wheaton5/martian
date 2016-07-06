@@ -174,7 +174,6 @@ func Abs(x float64) float64 {
  */
 func CheckOK(m *MetricDef, value interface{}) bool {
 
-	log.Printf("CHECK %v %v", *m, value)
 	asfloat, ok := value.(float64)
 
 	/* No specification. Metric auto-passes.

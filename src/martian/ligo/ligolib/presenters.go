@@ -10,7 +10,6 @@ package ligolib
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 )
@@ -82,7 +81,6 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot
 			metric := mets.Metrics[metric_name]
 			if metric != nil {
 
-				log.Printf("D: %v %v", metric_name, mets.Metrics[metric_name])
 				ok := CheckOK(mets.Metrics[metric_name], val)
 				if !ok {
 					all_ok = false
@@ -95,10 +93,8 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot
 	var plot Plot
 	fields = append(fields, "OK")
 	gendata := RotateN(data, fields)
-	log.Printf("GG: %v", gendata[0])
-	log.Printf("GG: %v", gendata[1])
 	plot.ChartData = gendata
-	plot.Name = "cats"
+	plot.Name = ""
 
 	/* Now iterate through the column names in the first row
 	 * of plot.ChartData and munge them.  Swap the key name with

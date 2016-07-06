@@ -11,8 +11,8 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/joker/jade"
 	"io/ioutil"
-	"martian/ligo/ligolib"
 	"log"
+	"martian/ligo/ligolib"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -113,9 +113,14 @@ func (s *LigoServer) MakeWrapper(method func(p *ligolib.Project, v url.Values) (
 func (s *LigoServer) APIWrapper(method func(p *ligolib.Project, v url.Values) (interface{}, error),
 	w http.ResponseWriter, r *http.Request) {
 
+	log.Printf("FULL QUERY: %v", r.URL.String())
 	params := r.URL.Query()
 
 	project := s.Projects.Get(params.Get("metrics_def"))
+
+	if project == nil {
+		log.Printf("WARNING: No project: `%v`", params.Get("metrics_def"))
+	}
 
 	result, err := method(project, params)
 
@@ -148,6 +153,11 @@ func (s *LigoServer) PlotAll(p *ligolib.Project, params url.Values) (interface{}
 
 /* Produce data (suitable for table or plot) for a given set of metrics. */
 func (s *LigoServer) Plot(p *ligolib.Project, params url.Values) (interface{}, error) {
+
+	if params.Get("columns") == "" {
+		log.Printf("WARN: no columns argument passed to Plot")
+		return nil, nil
+	}
 
 	variables := strings.Split(params.Get("columns"), ",")
 

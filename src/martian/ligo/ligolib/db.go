@@ -190,9 +190,6 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 						join_as_name, join_as_name, join_as_name, keypath[0])
 
 				joins = append(joins, join_statement)
-				log.Printf("NEW: %v-->%v", keypath[0], join_as_name)
-			} else {
-				log.Printf("OLD: %v-->%v", keypath[0], join_as_name)
 			}
 
 			/* Compute the postgres JSON path-like expression for this
