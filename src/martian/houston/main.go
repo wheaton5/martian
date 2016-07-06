@@ -90,7 +90,7 @@ Options:
 	// Downloader
 	dman := NewDownloadManager(downloadPath, downloadIntervalMin,
 		downloadMaxMB, filesPath, sman)
-	dman.AddDownloadSource(NewZendeskDownloadSource(zendeskDomain, zendeskUser, zendeskApiToken))
+	//dman.AddDownloadSource(NewZendeskDownloadSource(zendeskDomain, zendeskUser, zendeskApiToken))
 	dman.AddDownloadSource(NewAmazonS3DownloadSource(amazonS3Bucket))
 	dman.StartDownloadLoop()
 
