@@ -11,7 +11,7 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/joker/jade"
 	"io/ioutil"
-	"ligo/ligolib"
+	"martian/ligo/ligolib"
 	"log"
 	"net/http"
 	"net/url"
@@ -157,7 +157,7 @@ func (s *LigoServer) Plot(p *ligolib.Project, params url.Values) (interface{}, e
 	}
 
 	plot := s.DB.GenericChartPresenter(ligolib.NewStringWhere(params.Get("where")),
-		s.Projects.Get(params.Get("metrics_def")),
+		p,
 		variables,
 		sortby)
 
@@ -171,12 +171,11 @@ func (s *LigoServer) Compare(p *ligolib.Project, params url.Values) (interface{}
 
 	id1s := params.Get("base")
 	id2s := params.Get("new")
-	id3 := params.Get("metrics_def")
 
 	id1, _ := strconv.Atoi(id1s)
 	id2, _ := strconv.Atoi(id2s)
 
-	res := s.DB.GenericComparePresenter(id1, id2, s.Projects.Get(id3))
+	res := s.DB.GenericComparePresenter(id1, id2, p)
 	return res, nil
 }
 

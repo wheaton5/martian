@@ -4,8 +4,8 @@
 # Build a Go package with git version embedding.
 #
 
-GOBINS=martian/marsoc martian/mrc martian/mre martian/mrf martian/mrg martian/mrp martian/mrs martian/mrv martian/kepler martian/sere martian/houston martian/redstone martian/rsincoming martian/websoc ligo/ligo_server ligo/ligo_uploader
-GOTESTS=$(addprefix test-, $(GOBINS) martian/core)
+GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone rsincoming websoc ligo/ligo_server ligo/ligo_uploader
+GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
 
@@ -15,7 +15,7 @@ export GOPATH=$(shell pwd)
 
 # Default rule to make it easier to git pull deploy for now.
 # Remove this when we switch to package deployment.
-marsoc-deploy: martian/marsoc
+marsoc-deploy: marsoc
 
 #
 # Targets for development builds.
@@ -26,7 +26,7 @@ grammar:
 	go tool yacc -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
 
 $(GOBINS):
-	go install -ldflags "-X martian/core.__VERSION__ '$(VERSION)' -X martian/core.__RELEASE__ '$(RELEASE)'" $@
+	go install -ldflags "-X martian/core.__VERSION__ '$(VERSION)' -X martian/core.__RELEASE__ '$(RELEASE)'" martian/$@
 
 web:
 	cd web/martian; npm install; gulp; cd $(GOPATH)
@@ -36,7 +36,7 @@ web:
 	cd web/houston; npm install; gulp; cd $(GOPATH)
 
 $(GOTESTS): test-%:
-	go test -v $*
+	go test -v martian/$*
 
 test: $(GOTESTS)
 
@@ -51,7 +51,7 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-martian: mrc mre mrf mrg mrp mrs redstone sake-strip sake-martian-strip
+sake-martian: mrc mre mrf mrg mrp mrs ligo/ligo_uploader redstone sake-strip sake-martian-strip
 
 sake-test-martian: test
 
@@ -70,9 +70,6 @@ sake-strip:
 	rm -f web/*/package.json
 	rm -f web/*/client/*.coffee
 	rm -f web/*/templates/*.jade
-
-	# Remove ligo
-	rm -Rf src/ligo
 
 	# Remove build intermediates and dev-only files.
 	rm -rf pkg
@@ -95,3 +92,6 @@ sake-martian-cs-strip:
 
 	# Remove pd job templates.
 	rm -f jobmanagers/*.template
+
+	# Remove ligo_uploader
+	rm -f bin/ligo_uploader

@@ -3,8 +3,8 @@
 package main
 
 import (
-	"ligo/ligolib"
-	"ligo/ligoweb"
+	"martian/ligo/ligolib"
+	"martian/ligo/ligoweb"
 	"os"
 )
 
