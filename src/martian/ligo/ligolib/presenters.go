@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"encoding/json"
+	"log"
 )
 
 /*
@@ -28,6 +30,63 @@ type Plot struct {
 	 */
 	ChartData [][]interface{}
 }
+
+
+type Datum struct {
+	Path string
+	Value interface{}
+}
+
+
+func (c *CoreConnection) AllDataForPipestance(where WhereAble, pid int) *Plot{
+
+	log.Printf("Getting data");
+	my_where := NewStringWhere(fmt.Sprintf("ReportRecordId = %v", pid));
+	reports_i, _ := c.GrabRecords(MergeWhereClauses(where, my_where),
+		"test_report_summaries",
+		ReportSummaryFile{});
+
+	reports := reports_i.([]ReportSummaryFile);
+	log.Printf("Got %v records", len(reports));
+
+	result := []Datum{}
+	for _, r := range reports {
+		var toplevel interface{};
+		err := json.Unmarshal([]byte(r.SummaryJSON), &toplevel);
+		if (err != nil) {
+			log.Printf("Can't unmarshal JSON at %v: %v", r.StageName, err);
+		} else {
+			log.Printf("%v is %v bytes", r.StageName, len(r.SummaryJSON))
+			FlattenJSON("/" + r.StageName, toplevel, &result);
+		}
+	}
+
+	log.Printf("Processed %v json entries", len(result));
+	rotated := RotateStructs(result);
+	log.Printf("Done");
+
+	return &Plot{"", rotated}
+
+}
+
+
+func FlattenJSON(base string, json_blob interface{}, result *[]Datum) {
+	switch json_blob.(type) {
+	case map[string]interface{}:
+		for key, val := range(json_blob.(map[string]interface{})) {
+			FlattenJSON(base + "/" + key, val, result);
+		}
+	case []interface{}:
+		for idx, val := range(json_blob.([]interface{})) {
+			FlattenJSON(fmt.Sprintf("%v/%v",base, idx),val, result);
+		}
+	default:
+		//log.Printf("Found %v:%v", base, json_blob);
+		*result = append(*result, Datum{base, fmt.Sprintf("%v", json_blob)});
+	}
+
+}
+
 
 /*
  * Product a plot that just lists all of the metrics for this

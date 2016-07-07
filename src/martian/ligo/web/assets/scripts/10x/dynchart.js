@@ -38,6 +38,29 @@ function main() {
 
 }
 
+
+function JSONGetSafe(path, params, success) {
+
+	url = path + "?";
+	var first=false;
+	for (key in params) {
+		if (!first) {
+			url +="&";
+		}
+		url = url + key + "=" + encodeURIComponent(params[key])
+	}
+
+	$.getJSON(url, function(data) {
+		if (data["ERROR"]) {
+			alert(data["ERROR"])
+		} else {
+			callback(data["STUFF"]);
+		}
+	})
+
+}
+
+
 function project_dropdown_click(x) {
 	console.log(this);
 	console.log(event)
@@ -209,13 +232,24 @@ ViewState.prototype.compare_update = function() {
 	})
 }
 
+function GetSelectedId(idx) {
+	var selected = global_table.getSelection();
+	if (selected[idx]) {
+		return get_data_at_row(global_table_data, "test_reports.id", selected[idx].row);
+	}
+	return null;
+}
 /* Render the metric view */
 ViewState.prototype.table_update = function()  { 
 	var where = this.where;
 
 	var mode = this.table_mode;
+	var id;
 	if (mode=="metrics") {
 		var url = "/api/plotall?where=" + where 
+	} else if (mode=="everything" && (id = GetSelectedId(0))) {
+		var url = "/api/details?id=" + id +
+			"&where=" + encodeURIComponent("StageName NOT IN ('REPORT_COVERAGE','REPORT_LENGTH_MASS','_perf')")
 	} else {
 		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
 	}

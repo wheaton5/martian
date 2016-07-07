@@ -27,6 +27,12 @@ type LigoServer struct {
 	Projects *ligolib.ProjectsCache
 }
 
+type GenericResponse struct {
+	ERROR string;
+	STUFF interface{}
+}
+
+
 /*
  * Setup a server.
  * |port| is the port to run on
@@ -67,6 +73,8 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string) {
 	m.Get("/api/list_metric_sets", ls.MakeWrapper(ls.ListProjects))
 
 	m.Get("/api/reload_metrics", ls.Reload)
+
+	m.Get("/api/details", ls.MakeWrapper(ls.Details));
 
 	/* Start it up! */
 	m.Run()
@@ -138,6 +146,18 @@ func (s *LigoServer) APIWrapper(method func(p *ligolib.Project, v url.Values) (i
 
 }
 
+func (s *LigoServer) Details(p * ligolib.Project, v url.Values) (interface{}, error) {
+	i, err := strconv.Atoi(v.Get("id"));
+
+
+	if (err != nil) {
+		panic(err);
+	}
+
+
+	return s.DB.AllDataForPipestance(ligolib.NewStringWhere(v.Get("where")),i), nil
+
+}
 /*
  * List ever metric in a given project.
  */
