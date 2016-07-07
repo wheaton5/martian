@@ -1,0 +1,108 @@
+doctype html
+
+html
+	head
+		script(src="/assets/scripts/external/jquery-1.11.1.min.js")
+		link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous")
+
+		link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous")
+		link(rel="stylesheet" href="/assets/stylesheets/10x/ligo.css")
+
+		script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous")
+
+		script(src="https://www.gstatic.com/charts/loader.js")
+		script(src="/assets/scripts/10x/dynchart.js")
+
+	body
+		div.container(style="width:auto")
+			br
+			div.panel.panel-primary
+				div.panel-heading
+					h2.panel-title Please select a mode
+				div.panel-body
+					div(class="btn-group" role="group")
+						button(type="button" class="btn btn-default" onclick="pickwindow('plot')") Plot
+						button(type="button" class="btn btn-default" onclick="pickwindow('table')") Table
+						button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
+						button(type="button" class="btn btn-default" onclick="pickwindow('help')") Help
+						div(class="btn-group")
+							button(class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false")  
+								span#project_cur
+								span(class="caret")
+							ul#projects_dropdown(class="dropdown-menu")
+						button(type="button" class="btn btn-danger" onclick="reload()") Reload Projects
+					br
+			span Where (empty or a SQL where clause)
+			br
+			input#where(name="where" style="width:450px")
+			div.panel.panel-danger#errorbox
+				div.panel-heading
+					h2.panel-title Error
+				div.panel-body
+					p#errortext
+
+
+			div#table
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Table view
+					div.panel-body
+						div(class="btn-group" role="group")
+							button(type="button" class="btn btn-default" onclick="changetablemode('basic')") Basic  
+							button(type="button" class="btn btn-default" onclick="changetablemode('metrics')") Metrics
+							button(type="button" class="btn btn-default" onclick="changetablemode('everything')") Everything
+						div#table1(style="width:100%")
+			div#compare
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Comparison view
+					div.panel-body
+						div#compare1(style="width:1200px; height:500px")
+			div#plot
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Plot view
+					div.panel-body
+						form
+							table
+								tr
+									td.plot-table-td Sort By
+									td.plot-table-td
+										input#sortby(name="x" style="width:850px;" value="finishdate")
+								tr
+									td.plot-table-td X
+									td.plot-table-td
+										input#chartx(name="x" style="width:850px;" value="SHA")
+								tr
+									td.plot-table-td Y
+									td.plot-table-td
+										input#charty(name="y" style="width:850px;")
+							br
+							button(type="button" class="btn btn-default" onclick="update()") Go
+						div(style="float:right;")
+							h2 Metrics I know about
+							div#list1(style="width:600px;height:500px")
+						div#plot1(style="width:800px;height:500px")
+			div#help
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Halp!
+					div.panel-body
+						p
+							| Use the table view to see available datums for inspection. 
+							| Select two rows from the table view and click "compare" two
+							| compare two pipestances. 
+							| To plot a pipestance summary paremeter, select "plot" and select
+							| the metrics to plot on the X and Y axis. For example:
+							| X: SHA, y: /SUMMARIZE_REPORTS_PD/universal_N50_phase_block.
+							| You can use the 'where' field to force subselection. For example,
+							| "userid='dstaff'" or "sampleid=20486".
+							| Use the rightmost button to select which project you want to look at
+							| a project defines a set of metrics as well as a set of datums to
+							| consider.
+							| Use the tiny URL at the bottom of the page for a permanent link
+							| to what you're currently looking at.
+				
+			span Stable url
+			br
+			span#myurl.permaurl

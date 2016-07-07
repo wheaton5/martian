@@ -1,0 +1,22 @@
+
+.plot-table-td {
+	border: 4px solid white;
+}
+
+.permaurl {
+	font-size:6px;
+}
+
+.out-of-spec {
+	color: red;
+}
+
+.different {
+	background: #FFDDDD;
+}
+
+.chart-cell {
+	text-align: left !important;
+}
+
+
