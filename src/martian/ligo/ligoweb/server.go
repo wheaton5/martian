@@ -8,6 +8,8 @@ package ligoweb
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/go-martini/martini"
 	"github.com/joker/jade"
 	"io/ioutil"
@@ -28,10 +30,9 @@ type LigoServer struct {
 }
 
 type GenericResponse struct {
-	ERROR string;
+	ERROR *string
 	STUFF interface{}
 }
-
 
 /*
  * Setup a server.
@@ -70,11 +71,12 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string) {
 	//m.Get("/api/list_metrics", ls.ListProjects)
 	m.Get("/api/list_metrics", ls.MakeWrapper(ls.ListMetrics))
 
-	m.Get("/api/list_metric_sets", ls.MakeWrapper(ls.ListProjects))
+	m.Get("/api/list_metric_sets", ls.ListProjects)
 
 	m.Get("/api/reload_metrics", ls.Reload)
 
-	m.Get("/api/details", ls.MakeWrapper(ls.Details));
+	m.Get("/api/details", ls.MakeWrapper(ls.Details))
+	m.Get("/api/error", ls.MakeWrapper(ls.NeverWorks))
 
 	/* Start it up! */
 	m.Run()
@@ -126,57 +128,63 @@ func (s *LigoServer) APIWrapper(method func(p *ligolib.Project, v url.Values) (i
 
 	project := s.Projects.Get(params.Get("metrics_def"))
 
+	var err error
+	var result interface{}
 	if project == nil {
-		log.Printf("WARNING: No project: `%v`", params.Get("metrics_def"))
+		err = fmt.Errorf("No project: `%v`", params.Get("metrics_def"))
+	} else {
+		result, err = method(project, params)
 	}
 
-	result, err := method(project, params)
-
+	var resp GenericResponse
 	if err == nil {
-		js, err := json.Marshal(result)
-
-		if err != nil {
-			panic(err)
-		}
-		w.Write(js)
+		resp.STUFF = result
 	} else {
-		w.Write([]byte(""))
+		e_str := fmt.Sprintf("%v", err)
+		resp.ERROR = &e_str
 		log.Printf("ERROR: %v", err)
 	}
+	js, err := json.Marshal(resp)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(js)
 
 }
 
-func (s *LigoServer) Details(p * ligolib.Project, v url.Values) (interface{}, error) {
-	i, err := strconv.Atoi(v.Get("id"));
+func (s *LigoServer) NeverWorks(p *ligolib.Project, v url.Values) (interface{}, error) {
+	return nil, errors.New("I'm sorry, dave, I can't do that.")
+}
 
+func (s *LigoServer) Details(p *ligolib.Project, v url.Values) (interface{}, error) {
+	i, err := strconv.Atoi(v.Get("id"))
 
-	if (err != nil) {
-		panic(err);
+	if err != nil {
+		return nil, err
 	}
 
-
-	return s.DB.AllDataForPipestance(ligolib.NewStringWhere(v.Get("where")),i), nil
+	return s.DB.AllDataForPipestance(ligolib.NewStringWhere(v.Get("where")), i)
 
 }
+
 /*
  * List ever metric in a given project.
  */
 
 func (s *LigoServer) ListMetrics(p *ligolib.Project, v url.Values) (interface{}, error) {
-	return s.DB.ListAllMetrics(p), nil
+	return s.DB.ListAllMetrics(p)
 }
 
 /* Produce a table for every defined metric */
 func (s *LigoServer) PlotAll(p *ligolib.Project, params url.Values) (interface{}, error) {
-	return s.DB.PresentAllMetrics(ligolib.NewStringWhere(params.Get("where")), p), nil
+	return s.DB.PresentAllMetrics(ligolib.NewStringWhere(params.Get("where")), p)
 }
 
 /* Produce data (suitable for table or plot) for a given set of metrics. */
 func (s *LigoServer) Plot(p *ligolib.Project, params url.Values) (interface{}, error) {
 
 	if params.Get("columns") == "" {
-		log.Printf("WARN: no columns argument passed to Plot")
-		return nil, nil
+		return nil, errors.New("No columns to plot!")
 	}
 
 	variables := strings.Split(params.Get("columns"), ",")
@@ -186,12 +194,12 @@ func (s *LigoServer) Plot(p *ligolib.Project, params url.Values) (interface{}, e
 		sortby = "-finishdate"
 	}
 
-	plot := s.DB.GenericChartPresenter(ligolib.NewStringWhere(params.Get("where")),
+	plot, err := s.DB.GenericChartPresenter(ligolib.NewStringWhere(params.Get("where")),
 		p,
 		variables,
 		sortby)
 
-	return plot, nil
+	return plot, err
 }
 
 /*
@@ -205,13 +213,20 @@ func (s *LigoServer) Compare(p *ligolib.Project, params url.Values) (interface{}
 	id1, _ := strconv.Atoi(id1s)
 	id2, _ := strconv.Atoi(id2s)
 
-	res := s.DB.GenericComparePresenter(id1, id2, p)
-	return res, nil
+	res, err := s.DB.GenericComparePresenter(id1, id2, p)
+	return res, err
 }
 
 /* List every project. */
-func (s *LigoServer) ListProjects(p *ligolib.Project, params url.Values) (interface{}, error) {
-	return s.Projects.List(), nil
+func (s *LigoServer) ListProjects(w http.ResponseWriter, r *http.Request) {
+
+	v := GenericResponse{nil, s.Projects.List()}
+	js, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(js)
+
 }
 
 /* Reload projects from disk */

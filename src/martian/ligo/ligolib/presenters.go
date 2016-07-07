@@ -9,11 +9,11 @@ package ligolib
  */
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
-	"encoding/json"
-	"log"
 )
 
 /*
@@ -31,68 +31,75 @@ type Plot struct {
 	ChartData [][]interface{}
 }
 
-
 type Datum struct {
-	Path string
+	Path  string
 	Value interface{}
 }
 
+/*
+ * Grab all of the data for a given pipestance.
+ * Note: This can run into problems because there is a LOT
+ * of data for a pipestance!!!! In this case, the |where| argument
+ * applies to the test_report_summaries table and can be used
+ * to sub-select the stages for which we want to grab data.
+ */
+func (c *CoreConnection) AllDataForPipestance(where WhereAble, pid int) (*Plot, error) {
 
-func (c *CoreConnection) AllDataForPipestance(where WhereAble, pid int) *Plot{
-
-	log.Printf("Getting data");
-	my_where := NewStringWhere(fmt.Sprintf("ReportRecordId = %v", pid));
-	reports_i, _ := c.GrabRecords(MergeWhereClauses(where, my_where),
+	my_where := NewStringWhere(fmt.Sprintf("ReportRecordId = %v", pid))
+	reports_i, err := c.GrabRecords(MergeWhereClauses(where, my_where),
 		"test_report_summaries",
-		ReportSummaryFile{});
+		ReportSummaryFile{})
 
-	reports := reports_i.([]ReportSummaryFile);
-	log.Printf("Got %v records", len(reports));
+	if err != nil {
+		return nil, err
+	}
+
+	reports := reports_i.([]ReportSummaryFile)
 
 	result := []Datum{}
 	for _, r := range reports {
-		var toplevel interface{};
-		err := json.Unmarshal([]byte(r.SummaryJSON), &toplevel);
-		if (err != nil) {
-			log.Printf("Can't unmarshal JSON at %v: %v", r.StageName, err);
+		var toplevel interface{}
+		err := json.Unmarshal([]byte(r.SummaryJSON), &toplevel)
+		if err != nil {
+			log.Printf("Can't unmarshal JSON at %v: %v", r.StageName, err)
 		} else {
-			log.Printf("%v is %v bytes", r.StageName, len(r.SummaryJSON))
-			FlattenJSON("/" + r.StageName, toplevel, &result);
+			FlattenJSON("/"+r.StageName, toplevel, &result)
 		}
 	}
 
-	log.Printf("Processed %v json entries", len(result));
-	rotated := RotateStructs(result);
-	log.Printf("Done");
+	rotated := RotateStructs(result)
+	log.Printf("Processed %v json entries", len(result))
 
-	return &Plot{"", rotated}
-
+	return &Plot{"", rotated}, nil
 }
 
-
+/*
+ * Take an entire JSON structure and flatten it into a bunch of
+ * {Path:.... Key:.... } objects.
+ */
 func FlattenJSON(base string, json_blob interface{}, result *[]Datum) {
 	switch json_blob.(type) {
 	case map[string]interface{}:
-		for key, val := range(json_blob.(map[string]interface{})) {
-			FlattenJSON(base + "/" + key, val, result);
+		/* Iterate over maps and recurse into them */
+		for key, val := range json_blob.(map[string]interface{}) {
+			FlattenJSON(base+"/"+key, val, result)
 		}
 	case []interface{}:
-		for idx, val := range(json_blob.([]interface{})) {
-			FlattenJSON(fmt.Sprintf("%v/%v",base, idx),val, result);
+		/* Iterate over arrays and recurse into them */
+		for idx, val := range json_blob.([]interface{}) {
+			FlattenJSON(fmt.Sprintf("%v/%v", base, idx), val, result)
 		}
 	default:
-		//log.Printf("Found %v:%v", base, json_blob);
-		*result = append(*result, Datum{base, fmt.Sprintf("%v", json_blob)});
+		/* Render values as strings. */
+		*result = append(*result, Datum{base, fmt.Sprintf("%v", json_blob)})
 	}
-
 }
-
 
 /*
  * Product a plot that just lists all of the metrics for this
  * project.
  */
-func (c *CoreConnection) ListAllMetrics(mets *Project) *Plot {
+func (c *CoreConnection) ListAllMetrics(mets *Project) (*Plot, error) {
 
 	fields := make([][]interface{}, 0, 0)
 	fields = append(fields, []interface{}{"Metric Name"})
@@ -100,7 +107,7 @@ func (c *CoreConnection) ListAllMetrics(mets *Project) *Plot {
 		fields = append(fields, []interface{}{k})
 	}
 
-	return &Plot{"Some stuff", fields}
+	return &Plot{"Some stuff", fields}, nil
 }
 
 /*
@@ -112,7 +119,7 @@ func (c *CoreConnection) ListAllMetrics(mets *Project) *Plot {
  * ok is true if the row passes all specifications.
  *
  */
-func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot {
+func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) (*Plot, error) {
 
 	/* Create an array with every field of interest */
 	fields := make([]string, 0, 0)
@@ -126,7 +133,11 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot
 		fields = append(fields, k)
 	}
 
-	data := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate")
+	data, err := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate")
+
+	if err != nil {
+		return nil, err
+	}
 
 	/*
 	 * Iterate over all of the data and see if it meets the required metrics.
@@ -176,24 +187,33 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) *Plot
 		gendata[0][i] = str
 	}
 
-	return &plot
+	return &plot, nil
 }
 
 /*
  * Produce data suitable for plotting in a table or chart.
  */
-func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, fields []string, sortby string) *Plot {
-	data := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, sortby)
+func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, fields []string, sortby string) (*Plot, error) {
+	data, err := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, sortby)
+
+	if err != nil {
+		return nil, err
+	}
+
 	ChartData := RotateN(data, fields)
-	return &Plot{"A plot", ChartData}
+	return &Plot{"A plot", ChartData}, nil
 }
 
 /*
  * Produce data suitable for plotting in a table that compares two samples.
  */
-func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, mets *Project) *Plot {
+func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, mets *Project) (*Plot, error) {
 
-	comps := Compare2(c, mets, baseid, newid)
+	comps, err := Compare2(c, mets, baseid, newid)
+
+	if err != nil {
+		return nil, err
+	}
 
 	/*
 	 * This is a hack to render numbers on the server-side for float-like data.
@@ -214,7 +234,7 @@ func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, mets *Pr
 
 	data := RotateStructs(comps)
 
-	return &Plot{"A chart", data}
+	return &Plot{"A chart", data}, nil
 }
 
 /*

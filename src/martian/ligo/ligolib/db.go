@@ -8,6 +8,7 @@ package ligolib
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
@@ -147,7 +148,7 @@ func (c *CoreConnection) InsertRecord(table string, record interface{}) (int, er
  * "universal_fract_snps_phased" in the SUMMARIZE_REPORTS_PD/summary.json
  * directory for every test with the sample id of 12345.
  */
-func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey string) []map[string]interface{} {
+func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey string) ([]map[string]interface{}, error) {
 
 	/* List of all the JOIN statements we need */
 	joins := []string{}
@@ -167,6 +168,9 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 	 * a new join clause and every key adds exactly one select expression.
 	 */
 	for _, key := range keys {
+		if len(key) == 0 {
+			return nil, errors.New("key with empty name")
+		}
 
 		if key[0] == '/' {
 			/* key is a JSON path */
@@ -247,7 +251,8 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 	rows, err := c.Q.Query(query)
 
 	if err != nil {
-		panic(err)
+		log.Printf("DATABASE QUERY FAILED: %v", err)
+		return nil, err
 	}
 
 	/* STEP 4: Now collect the results. We return an array of maps. Each map
@@ -267,7 +272,8 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 
 		err = rows.Scan(iface_ptrs...)
 		if err != nil {
-			panic(err)
+			log.Printf("Failed to parse database results: %v", err)
+			return nil, err
 		}
 
 		rowmap := make(map[string]interface{})
@@ -286,7 +292,7 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 		results = append(results, rowmap)
 	}
 
-	return results
+	return results, nil
 }
 
 /*
@@ -353,7 +359,7 @@ func (c *CoreConnection) GrabRecords(where WhereAble, table string, outtype inte
 	rows, err := c.Q.Query(query)
 
 	if err != nil {
-		log.Printf("UHOHL %v", err)
+		log.Printf("Failed to execute SQL: %v. Error: %v", err)
 		return []ReportRecord{}, err
 	}
 
@@ -368,7 +374,7 @@ func (c *CoreConnection) GrabRecords(where WhereAble, table string, outtype inte
 		err := UnpackRow(rows, elem_type, val_elem)
 
 		if err != nil {
-			log.Printf("UNOHHHHHHH -- %v", err)
+			log.Printf("Failed to unpack SQL: %v", err)
 			return nil, err
 		}
 		index++

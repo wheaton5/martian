@@ -39,28 +39,43 @@ function main() {
 }
 
 
-function JSONGetSafe(path, params, success) {
+/*
+ * This is a JSON front-end to help with error handling. We call a path and expect
+ * an object that looks like:
+ * {ERROR:...,
+ *  STUFF:...
+ * }
+ * If error is missing or null, we call success with the STUFF as its only argument.
+ * If error is not missing, we render the error in the friendly error box.
+ */
+function get_json_safe(path, success) {
 
-	url = path + "?";
-	var first=false;
-	for (key in params) {
+	/*
+	var url = path + "?";
+	var first=true;
+	for (var key in params) {
 		if (!first) {
 			url +="&";
 		}
+		first=false;
 		url = url + key + "=" + encodeURIComponent(params[key])
 	}
+	*/
+
+	var url = path;
 
 	$.getJSON(url, function(data) {
 		if (data["ERROR"]) {
-			alert(data["ERROR"])
+			set_error_box(data["ERROR"])
 		} else {
-			callback(data["STUFF"]);
+			success(data["STUFF"]);
 		}
 	})
-
 }
 
-
+/*
+ * Handle clicks that change the current project.
+ */
 function project_dropdown_click(x) {
 	console.log(this);
 	console.log(event)
@@ -70,9 +85,11 @@ function project_dropdown_click(x) {
 
 }
 
-
+/*
+ * Grab the data to fill in the project dropdown.
+ */
 function setup_project_dropdown() {
-	$.getJSON("/api/list_metric_sets", function(data) {
+	get_json_safe("/api/list_metric_sets", function(data) {
 		var pd = $("#projects_dropdown")
 
 		for (var i = 0; i < data.length; i++) {
@@ -111,7 +128,10 @@ function update() {
 }
 
 
-
+/*
+ * The view state object tracks *ALL* of the data that defines the current view.
+ * It can be serialized (as JSON) and then the page can be reconstituded from it.
+ */
 function ViewState() {
 	this.mode = "table";
 	this.table_mode = "";
@@ -127,13 +147,19 @@ function ViewState() {
 	return this;
 }
 
-
+/*
+ * Get a URL with a serialized version of this viewstate embedded in it.
+ */
 ViewState.prototype.GetURL = function() {
 	var url = document.location;
 	var str = url.host + url.pathname + "?params=" +
 		encodeURIComponent(JSON.stringify(this));
 	return str;
 }
+
+/*
+ * Unpack a serialized version of a ViewState object.
+ */
 ViewState.prototype.ReconstituteFromURL = function(p) {
 	var p = decodeURIComponent(p);
 
@@ -147,7 +173,9 @@ ViewState.prototype.ReconstituteFromURL = function(p) {
 }
 
 
-
+/*
+ * This is the master render function.
+ */
 ViewState.prototype.render = function() {
 	$("#table").hide();
 	$("#compare").hide();
@@ -186,7 +214,7 @@ ViewState.prototype.render = function() {
 		}
 
 		if (w == "plot") {
-			$.getJSON("/api/list_metrics?metrics_def=" + this.project, function(data) {
+			get_json_safe("/api/list_metrics?metrics_def=" + this.project, function(data) {
 				global_metrics_db = data.ChartData;
 				var mdata = google.visualization.arrayToDataTable(global_metrics_db);
 				global_metrics_table.draw(mdata, {})
@@ -219,7 +247,7 @@ ViewState.prototype.compare_update = function() {
 		"&metrics_def=" + this.project;
 	
 	console.log(url)
-	$.getJSON(url, function(data) {
+	get_json_safe(url, function(data) {
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
 		var options = {allowHtml:true};
@@ -232,23 +260,19 @@ ViewState.prototype.compare_update = function() {
 	})
 }
 
-function GetSelectedId(idx) {
-	var selected = global_table.getSelection();
-	if (selected[idx]) {
-		return get_data_at_row(global_table_data, "test_reports.id", selected[idx].row);
-	}
-	return null;
-}
-/* Render the metric view */
+/* Render the various table views.*/
 ViewState.prototype.table_update = function()  { 
 	var where = this.where;
 
 	var mode = this.table_mode;
 	var id;
+
+	/* Which table view are we actually rendering?*/
 	if (mode=="metrics") {
 		var url = "/api/plotall?where=" + where 
-	} else if (mode=="everything" && (id = GetSelectedId(0))) {
-		var url = "/api/details?id=" + id +
+	} else if (mode=="everything" && this.compareidold) {
+		/* XXX Need to show an error if this.compareidold is null */
+		var url = "/api/details?id=" + this.compareidold +
 			"&where=" + encodeURIComponent("StageName NOT IN ('REPORT_COVERAGE','REPORT_LENGTH_MASS','_perf')")
 	} else {
 		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
@@ -256,7 +280,7 @@ ViewState.prototype.table_update = function()  {
 
 	url += "&metrics_def=" + this.project;
 
-	$.getJSON(url, function(data) {
+	get_json_safe(url, function(data) {
 		global_table_data = data;
 		console.log(data);
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
@@ -287,6 +311,12 @@ ViewState.prototype.metrics_list_click = function() {
 	y.value = v;
 }
 
+/*
+ * THIS IS PROBABLY THE DROID YOU ARE LOOKING FOR!
+ * This function binds the UI to a global instance of the ViewState object. 
+ * We call it whenever an interesting change happens and then subseqnetly call the
+ * render function to actually update the UI.
+ */
 function update_model_from_ui() {
 	var v = global_view_state;
 	v.chartx = document.getElementById("chartx").value;
@@ -324,7 +354,7 @@ ViewState.prototype.chart_update = function() {
 		"&sortby=" + sortby ;
 
 	console.log(url);
-	$.getJSON(url, function(data) {
+	get_json_safe(url, function(data) {
 		console.log("GOTDATA!");
 		console.log(data)
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);

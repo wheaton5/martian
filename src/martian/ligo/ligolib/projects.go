@@ -115,7 +115,10 @@ func LoadProject(path string) (*Project, error) {
 	return &project, nil
 }
 
-func (pc *ProjectsCache) Reload() {
+/*
+ * Reload all project files into the projects cache.
+ */
+func (pc *ProjectsCache) Reload() error {
 
 	paths, err := ioutil.ReadDir(pc.BasePath)
 
@@ -135,10 +138,15 @@ func (pc *ProjectsCache) Reload() {
 		}
 
 	}
-	pc.Projects = projects
 
+	pc.Projects = projects
+	return nil
 }
 
+/*
+ * Load all of the projects out of a directory and return the
+ * projects cache object for them.
+ */
 func LoadAllProjects(basepath string) *ProjectsCache {
 	pc := new(ProjectsCache)
 	pc.BasePath = basepath
@@ -146,11 +154,17 @@ func LoadAllProjects(basepath string) *ProjectsCache {
 	return pc
 }
 
+/*
+ * Search a project by name.
+ */
 func (pc *ProjectsCache) Get(path string) *Project {
 	project := pc.Projects[path]
 	return project
 }
 
+/*
+ * This all of the projects that we know of.
+ */
 func (pc *ProjectsCache) List() []string {
 
 	plist := []string{}
@@ -254,7 +268,7 @@ func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 /*
  * Compare two pipestance invocations, specified by pipestance invocation ID.
  */
-func Compare2(db *CoreConnection, m *Project, base int, newguy int) []MetricResult {
+func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricResult, error) {
 
 	/* Flatten the list of metrics */
 	list_of_metrics := make([]string, 0, len(m.Metrics))
@@ -264,12 +278,21 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) []MetricResu
 
 	/* Grab the metric for each pipestance */
 	log.Printf("Comparing %v and %v", base, newguy)
-	basedata := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", base)),
+	basedata, err := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", base)),
 		list_of_metrics,
 		"")
-	newdata := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", newguy)),
+
+	if err != nil {
+		return nil, err
+	}
+
+	newdata, err := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", newguy)),
 		list_of_metrics,
 		"")
+
+	if err != nil {
+		return nil, err
+	}
 
 	results := make([]MetricResult, 0, 0)
 
@@ -306,5 +329,5 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) []MetricResu
 		results = append(results, mr)
 	}
 	sort.Sort((MetricResultSorter)(results))
-	return results
+	return results, nil
 }
