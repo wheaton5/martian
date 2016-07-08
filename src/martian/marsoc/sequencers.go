@@ -118,7 +118,6 @@ func NewXTSeqSequencer(pool *SequencerPool, name string) *Sequencer {
 	return NewSequencer(pool, name, "^(\\d{6})_([\\w-]+)_(\\d+)_[AB]*(?:FC)?([A-Z0-9]{9})$")
 }
 
-
 // Parse the folder name into info fields and get various file mod times.
 func (self *Sequencer) getFolderInfo(fname string, runchan chan *Run) (int, error) {
 	// Parse folder name for basic info.

@@ -15,7 +15,7 @@ export GOPATH=$(shell pwd)
 
 # Default rule to make it easier to git pull deploy for now.
 # Remove this when we switch to package deployment.
-marsoc-deploy: marsoc
+marsoc-deploy: marsoc ligo/ligo_uploader
 
 #
 # Targets for development builds.

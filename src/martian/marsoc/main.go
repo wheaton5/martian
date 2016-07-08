@@ -198,6 +198,7 @@ Options:
                             Disables running pipestances if dirty.
     --autoinvoke        Turns on automatic pipestance invocation.
     --debug             Enable debug printing for package argshims.
+    --notify=SCRIPT	Run script whenever a pipestance stops for any reason.
 
     -h --help           Show this message.
     --version           Show version.`
@@ -304,6 +305,11 @@ Options:
 	}
 	core.LogInfo("options", "--jobmode=%s", jobMode)
 
+	notify := ""
+	if value := opts["--notify"]; value != nil {
+		notify = value.(string)
+	}
+
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
@@ -329,7 +335,7 @@ Options:
 		if mb < 0 {
 			maxStorageBytes = manager.STORAGE_UNLIMITED_BYTES
 		} else {
-			maxStorageBytes = int64(1024*1024)*int64(mb)
+			maxStorageBytes = int64(1024*1024) * int64(mb)
 		}
 	}
 	core.LogInfo("options", "Storage high water mark: %d bytes", maxStorageBytes)
@@ -349,7 +355,7 @@ Options:
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
-		skipPreflight, enableMonitor, debug, false)
+		skipPreflight, enableMonitor, debug, false, notify)
 
 	//=========================================================================
 	// Setup Mailer.
