@@ -657,7 +657,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 				core.LogInfo("pipeman", "VDR killed %d files, %s from %s.", killReport.Count, humanize.Bytes(killReport.Size), pkey)
 
 				// Run the notify hook
-				pipestance.NotifyHook();
+				pipestance.OnFinishHook()
 				// Unlock.
 				pipestance.Unlock()
 
@@ -716,7 +716,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 				// Write pipestance to fail coop.
 				self.writePipestanceToFailCoop(pkey, stage, preflight, summary, errlog, kind, errpaths, invocation)
 				// Run the notify hook
-				pipestance.NotifyHook();
+				pipestance.OnFinishHook()
 
 				// Delete jobs for failed stage.
 				deleteJobs(stage)

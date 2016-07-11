@@ -198,7 +198,7 @@ Options:
                             Disables running pipestances if dirty.
     --autoinvoke        Turns on automatic pipestance invocation.
     --debug             Enable debug printing for package argshims.
-    --notify=SCRIPT	Run script whenever a pipestance stops for any reason.
+    --onfinish=SCRIPT	Run script whenever a pipestance stops for any reason.
 
     -h --help           Show this message.
     --version           Show version.`
@@ -305,9 +305,9 @@ Options:
 	}
 	core.LogInfo("options", "--jobmode=%s", jobMode)
 
-	notify := ""
-	if value := opts["--notify"]; value != nil {
-		notify = value.(string)
+	onfinish:= ""
+	if value := opts["--onfinish"]; value != nil {
+		onfinish= value.(string)
 	}
 
 	// Prepare configuration variables.
@@ -355,7 +355,7 @@ Options:
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
-		skipPreflight, enableMonitor, debug, false, notify)
+		skipPreflight, enableMonitor, debug, false, onfinish)
 
 	//=========================================================================
 	// Setup Mailer.
