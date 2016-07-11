@@ -198,7 +198,7 @@ Options:
                             Disables running pipestances if dirty.
     --autoinvoke        Turns on automatic pipestance invocation.
     --debug             Enable debug printing for package argshims.
-    --onfinish=SCRIPT	Run script whenever a pipestance stops for any reason.
+    --onfinish=EXEC	Run this when pipeline finishes, success or fail.
 
     -h --help           Show this message.
     --version           Show version.`
