@@ -191,6 +191,8 @@ Options:
                             Only applies in cluster jobmodes.
     --vdrmode=MODE      Enables Volatile Data Removal. Valid options:
                             post (default), rolling, or disable
+    --jobqueues=LIST    Semicolon-separated name:queue pairs for advanced use.
+                            Only applies in cluster jobmodes.
 
     --maxprocs=NUM      Set number of processes used by MARSOC.
                             Defaults to 1.
@@ -292,6 +294,12 @@ Options:
 		}
 	}
 
+	jobQueues := ""
+	if value := opts["--jobqueues"]; value != nil {
+		jobQueues = value.(string)
+	}
+	core.LogInfo("options", "--jobqueues=%s", jobQueues)
+
 	vdrMode := "rolling"
 	if value := opts["--vdrmode"]; value != nil {
 		vdrMode = value.(string)
@@ -329,7 +337,7 @@ Options:
 		if mb < 0 {
 			maxStorageBytes = manager.STORAGE_UNLIMITED_BYTES
 		} else {
-			maxStorageBytes = int64(1024*1024)*int64(mb)
+			maxStorageBytes = int64(1024*1024) * int64(mb)
 		}
 	}
 	core.LogInfo("options", "Storage high water mark: %d bytes", maxStorageBytes)
@@ -348,8 +356,8 @@ Options:
 	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
-		skipPreflight, enableMonitor, debug, false)
+		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobQueues,
+		stackVars, zip, skipPreflight, enableMonitor, debug, false)
 
 	//=========================================================================
 	// Setup Mailer.
