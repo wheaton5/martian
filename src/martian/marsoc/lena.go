@@ -48,7 +48,6 @@ type Sample struct {
 	Pscontainer     string       `json:"pscontainer"`
 	Psstate         string       `json:"psstate"`
 	Ready_to_invoke bool         `json:"ready_to_invoke"`
-	Callsrc         string       `json:"callsrc"`
 }
 
 type BySampleId []*Sample

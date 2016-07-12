@@ -33,6 +33,7 @@ type MainPage struct {
 	PipelinesVersion string
 	PipestanceCount  int
 	State            string
+	Products	[]string
 }
 type GraphPage struct {
 	InstanceName string
@@ -66,6 +67,7 @@ type PipestanceForm struct {
 	Fcid     string
 	Pipeline string
 	Psid     string
+	Product string
 }
 
 type RedstoneFile struct {
@@ -113,7 +115,8 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 			sample.Ready_to_invoke = false
 		}
 	}
-	sample.Callsrc = packages.BuildCallSourceForSample(rt, lena.GetSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample)
+	// DSTAFF: Don't do this here anymore!
+	//sample.Callsrc = packages.BuildCallSourceForSample(rt, lena.GetSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample)
 	return fastqPaths
 }
 
@@ -166,7 +169,7 @@ func EnqueuePreprocess(fcid string, rt *core.Runtime, packages *PackageManager, 
 	return ""
 }
 
-func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *Lena, instanceName string) string {
+func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *Lena, instanceName string, product string) string {
 	// Invoke the pipestance.
 	fastqPaths := updateSampleState(sample, rt, lena, packages, pman)
 	errors := []string{}
@@ -179,7 +182,17 @@ func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, p
 	}
 	if every {
 		tags := GetSampleTags(sample, fastqPaths, instanceName)
-		if err := pman.Enqueue(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc, tags); err != nil {
+		//DSTAFF
+		real_product := sample.Product
+		if (product != "") {
+			real_product = product;
+		}
+		callsrc := packages.BuildCallSourceForSample(rt,
+			lena.GetSampleBagWithId(strconv.Itoa(sample.Id)),
+			fastqPaths,
+			sample,
+			real_product)
+		if err := pman.Enqueue(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), callsrc, tags); err != nil {
 			errors = append(errors, err.Error())
 		}
 	}
@@ -193,7 +206,7 @@ func EnqueueAllSamples(fcid string, rt *core.Runtime, packages *PackageManager, 
 	// Invoke the appropriate pipeline on each sample.
 	errors := []string{}
 	for _, sample := range samples {
-		if error := EnqueueSample(sample, rt, packages, pman, lena, instanceName); len(error) > 0 {
+		if error := EnqueueSample(sample, rt, packages, pman, lena, instanceName, sample.Product); len(error) > 0 {
 			errors = append(errors, error)
 		}
 	}
@@ -272,6 +285,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
+				Products:	 packages.ListPackages(),
 			})
 	})
 
@@ -550,7 +564,12 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Psid)
 		}
-		return EnqueueSample(sample, rt, packages, pman, lena, instanceName)
+
+		if(packages.CheckProduct(body.Product)) {
+			return fmt.Sprintf("Bad product '%s'.", body.Product);
+		}
+
+		return EnqueueSample(sample, rt, packages, pman, lena, instanceName, body.Product)
 	})
 
 	//=========================================================================
@@ -606,7 +625,9 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Id)
 		}
-		return EnqueueSample(sample, rt, packages, pman, lena, instanceName)
+		//return EnqueueSample(sample, rt, packages, pman, lena, instanceName, body.Product)
+		//DSTAFF: Metasamples not handled right here!!!!!
+		return EnqueueSample(sample, rt, packages, pman, lena, instanceName, sample.Product)
 	})
 
 	// API: Restart failed metasample analysis.
