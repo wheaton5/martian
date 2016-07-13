@@ -191,8 +191,6 @@ Options:
                             Only applies in cluster jobmodes.
     --vdrmode=MODE      Enables Volatile Data Removal. Valid options:
                             post (default), rolling, or disable
-    --jobqueues=LIST    Semicolon-separated name:queue pairs for advanced use.
-                            Only applies in cluster jobmodes.
 
     --maxprocs=NUM      Set number of processes used by MARSOC.
                             Defaults to 1.
@@ -217,6 +215,7 @@ Options:
 	env := core.EnvRequire([][]string{
 		{"MARSOC_PORT", ">2000"},
 		{"MARSOC_INSTANCE_NAME", "displayed_in_ui"},
+		{"MARSOC_JOBRESOURCES", "special:resources;special:resources"},
 		{"MARSOC_SEQUENCERS", "miseq001;hiseq001"},
 		{"MARSOC_SEQUENCERS_PATH", "path/to/sequencers"},
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
@@ -294,11 +293,8 @@ Options:
 		}
 	}
 
-	jobQueues := ""
-	if value := opts["--jobqueues"]; value != nil {
-		jobQueues = value.(string)
-	}
-	core.LogInfo("options", "--jobqueues=%s", jobQueues)
+	// Special to resources mappings
+	jobResources := env["MARSOC_JOBRESOURCES"]
 
 	vdrMode := "rolling"
 	if value := opts["--vdrmode"]; value != nil {
@@ -356,7 +352,7 @@ Options:
 	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobQueues,
+		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
 		stackVars, zip, skipPreflight, enableMonitor, debug, false)
 
 	//=========================================================================
