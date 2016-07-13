@@ -656,14 +656,15 @@ func (self *PipestanceManager) processRunningPipestances() {
 				killReport := pipestance.VDRKill()
 				core.LogInfo("pipeman", "VDR killed %d files, %s from %s.", killReport.Count, humanize.Bytes(killReport.Size), pkey)
 
-				// Run the notify hook
-				pipestance.OnFinishHook()
 				// Unlock.
 				pipestance.Unlock()
 
 				// Post processing.
 				pipestance.PostProcess()
 				interval = logProcessProgress(pkey, "CompleteProcess", interval)
+
+				// Run the notify hook
+				pipestance.OnFinishHook()
 
 				self.mutex.Lock()
 				delete(self.running, pkey)
