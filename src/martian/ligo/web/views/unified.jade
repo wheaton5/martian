@@ -48,8 +48,12 @@ html
 			div#override
 				div.panel.panel-primary
 					div.panel-heading
-						h2.panel-title Table view
+						h2.panel-title Playground
 					div.panel-body
+						p(style="color:red") 
+							| The 'playground' is for exploratory and temporary work on
+							| project definitions. Nothing you do here is saved to disk.
+							| When you are done, check in any changes you want to ligo via git.
 						textarea#project_def(cols=128 rows=25)
 						br
 						div(class="btn-group" role="group")
