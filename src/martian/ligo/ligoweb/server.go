@@ -78,6 +78,9 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string) {
 	m.Get("/api/details", ls.MakeWrapper(ls.Details))
 	m.Get("/api/error", ls.MakeWrapper(ls.NeverWorks))
 
+	m.Post("/api/tmpproject", ls.UploadTempProject)
+	m.Get("/api/downloadproject", ls.DownloadProject)
+
 	/* Start it up! */
 	m.Run()
 }
@@ -136,6 +139,10 @@ func (s *LigoServer) APIWrapper(method func(p *ligolib.Project, v url.Values) (i
 		result, err = method(project, params)
 	}
 
+	FormatResponse(result, err, w)
+}
+
+func FormatResponse(result interface{}, err error, w http.ResponseWriter) {
 	var resp GenericResponse
 	if err == nil {
 		resp.STUFF = result
@@ -149,7 +156,6 @@ func (s *LigoServer) APIWrapper(method func(p *ligolib.Project, v url.Values) (i
 		panic(err)
 	}
 	w.Write(js)
-
 }
 
 func (s *LigoServer) NeverWorks(p *ligolib.Project, v url.Values) (interface{}, error) {
@@ -234,4 +240,30 @@ func (s *LigoServer) Reload(w http.ResponseWriter, r *http.Request) {
 	s.Projects.Reload()
 	http.Redirect(w, r, "/views/unified.jade", 302)
 
+}
+
+func (s *LigoServer) UploadTempProject(w http.ResponseWriter, r *http.Request) {
+
+	//err := r.ParseMultipartForm(1024*1024);
+	//if (err != nil) {
+	//		log.Printf("UHOH: %v", err);
+	//	}
+	log.Printf("STUFFSTUFF: %v", *r)
+	json_txt := r.PostFormValue("project_def")
+	log.Printf("New project def: %v", json_txt)
+
+	project_key, err := s.Projects.NewTempProject(json_txt)
+	if err != nil {
+		FormatResponse(nil, err, w)
+		return
+	}
+
+	FormatResponse(map[string]interface{}{"project_id": project_key}, nil, w)
+}
+
+func (s *LigoServer) DownloadProject(w http.ResponseWriter, r *http.Request) {
+	params := r.URL.Query()
+	project := s.Projects.Get(params.Get("metrics_def"))
+
+	FormatResponse(map[string]interface{}{"project_def": project}, nil, w)
 }

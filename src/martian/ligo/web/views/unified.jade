@@ -24,6 +24,7 @@ html
 						button(type="button" class="btn btn-default" onclick="pickwindow('plot')") Plot
 						button(type="button" class="btn btn-default" onclick="pickwindow('table')") Table
 						button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
+						button(type="button" class="btn btn-default" onclick="pickwindow('override')") override
 						button(type="button" class="btn btn-default" onclick="pickwindow('help')") Help
 						div(class="btn-group")
 							button(class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false")  
@@ -42,6 +43,16 @@ html
 					p#errortext
 
 
+			div#override
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Table view
+					div.panel-body
+						textarea#project_def(cols=128 rows=25)
+						br
+						div(class="btn-group" role="group")
+							button(type="button" class="btn btn-default" onclick="updateprojecttextarea()") Update
+				
 			div#table
 				div.panel.panel-primary
 					div.panel-heading

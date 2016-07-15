@@ -15,22 +15,22 @@ import (
  * This defines metadata for a specific metric
  */
 type MetricDef struct {
-	JSONPath string
+	JSONPath string `json:"-"`
 
 	/* These JSON parameters help display the metric */
-	HumanName string
-	Owner     string
-	Type      string
+	HumanName string `json:",omitempty"`
+	Owner     string `json:",omitempty"`
+	Type      string `json:",omitempty"`
 
 	/* Warn is value is below Low or above High */
-	Low  *float64
-	High *float64
+	Low  *float64 `json:",omitempty"`
+	High *float64 `json:",omitempty"`
 
 	/* Warn when value changes by more than AbsDiffAllow */
-	AbsDiffAllow *float64
+	AbsDiffAllow *float64 `json:",omitempty"`
 
 	/* Warn when the percentile change is more then RelDiffAllow */
-	RelDiffAllow *float64
+	RelDiffAllow *float64 `json:",omitempty"`
 }
 
 /*
@@ -39,12 +39,25 @@ type MetricDef struct {
 type Project struct {
 	Metrics   map[string]*MetricDef
 	Where     string
-	WhereAble WhereAble
+	WhereAble WhereAble `json:"-"`
 }
 
+/*
+ * A cache of all projects
+ */
+
 type ProjectsCache struct {
+	/* Projects loaded from disk (and checked in */
 	Projects map[string]*Project
 	BasePath string
+
+	/* These are temporary "projects" that are only cached in memory that
+	 * people can build in the UI.
+	 */
+
+	TempProjects     map[string]*Project
+	TempProjectsPath string
+	TempId           int
 }
 
 /*
@@ -79,6 +92,35 @@ type MetricResultSorter []MetricResult
 func (m MetricResultSorter) Len() int           { return len(m) }
 func (m MetricResultSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m MetricResultSorter) Less(i, j int) bool { return m[i].JSONPath < m[j].JSONPath }
+
+/*
+ * Load a new temporary project, and return a key to find that project
+ * later.
+ */
+func (pc *ProjectsCache) NewTempProject(txt string) (string, error) {
+	/* Make up a name for this project */
+	pc.TempId++
+	temp_project_name := fmt.Sprintf("_T%v", pc.TempId)
+
+	var project Project
+
+	/* Load and parse the JSON for it */
+	err := json.Unmarshal([]byte(txt), &project)
+	if err != nil {
+		return "", err
+	}
+
+	/*
+	 * Fix up a bunch of stuff (see LoadProject)
+	 */
+	for k, _ := range project.Metrics {
+		project.Metrics[k].JSONPath = k
+	}
+	project.WhereAble = NewStringWhere(project.Where)
+	pc.TempProjects[temp_project_name] = &project
+
+	return temp_project_name, nil
+}
 
 /*
  * Load a metrics file from disk and return a Project structure that
@@ -151,6 +193,8 @@ func LoadAllProjects(basepath string) *ProjectsCache {
 	pc := new(ProjectsCache)
 	pc.BasePath = basepath
 	pc.Reload()
+
+	pc.TempProjects = make(map[string]*Project)
 	return pc
 }
 
@@ -159,6 +203,10 @@ func LoadAllProjects(basepath string) *ProjectsCache {
  */
 func (pc *ProjectsCache) Get(path string) *Project {
 	project := pc.Projects[path]
+
+	if project == nil {
+		project = pc.TempProjects[path]
+	}
 	return project
 }
 

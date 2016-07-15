@@ -127,6 +127,14 @@ function update() {
 
 }
 
+function updateprojecttextarea() {
+	//update_model_from_ui();
+	global_view_state.write_override();
+	//global_view_state.render();
+}
+
+	
+
 
 /*
  * The view state object tracks *ALL* of the data that defines the current view.
@@ -181,6 +189,8 @@ ViewState.prototype.render = function() {
 	$("#compare").hide();
 	$("#plot").hide();
 	$("#help").hide();
+	$("#override").hide()
+
 	clear_error_box();
 
 	var w = this.mode;
@@ -223,10 +233,51 @@ ViewState.prototype.render = function() {
 			this.chart_update();
 
 		}
+
+		if (w == "override") {
+			this.update_override();
+		}
+
 	}
 	$("#project_cur").text(this.project);
 	$("#myurl").text(this.GetURL());
 }
+
+ViewState.prototype.update_override = function () {
+	var url = "/api/downloadproject?metrics_def=" + this.project;
+
+	get_json_safe(url, function(data) {
+		console.log(data);
+		var js = JSON.stringify(data.project_def, null, 2);
+		var tx = document.getElementById("project_def");
+		tx.value = js;
+	})
+}
+
+ViewState.prototype.write_override = function () {
+	var url = "/api/tmpproject";
+	var data = document.getElementById("project_def").value;
+
+	$.post(url, "project_def=" + encodeURIComponent(data), function(res) {
+		console.log(res);
+		var t=JSON.parse(res);
+		console.log(t);
+		clear_error_box();
+		if (t["ERROR"]) {
+			set_error_box(t.ERROR);
+			return;
+		}
+
+		if (t["STUFF"]) {
+			changeproject(t.STUFF.project_id);
+			console.log(this.project);
+			return;
+		}
+		set_error_box("unineligable output from server");
+
+	})
+}
+
 
 /*
  * Render the compare view */
