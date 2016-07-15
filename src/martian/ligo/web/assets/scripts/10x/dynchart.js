@@ -1,4 +1,3 @@
-// Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
 
 "use strict";
 
@@ -189,6 +188,7 @@ ViewState.prototype.render = function() {
 	$("#plot").hide();
 	$("#help").hide();
 	$("#override").hide()
+	set_csv_download_url("");
 
 	clear_error_box();
 
@@ -213,9 +213,7 @@ ViewState.prototype.render = function() {
 			this.compare_update();
 			$("#compare").show();
 		}
-	}
-	else {
-
+	} else {
 		$("#" + w).show();
 
 		if (w == "table") {
@@ -223,6 +221,7 @@ ViewState.prototype.render = function() {
 		}
 
 		if (w == "plot") {
+			/* Grab the metric definitions that we want to show as options in the plot view */
 			get_json_safe("/api/list_metrics?metrics_def=" + this.project, function(data) {
 				global_metrics_db = data.ChartData;
 				var mdata = google.visualization.arrayToDataTable(global_metrics_db);
@@ -305,8 +304,7 @@ ViewState.prototype.compare_update = function() {
 		colorize_table2(data.ChartData,gdata, "OldOK" ,"BaseVal", "out-of-spec");
 		colorize_table2(data.ChartData,gdata, "NewOK" ,"NewVal", "out-of-spec");
 		global_compare.draw(gdata, options)
-
-
+		set_csv_download_url(url);
 	})
 }
 
@@ -340,6 +338,7 @@ ViewState.prototype.table_update = function()  {
 		var options = {allowHtml:true, cssClassNames: {tableCell:"chart-cell"}};
 		colorize_table(data.ChartData, gdata, "OK", "out-of-spec")
 		global_table.draw(gdata, options)
+		set_csv_download_url(url);
 
 	})
 }
@@ -412,8 +411,7 @@ ViewState.prototype.chart_update = function() {
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
 		var options = {title:data.Name};
 		global_chart.draw(gdata, options);
-
-
+		set_csv_download_url(url);
 	})
 }
 
@@ -516,6 +514,17 @@ function set_error_box(s) {
 
 function clear_error_box() {
 	$("#errorbox").hide();
+}
+
+function set_csv_download_url(l) {
+	var csv = document.getElementById("csvlink");
+
+	/* Use empty string to "hide" the link */
+	if (l) {
+		l = l +"&csv=yes";
+	}
+	csv.text = l;
+	csv.href = l;
 }
 
 
