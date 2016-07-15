@@ -130,6 +130,7 @@ func (s *LigoServer) APIWrapper(method func(p *ligolib.Project, v url.Values) (i
 	log.Printf("FULL QUERY: %v", r.URL.String())
 	params := r.URL.Query()
 
+	/* Grab the project definition that we're using */
 	project := s.Projects.Get(params.Get("metrics_def"))
 
 	var err error
@@ -137,11 +138,61 @@ func (s *LigoServer) APIWrapper(method func(p *ligolib.Project, v url.Values) (i
 	if project == nil {
 		err = fmt.Errorf("No project: `%v`", params.Get("metrics_def"))
 	} else {
+		/* Actually do some work, here */
 		result, err = method(project, params)
 	}
 
-	FormatResponse(result, err, w)
+	if params.Get("csv") == "yes" {
+		FormatResponseCSV(result, err, w)
+	} else {
+		FormatResponse(result, err, w)
+	}
 }
+
+/*
+ * Format a response to the client in CSV format. We assume that result
+ * is secretely of type ligolib.Plot (unless err is set, in which case we don't care).
+ * CSV format is never used directly by the client code. It is only used to format CSV
+ * format for the user to import into other tools.
+ */
+func FormatResponseCSV(result interface{}, err error, w http.ResponseWriter) {
+	if err != nil {
+		/* Hack to do SOMETHING with errors in CSV mode */
+		w.Write([]byte(fmt.Sprintf("%v", err)))
+	} else {
+		/* Render CSV from the chartdata in the obvious way */
+		csv := make([]byte, 0, 1000000)
+
+		/* XXX We assume that method always returns a type of *Plot.
+		 * We should use some proteciton here.
+		 */
+		plot := result.(*ligolib.Plot)
+
+		for i := 0; i < len(plot.ChartData); i++ {
+			row := plot.ChartData[i]
+			for j := 0; j < len(row); j++ {
+				if j != 0 {
+					csv = append(csv, ',')
+				}
+				/*
+				 XXX Need to protect against commas in row[j]
+				*/
+				csv = append(csv, ([]byte(fmt.Sprintf("%v", row[j])))...)
+			}
+			csv = append(csv, ([]byte("\n"))...)
+		}
+		w.Write(csv)
+	}
+}
+
+/*
+ * Format responses as JSON for consumption by our javascript client.
+ * The client expects an object that looks like:
+ * {
+ *	 ERROR: <nil or string describing an error>,
+ *	 STUFF: <opaque JSON bag that depends on the request>
+ * }
+ */
 
 func FormatResponse(result interface{}, err error, w http.ResponseWriter) {
 	var resp GenericResponse
@@ -159,10 +210,16 @@ func FormatResponse(result interface{}, err error, w http.ResponseWriter) {
 	w.Write(js)
 }
 
+/*
+ * Rig to test error handling in FormatResponse.
+ */
 func (s *LigoServer) NeverWorks(p *ligolib.Project, v url.Values) (interface{}, error) {
 	return nil, errors.New("I'm sorry, dave, I can't do that.")
 }
 
+/*
+ * Return all info for this sample that is defined in the project.
+ */
 func (s *LigoServer) Details(p *ligolib.Project, v url.Values) (interface{}, error) {
 	id, err := strconv.Atoi(v.Get("id"))
 
@@ -173,6 +230,9 @@ func (s *LigoServer) Details(p *ligolib.Project, v url.Values) (interface{}, err
 	return s.DB.DetailsPresenter(id, p)
 }
 
+/*
+ * Return everything about this pipestance. ignore the project.
+ */
 func (s *LigoServer) Everything(p *ligolib.Project, v url.Values) (interface{}, error) {
 	i, err := strconv.Atoi(v.Get("id"))
 
@@ -187,7 +247,6 @@ func (s *LigoServer) Everything(p *ligolib.Project, v url.Values) (interface{}, 
 /*
  * List ever metric in a given project.
  */
-
 func (s *LigoServer) ListMetrics(p *ligolib.Project, v url.Values) (interface{}, error) {
 	return s.DB.ListAllMetrics(p)
 }
@@ -253,6 +312,12 @@ func (s *LigoServer) Reload(w http.ResponseWriter, r *http.Request) {
 
 }
 
+/*
+ * Upload a new temporary project.  This accepts an HTTP form describing the
+ * new projoect (in the same JSON format as the on-disk descriptions) and
+ * this copies it into temporary memory.  It returns a key that can be used
+ * as any "metrics_def" argument to refer to the new project.
+ */
 func (s *LigoServer) UploadTempProject(w http.ResponseWriter, r *http.Request) {
 
 	//err := r.ParseMultipartForm(1024*1024);
