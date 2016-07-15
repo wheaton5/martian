@@ -115,6 +115,7 @@ function changetablemode(mode) {
 	global_view_state.render();
 
 }
+
 function pickwindow(mode) {
 	update_model_from_ui()
 	global_view_state.mode = mode;
@@ -132,8 +133,6 @@ function updateprojecttextarea() {
 	global_view_state.write_override();
 	//global_view_state.render();
 }
-
-	
 
 
 /*
@@ -323,8 +322,10 @@ ViewState.prototype.table_update = function()  {
 		var url = "/api/plotall?where=" + where 
 	} else if (mode=="everything" && this.compareidold) {
 		/* XXX Need to show an error if this.compareidold is null */
-		var url = "/api/details?id=" + this.compareidold +
+		var url = "/api/everything?id=" + this.compareidold +
 			"&where=" + encodeURIComponent("StageName NOT IN ('REPORT_COVERAGE','REPORT_LENGTH_MASS','_perf')")
+	} else if (mode=="details" && this.compareidold) {
+		var url = "/api/details?id=" + this.compareidold
 	} else {
 		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
 	}

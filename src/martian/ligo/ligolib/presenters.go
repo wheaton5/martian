@@ -10,6 +10,7 @@ package ligolib
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -235,6 +236,54 @@ func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, mets *Pr
 	data := RotateStructs(comps)
 
 	return &Plot{"A chart", data}, nil
+}
+
+/*
+ * Grab the values of every *DEFINED* metric for a test ID and return
+ * them. Also return an "OK" field that defines if a metric hit spec.
+ */
+func (c *CoreConnection) DetailsPresenter(id int, mets *Project) (*Plot, error) {
+
+	/* Flatten the list of metrics */
+	list_of_metrics := make([]string, 0, len(mets.Metrics))
+	for metric_name, _ := range mets.Metrics {
+		list_of_metrics = append(list_of_metrics, metric_name)
+	}
+
+	/* Grab the data for the metrics that we care about */
+	data, err := c.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", id)),
+		list_of_metrics,
+		"")
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data) < 1 {
+		return nil, errors.New("No Data for your ID!")
+	}
+
+	/*
+	 * Database will return exactly one row that maps metric names to values.
+	 * Convert that to a plot like format that looks like.
+	 * [
+	 *  [metric_1_name, metric_1_value, OK],
+	 *  [metric_2_name, metric_2_value, OK],
+	 *  ...
+	 * ]
+	 */
+	d1 := data[0]
+
+	details := make([][]interface{}, 0, 0)
+	details = append(details, []interface{}{"Metric", "Value", "OK"})
+
+	for metric_name, metric_value := range d1 {
+		met_ok := CheckOK(mets.Metrics[metric_name], metric_value)
+		row := []interface{}{metric_name, fmt.Sprintf("%v", metric_value), met_ok}
+		details = append(details, row)
+	}
+
+	return &Plot{"", details}, nil
 }
 
 /*

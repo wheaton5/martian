@@ -76,6 +76,7 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string) {
 	m.Get("/api/reload_metrics", ls.Reload)
 
 	m.Get("/api/details", ls.MakeWrapper(ls.Details))
+	m.Get("/api/everything", ls.MakeWrapper(ls.Everything))
 	m.Get("/api/error", ls.MakeWrapper(ls.NeverWorks))
 
 	m.Post("/api/tmpproject", ls.UploadTempProject)
@@ -163,6 +164,16 @@ func (s *LigoServer) NeverWorks(p *ligolib.Project, v url.Values) (interface{}, 
 }
 
 func (s *LigoServer) Details(p *ligolib.Project, v url.Values) (interface{}, error) {
+	id, err := strconv.Atoi(v.Get("id"))
+
+	if err != nil {
+		return nil, err
+	}
+
+	return s.DB.DetailsPresenter(id, p)
+}
+
+func (s *LigoServer) Everything(p *ligolib.Project, v url.Values) (interface{}, error) {
 	i, err := strconv.Atoi(v.Get("id"))
 
 	if err != nil {
