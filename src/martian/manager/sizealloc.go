@@ -206,9 +206,9 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 				} else if nreads, ok := downsample["target_reads"]; ok {
 					// TODO: evil harcoded read length 150 below
 					if nr, ok := nreads.(int64); ok {
-						weightedSize = GB_DOWNSAMPLE_RATIO * float64(150*1024*1024*1024*nr)
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(150*nr)
 					} else if nr, ok := nreads.(float64); ok {
-						weightedSize = GB_DOWNSAMPLE_RATIO * float64(150*1024*1024*1024) * nr
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(150) * nr
 					}
 				}
 			}
