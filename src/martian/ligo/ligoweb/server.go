@@ -41,11 +41,11 @@ type GenericResponse struct {
  * webbase is the root directory of the web routes and assets.  Relative to the
  *   git root, it is web/ligo
  */
-func SetupServer(port int, db *ligolib.CoreConnection, webbase string) {
+func SetupServer(port int, db *ligolib.CoreConnection, webbase string, projectbase string) {
 	ls := new(LigoServer)
 	ls.DB = db
 	ls.WebBase = webbase
-	ls.Projects = ligolib.LoadAllProjects(webbase + "/metrics")
+	ls.Projects = ligolib.LoadAllProjects(projectbase)
 
 	martini.Root = webbase
 	m := martini.Classic()

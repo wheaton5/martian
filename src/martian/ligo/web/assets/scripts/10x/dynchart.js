@@ -129,7 +129,7 @@ function update() {
 
 function updateprojecttextarea() {
 	//update_model_from_ui();
-	global_view_state.write_override();
+	global_view_state.write_playground();
 	//global_view_state.render();
 }
 
@@ -187,7 +187,7 @@ ViewState.prototype.render = function() {
 	$("#compare").hide();
 	$("#plot").hide();
 	$("#help").hide();
-	$("#override").hide()
+	$("#playground").hide()
 	set_csv_download_url("");
 
 	clear_error_box();
@@ -232,8 +232,8 @@ ViewState.prototype.render = function() {
 
 		}
 
-		if (w == "override") {
-			this.update_override();
+		if (w == "playground") {
+			this.update_playground();
 		}
 
 	}
@@ -241,7 +241,7 @@ ViewState.prototype.render = function() {
 	$("#myurl").text(this.GetURL());
 }
 
-ViewState.prototype.update_override = function () {
+ViewState.prototype.update_playground = function () {
 	var url = "/api/downloadproject?metrics_def=" + this.project;
 
 	get_json_safe(url, function(data) {
@@ -252,7 +252,7 @@ ViewState.prototype.update_override = function () {
 	})
 }
 
-ViewState.prototype.write_override = function () {
+ViewState.prototype.write_playground = function () {
 	var url = "/api/tmpproject";
 	var data = document.getElementById("project_def").value;
 

@@ -11,6 +11,11 @@ import (
 func main() {
 	c := ligolib.Setup(os.Getenv("LIGO_DB"))
 
-	ligoweb.SetupServer(3000, c, os.Getenv("LIGO_WEBDIR"))
+	projects_path := os.Getenv("LIGO_PROJECTS");
+	if (projects_path == "") {
+		projects_path = os.Getenv("LIGO_WEBDIR") + "/metrics"
+	}
+
+	ligoweb.SetupServer(3000, c, os.Getenv("LIGO_WEBDIR"), projects_path)
 
 }
