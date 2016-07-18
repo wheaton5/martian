@@ -71,15 +71,17 @@ func GetRunInfo(runPath string) *XMLRunInfo {
 	return &xmlRunInfo
 }
 
-func GetNumCycles(runPath string) int {
+func GetNumCycles(runPath string) (int, error) {
 	runInfo := GetRunInfo(runPath)
-	numCycles := 0
-	if runInfo != nil {
+	if runInfo == nil {
+		return 0, &core.PipestancePathError{runPath}
+	} else {
+		numCycles := 0
 		for _, read := range runInfo.Run.Reads.Reads {
 			numCycles += read.NumCycles
 		}
+		return numCycles, nil
 	}
-	return numCycles
 }
 
 func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAllocation, error) {
@@ -102,7 +104,11 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 	if strings.Contains(psname, "BCL_PROCESSOR") {
 		var sequencer string
 		runPath := invokeArgs["run_path"].(string)
-		numCycles := GetNumCycles(runPath)
+		// if path cannot be resolved, raise error
+		numCycles, err := GetNumCycles(runPath)
+		if err != nil {
+			return nil, err
+		}
 		sequencer = BclProcessorSequencer(runPath)
 		// TODO log on error
 		filePaths, _ := BclPathsFromRunPath(runPath)
