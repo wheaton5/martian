@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"martian/core"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -56,6 +57,7 @@ func (self *ArgShim) start() {
 	self.writer = bufio.NewWriterSize(self.stdin, 1000000)
 	self.stdout, _ = self.cmd.StdoutPipe()
 	self.reader = bufio.NewReaderSize(self.stdout, 1000000)
+	self.cmd.Stderr = os.Stderr
 	self.cmd.Start()
 }
 
