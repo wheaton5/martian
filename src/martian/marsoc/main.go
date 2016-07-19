@@ -198,6 +198,7 @@ Options:
                             Disables running pipestances if dirty.
     --autoinvoke        Turns on automatic pipestance invocation.
     --debug             Enable debug printing for package argshims.
+    --onfinish=EXEC     Run this when pipeline finishes, success or fail.
 
     -h --help           Show this message.
     --version           Show version.`
@@ -308,6 +309,11 @@ Options:
 	}
 	core.LogInfo("options", "--jobmode=%s", jobMode)
 
+	onfinish := ""
+	if value := opts["--onfinish"]; value != nil {
+		onfinish = value.(string)
+	}
+
 	// Prepare configuration variables.
 	uiport := env["MARSOC_PORT"]
 	instanceName := env["MARSOC_INSTANCE_NAME"]
@@ -353,7 +359,7 @@ Options:
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
-		stackVars, zip, skipPreflight, enableMonitor, debug, false)
+		stackVars, zip, skipPreflight, enableMonitor, debug, false, onfinish)
 
 	//=========================================================================
 	// Setup Mailer.

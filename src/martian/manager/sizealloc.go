@@ -71,15 +71,17 @@ func GetRunInfo(runPath string) *XMLRunInfo {
 	return &xmlRunInfo
 }
 
-func GetNumCycles(runPath string) int {
+func GetNumCycles(runPath string) (int, error) {
 	runInfo := GetRunInfo(runPath)
-	numCycles := 0
-	if runInfo != nil {
+	if runInfo == nil {
+		return 0, &core.PipestancePathError{runPath}
+	} else {
+		numCycles := 0
 		for _, read := range runInfo.Run.Reads.Reads {
 			numCycles += read.NumCycles
 		}
+		return numCycles, nil
 	}
-	return numCycles
 }
 
 func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAllocation, error) {
@@ -102,7 +104,11 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 	if strings.Contains(psname, "BCL_PROCESSOR") {
 		var sequencer string
 		runPath := invokeArgs["run_path"].(string)
-		numCycles := GetNumCycles(runPath)
+		// if path cannot be resolved, raise error
+		numCycles, err := GetNumCycles(runPath)
+		if err != nil {
+			return nil, err
+		}
 		sequencer = BclProcessorSequencer(runPath)
 		// TODO log on error
 		filePaths, _ := BclPathsFromRunPath(runPath)
@@ -178,6 +184,37 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 						weightedSize *= sr
 					} else if sr, ok := subsample_rate.(int64); ok {
 						weightedSize *= float64(sr)
+					}
+				}
+			}
+		} else if strings.Contains(psname, "ASSEMBLER") {
+			// get downsample rate
+			// JM 3-29-2016: increase ratios by 25% to handle observed delay in TRIM_READS vdrkill
+			GB_DOWNSAMPLE_RATIO := 9.5
+			NO_DOWNSAMPLE_RATIO := 14.5
+			NO_DOWNSAMPLE_OFFSET := 30.0 * float64(1024*1024*1024)
+			downsample_iface := invokeArgs["downsample"]
+			weightedSize = NO_DOWNSAMPLE_OFFSET + NO_DOWNSAMPLE_RATIO*float64(inputSize)
+			if downsample_iface != nil {
+				downsample := downsample_iface.(map[string]interface{})
+				if gigabases, ok := downsample["gigabases"]; ok {
+					if gb, ok := gigabases.(int64); ok {
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024*1024*1024*gb)
+					} else if gb, ok := gigabases.(float64); ok {
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(1024*1024*1024) * gb
+					}
+				} else if subsample_rate, ok := downsample["subsample_rate"]; ok {
+					if sr, ok := subsample_rate.(float64); ok {
+						weightedSize *= sr
+					} else if sr, ok := subsample_rate.(int64); ok {
+						weightedSize *= float64(sr)
+					}
+				} else if nreads, ok := downsample["target_reads"]; ok {
+					// TODO: evil harcoded read length 150 below
+					if nr, ok := nreads.(int64); ok {
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(150*nr)
+					} else if nr, ok := nreads.(float64); ok {
+						weightedSize = GB_DOWNSAMPLE_RATIO * float64(150) * nr
 					}
 				}
 			}

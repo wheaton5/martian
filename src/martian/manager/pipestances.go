@@ -663,6 +663,9 @@ func (self *PipestanceManager) processRunningPipestances() {
 				pipestance.PostProcess()
 				interval = logProcessProgress(pkey, "CompleteProcess", interval)
 
+				// Run the notify hook
+				pipestance.OnFinishHook()
+
 				self.mutex.Lock()
 				delete(self.running, pkey)
 				self.completed[pkey] = true
@@ -713,6 +716,8 @@ func (self *PipestanceManager) processRunningPipestances() {
 
 				// Write pipestance to fail coop.
 				self.writePipestanceToFailCoop(pkey, stage, preflight, summary, errlog, kind, errpaths, invocation)
+				// Run the notify hook
+				pipestance.OnFinishHook()
 
 				// Delete jobs for failed stage.
 				deleteJobs(stage)

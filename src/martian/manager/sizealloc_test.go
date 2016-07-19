@@ -9,7 +9,7 @@ import (
 
 func TestGetTotalReadCount(t *testing.T) {
 	runPath := getTestFilePath("sequencers/miseq002/HTESTBCXX")
-	numCycles := GetNumCycles(runPath)
+	numCycles, _ := GetNumCycles(runPath)
 	assert.Equal(t, numCycles, 125)
 }
 
