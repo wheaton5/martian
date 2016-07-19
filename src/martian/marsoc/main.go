@@ -216,6 +216,7 @@ Options:
 	env := core.EnvRequire([][]string{
 		{"MARSOC_PORT", ">2000"},
 		{"MARSOC_INSTANCE_NAME", "displayed_in_ui"},
+		{"MARSOC_JOBRESOURCES", "special:resources;special:resources"},
 		{"MARSOC_SEQUENCERS", "miseq001;hiseq001"},
 		{"MARSOC_SEQUENCERS_PATH", "path/to/sequencers"},
 		{"MARSOC_CACHE_PATH", "path/to/marsoc/cache"},
@@ -293,6 +294,9 @@ Options:
 		}
 	}
 
+	// Special to resources mappings
+	jobResources := env["MARSOC_JOBRESOURCES"]
+
 	vdrMode := "rolling"
 	if value := opts["--vdrmode"]; value != nil {
 		vdrMode = value.(string)
@@ -305,9 +309,9 @@ Options:
 	}
 	core.LogInfo("options", "--jobmode=%s", jobMode)
 
-	onfinish:= ""
+	onfinish := ""
 	if value := opts["--onfinish"]; value != nil {
-		onfinish= value.(string)
+		onfinish = value.(string)
 	}
 
 	// Prepare configuration variables.
@@ -354,8 +358,8 @@ Options:
 	skipPreflight := false
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
-		skipPreflight, enableMonitor, debug, false, onfinish)
+		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
+		stackVars, zip, skipPreflight, enableMonitor, debug, false, onfinish)
 
 	//=========================================================================
 	// Setup Mailer.
