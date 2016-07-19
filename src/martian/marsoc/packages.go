@@ -103,6 +103,8 @@ func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag inte
 	sample *Sample) string {
 	if p, ok := self.packages[sample.Product]; ok {
 		return p.Argshim.BuildCallSourceForTest(rt, "lena", strconv.Itoa(sample.Id), sbag, fastqPaths, p.MroPaths)
+	} else {
+		core.LogInfo("packages", "Could not build call source for package %s for sample %d", sample.Product, strconv.Itoa(sample.Id))
 	}
 	return ""
 }
