@@ -407,6 +407,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
+				Products:	 packages.ListPackages(),
 			})
 	})
 
