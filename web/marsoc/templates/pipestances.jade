@@ -127,7 +127,7 @@ html(ng-app="app")
                             button.btn.btn-default(ng-if="p.state == 'running' && admin && showbutton" ng-click="killPipestance(p)") Kill
                         td(ng-if=admin)
                                 select(ng-model="p.product").
-                                        <option>Default</option>
+                                        <option selected>Default</option>
                                         [[range .Products]] <option value="[[.]]"> [[.]] </options> [[end]]
                 tfoot
                     td(colspan="6")
