@@ -101,10 +101,6 @@ html(ng-app="app")
                                         a(ng-click="state='copying'") Copying
                                     li
                                         a(ng-click="state='waiting'") Waiting
-			td(ng-if=admin)
-				| Override software product:
-				select
-					[[range .Products]] option(value="K") [[.]] [[end]]
             table.table#ps_table(style="margin-top: 50px")
                 thead
                     tr
@@ -129,8 +125,10 @@ html(ng-app="app")
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="unfailPipestance(p)") Unfail
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="wipePipestance(p)") Wipe
                             button.btn.btn-default(ng-if="p.state == 'running' && admin && showbutton" ng-click="killPipestance(p)") Kill
-			td(ng-if="admin")
-			    select
+                        td(ng-if=admin)
+                                select(ng-model="p.product").
+                                        <option>Default</option>
+                                        [[range .Products]] <option value="[[.]]"> [[.]] </options> [[end]]
                 tfoot
                     td(colspan="6")
                         ul.pagination.pull-right

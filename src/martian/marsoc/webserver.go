@@ -181,20 +181,28 @@ func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, p
 		}
 	}
 	if every {
-		tags := GetSampleTags(sample, fastqPaths, instanceName)
+		//tags := GetSampleTags(sample, fastqPaths, instanceName)
 		//DSTAFF
 		real_product := sample.Product
-		if (product != "") {
+		if (product != "" && product != "Default") {
 			real_product = product;
+		}
+
+		if (!packages.CheckProduct(real_product)) {
+			return fmt.Sprintf("Bad product '%s'.", real_product);
+			
 		}
 		callsrc := packages.BuildCallSourceForSample(rt,
 			lena.GetSampleBagWithId(strconv.Itoa(sample.Id)),
 			fastqPaths,
 			sample,
 			real_product)
+			core.PrintInfo("COOLNESS","x: %v %v",  real_product, callsrc);
+		/*
 		if err := pman.Enqueue(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), callsrc, tags); err != nil {
 			errors = append(errors, err.Error())
 		}
+		*/
 	}
 	return strings.Join(errors, "\n")
 }
@@ -298,6 +306,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
+				Products:	 packages.ListPackages(),
 			})
 	})
 
@@ -431,6 +440,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
+				Products:	 packages.ListPackages(),
 			})
 	})
 
@@ -564,10 +574,6 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		sample := lena.GetSampleWithId(body.Psid)
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Psid)
-		}
-
-		if(packages.CheckProduct(body.Product)) {
-			return fmt.Sprintf("Bad product '%s'.", body.Product);
 		}
 
 		return EnqueueSample(sample, rt, packages, pman, lena, instanceName, body.Product)
