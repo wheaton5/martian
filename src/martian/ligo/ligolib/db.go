@@ -12,7 +12,9 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
+	"math"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -133,6 +135,71 @@ func (c *CoreConnection) InsertRecord(table string, record interface{}) (int, er
 }
 
 /*
+ * This is a helper function for JSONExtract2.  Given a specific JSON path that looks like
+ * "/STAGE/json_path_element1/json_path_element2/...", we compute the various components
+ * of the query to use to extract (for select, where, or order by clauses) that information.
+ * it will add a join clause to a list of joins if needed and update a map describing the extant
+ * join clauses.
+ * |joins| an array of join clauses that we may append to (but do not inspect)
+ * |tref_map| a map of join clases mapping the STAGE to the temporary name assigned to the table
+ * |tref_next_index| a pointer to an integer to keep track of the next free temporary name (starts at 1)
+ *
+ * we return a string to embed in a select, where, or order by clause.
+ */
+func addKey(key string, joins *[]string, tref_map map[string]string, next_tref_index *int) (string, error) {
+
+	/* key is a JSON path */
+	keypath := strings.Split(key[1:], "/")
+	var join_as_name string
+
+	/* Do we already have a JOIN reference for the
+	 * test_report_summaries_row that we're going to use?
+	 */
+	join_as_name, exists := tref_map[keypath[0]]
+	if !exists {
+		/* We don't have a join for this table, make one up */
+		join_as_name = fmt.Sprintf("tmp_%v", *next_tref_index)
+		tref_map[keypath[0]] = join_as_name
+		*next_tref_index++
+
+		/* Compute the JOIN statement for this table reference */
+		join_statement :=
+			fmt.Sprintf("LEFT JOIN test_report_summaries AS %v ON "+
+				"test_reports.id = %v.reportrecordid and %v.stagename='%v'",
+				join_as_name, join_as_name, join_as_name, keypath[0])
+
+		*joins = append(*joins, join_statement)
+	}
+
+	/* Compute the postgres JSON path-like expression for this
+	 * key
+	 */
+	str := join_as_name + ".summaryjson"
+	for i, p_element := range keypath[1:] {
+
+		/* Use '->' to follow nested JSON objects except for the
+		 * last indirection which needs to be ->> to get the right
+		 * type mappings.
+		 */
+		operator := "->"
+		if i == len(keypath)-2 {
+			operator = "->>"
+		}
+
+		/* If p_element looks like an integer, write it as an
+		 * integer. Otherwise quote it as a string.
+		 */
+		_, ok := strconv.Atoi(p_element)
+		if ok == nil {
+			str += operator + p_element
+		} else {
+			str += operator + "'" + p_element + "'"
+		}
+	}
+	return str, nil
+}
+
+/*
  * This implements the awesomeness to extract JSON queries across a join.  We
  * expect a scheme like test_reports:[id, ... other fields]
  * test_report_summaries[id, testreportid, stagename, jsonsummary] with
@@ -150,6 +217,7 @@ func (c *CoreConnection) InsertRecord(table string, record interface{}) (int, er
  */
 func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey string) ([]map[string]interface{}, error) {
 
+	var err error
 	/* List of all the JOIN statements we need */
 	joins := []string{}
 
@@ -173,44 +241,9 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 		}
 
 		if key[0] == '/' {
-			/* key is a JSON path */
-			keypath := strings.Split(key[1:], "/")
-			var join_as_name string
-
-			/* Do we already have a JOIN reference for the
-			 * test_report_summaries_row that we're going to use?
-			 */
-			join_as_name, exists := tref_map[keypath[0]]
-			if !exists {
-				/* We don't have a join for this table, make one up */
-				join_as_name = fmt.Sprintf("tmp_%v", next_tref_index)
-				tref_map[keypath[0]] = join_as_name
-				next_tref_index++
-
-				/* Compute the JOIN statement for this table reference */
-				join_statement :=
-					fmt.Sprintf("LEFT JOIN test_report_summaries AS %v ON "+
-						"test_reports.id = %v.reportrecordid and %v.stagename='%v'",
-						join_as_name, join_as_name, join_as_name, keypath[0])
-
-				joins = append(joins, join_statement)
-			}
-
-			/* Compute the postgres JSON path-like expression for this
-			 * key
-			 */
-			str := join_as_name + ".summaryjson"
-			for _, p_element := range keypath[1:] {
-				_, ok := strconv.Atoi(p_element)
-
-				/* If p_element looks like an integer, write it as an
-				 * integer. Otherwise quote it as a string.
-				 */
-				if ok == nil {
-					str += "->" + p_element
-				} else {
-					str += "->" + "'" + p_element + "'"
-				}
+			str, err := addKey(key, &joins, tref_map, &next_tref_index)
+			if err != nil {
+				return nil, err
 			}
 			selects = append(selects, str)
 		} else {
@@ -218,18 +251,11 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 			selects = append(selects, key)
 		}
 	}
-
-	query := "SELECT " + strings.Join(selects, ",") + " FROM test_reports " +
-		strings.Join(joins, " ")
-
-	query += RenderWhereClause(where)
-
 	/*
 	 * STEP 2: Parse the sort key.
-	 * we'd like to be able to enable arbitrary JSON paths here but its tricky.
-	 * So for now we only allow references to the test_reports table which
-	 * handles most of the cases anyways.
 	 */
+
+	order_by_clause := ""
 	if sortkey != "" {
 		dir := ""
 		key_to_use := sortkey
@@ -242,20 +268,52 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 			dir = "DESC"
 			key_to_use = sortkey[1:]
 		}
-		query += " ORDER BY " + key_to_use + " " + dir
+
+		/* Does sortkey look like a JSON path expression? If so translate it */
+		if key_to_use[0] == '/' {
+			key_to_use, err = addKey(key_to_use, &joins, tref_map, &next_tref_index)
+			if err != nil {
+				return nil, err
+			}
+		}
+		order_by_clause = " ORDER BY " + key_to_use + " " + dir
 	}
+
+	/* STEP 3: Deal with where clauses. Here we expand components of a where
+	 * clause that are seceretely JSON path expressions. If we see anyting that looks
+	 * like /A/B/C in the where clause, we run addKey on it and replace it with the
+	 * SQL-ified path expression.
+	 */
+	full_where_clause := RenderWhereClause(where)
+	json_path_regexp := regexp.MustCompile("/[A-Za-z0-9_/]*")
+
+	expanded_where_clause := json_path_regexp.ReplaceAllFunc([]byte(full_where_clause), func(component []byte) []byte {
+		sql_exp, err := addKey(string(component), &joins, tref_map, &next_tref_index)
+		if err != nil {
+			panic(err)
+		}
+		return []byte(sql_exp)
+	})
+
+	/* Step 4: Put the parts of the query together */
+	query := "SELECT " + strings.Join(selects, ",") + " FROM test_reports " +
+		strings.Join(joins, " ")
+
+	query += string(expanded_where_clause)
+
+	query += order_by_clause
 
 	log.Printf("QUERY: %v", query)
 
-	/* STEP 3: Actually do the query */
+	/* STEP 5: Actually do the query */
 	rows, err := c.Q.Query(query)
 
 	if err != nil {
-		log.Printf("DATABASE QUERY FAILED: %v", err)
+		log.Printf("DATABASE QUERY FAILED: %v. Query was: %v", err, query)
 		return nil, err
 	}
 
-	/* STEP 4: Now collect the results. We return an array of maps. Each map
+	/* STEP 6: Now collect the results. We return an array of maps. Each map
 	 * associates the specific keys from the key array with some value.
 	 */
 	results := make([]map[string]interface{}, 0, 0)
@@ -303,9 +361,16 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
  */
 func FixTypeJSON(in interface{}) interface{} {
 	switch in.(type) {
+	case float64:
+		as_f := in.(float64)
+		if math.IsNaN(as_f) || math.IsInf(as_f, 1) || math.IsInf(as_f, -1) {
+			return nil
+		} else {
+			return as_f
+		}
 	case []byte:
 		as_s := string(in.([]byte))
-		if as_s == "\"NaN\"" || as_s == "\"+Inf\"" || as_s == "\"-Inf\"" {
+		if as_s == "NaN" || as_s == "+Inf" || as_s == "-Inf" {
 			return nil
 		}
 		f, err := strconv.ParseFloat(as_s, 64)

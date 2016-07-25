@@ -402,7 +402,7 @@ ViewState.prototype.chart_update = function() {
 	var url = "/api/plot?where="+encodeURIComponent(where)+
 		"&columns=" + encodeURIComponent(x) + "," + encodeURIComponent(y) +
 		"&metrics_def=" + this.project +
-		"&sortby=" + sortby ;
+		"&sortby=" + encodeURIComponent(sortby) ;
 
 	console.log(url);
 	get_json_safe(url, function(data) {
