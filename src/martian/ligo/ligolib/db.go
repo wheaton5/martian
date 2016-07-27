@@ -309,8 +309,8 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 	rows, err := c.Q.Query(query)
 
 	if err != nil {
-		log.Printf("DATABASE QUERY FAILED: %v. Query was: %v", err, query)
-		return nil, err
+		log.Printf("DATABASE QUERY FAILED: %v", err)
+		return nil, errors.New(fmt.Sprintf("Failed DB query: %v. Query was: %v", err, query))
 	}
 
 	/* STEP 6: Now collect the results. We return an array of maps. Each map

@@ -92,6 +92,17 @@ html
 									td.plot-table-td Y
 									td.plot-table-td
 										input#charty(name="y" style="width:850px;")
+								tr
+									td.plot-table-td
+									td.plot-table-td
+										div.btn-group
+											button(class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false")  
+												span#chart_mode Chart style
+												span(class="caret")
+											ul.dropdown-menu
+												li(onclick="update_chart_style('line')") line
+												li(onclick="update_chart_style('scatter')") scatter
+
 							br
 							button(type="button" class="btn btn-default" onclick="update()") Go
 						div(style="float:right;")

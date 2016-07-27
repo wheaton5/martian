@@ -71,19 +71,6 @@ function get_json_safe(path, success) {
 		}
 	})
 }
-
-/*
- * Handle clicks that change the current project.
- */
-function project_dropdown_click(x) {
-	console.log(this);
-	console.log(event)
-
-	//document.getElementById("metricset").value = event.target.textContent
-	changeproject(event.target.textContent);
-
-}
-
 /*
  * Grab the data to fill in the project dropdown.
  */
@@ -102,12 +89,24 @@ function setup_project_dropdown() {
 	})
 }
 
+
+/*
+ * Handle clicks that change the current project.
+ */
+function project_dropdown_click(x) {
+	changeproject(event.target.textContent);
+}
+
+
 function changeproject(p) {
 	global_view_state.project = p;
 	update_model_from_ui();
 	global_view_state.render();
 }
 
+/*
+ * Handle "basic" and "metrics" clicks
+ */
 function changetablemode(mode) {
 	update_model_from_ui()
 	global_view_state.table_mode = mode;
@@ -115,18 +114,36 @@ function changetablemode(mode) {
 
 }
 
+/*
+ * Handle clicks on the top-level buttons.
+ */
 function pickwindow(mode) {
 	update_model_from_ui()
 	global_view_state.mode = mode;
 	global_view_state.render();
 }
 
+/*
+ * Handles clicks on the "go" button on the chart view 
+ */
 function update() {
 	update_model_from_ui()
 	global_view_state.render();
 
 }
 
+/*
+ * Handle clicks on the button to change the chart style
+ */
+function update_chart_style(chart_mode) {
+	global_view_state.chart_mode = chart_mode;
+	global_view_state.render();
+
+}
+
+/*
+ * Handle clicks on the "update" button in playground mode.
+ */
 function updateprojecttextarea() {
 	//update_model_from_ui();
 	global_view_state.write_playground();
@@ -149,6 +166,7 @@ function ViewState() {
 	this.charty = null;
 	this.sample_search = null;
 	this.sortby = null;
+	this.chart_mode="line";
 
 	return this;
 }
@@ -178,9 +196,38 @@ ViewState.prototype.ReconstituteFromURL = function(p) {
 	}
 }
 
+/*
+ * This defines the mappings between components of the viewstate object and HTML IDs on the page
+ *
+ * |model| is the n ame of the field of the ViewState object
+ * |element| is the jquery selector for the HTML element that relfects that value
+ * |method| is the (jquery selector) method to call on the element to change it.
+ */
+var model_view_bindings = [
+	{model:"sortby", element:"#sortby", method:"val"},
+	{model:"chartx", element:"#chartx", method:"val"},
+	{model:"charty", element:"#charty", method:"val"},
+	{model:"where", element:"#where", method:"val"},
+	{model:"project", element:"#project_cur", method:"text"},
+	{model:"chart_mode", element:"#chart_mode", method:"text"}
+]
 
 /*
- * This is the master render function.
+ * This function copies fields of the ViewState object back to the DOM, 
+ * using model_view_bindings to figure out how to associate ViewState fields
+ * with dom elements.
+ */
+ViewState.prototype.apply_view_bindings= function() {
+	for (var i = 0; i < model_view_bindings.length; i++) {
+		var b = model_view_bindings[i];
+		$(b.element)[b.method](this[b.model])
+	}
+}
+
+
+/*
+ * This is the master render function. We call this whenever we change the contents of
+ * the ViewState object to update the page accordingly.
  */
 ViewState.prototype.render = function() {
 	$("#table").hide();
@@ -191,6 +238,8 @@ ViewState.prototype.render = function() {
 	set_csv_download_url("");
 
 	clear_error_box();
+
+	this.apply_view_bindings();
 
 	var w = this.mode;
 
@@ -237,7 +286,6 @@ ViewState.prototype.render = function() {
 		}
 
 	}
-	$("#project_cur").text(this.project);
 	$("#myurl").text(this.GetURL());
 }
 
@@ -405,11 +453,18 @@ ViewState.prototype.chart_update = function() {
 		"&sortby=" + encodeURIComponent(sortby) ;
 
 	console.log(url);
+	var that=this;
 	get_json_safe(url, function(data) {
 		console.log("GOTDATA!");
 		console.log(data)
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
-		var options = {title:data.Name};
+		var options;
+		if (that.chart_mode == 'line') {
+			options = {title:data.Name, lineWidth:2, pointSize:2};
+		} else {
+			options = {title:data.Name, lineWidth:0, pointSize:5};
+		}
+
 		global_chart.draw(gdata, options);
 		set_csv_download_url(url);
 	})
@@ -437,7 +492,6 @@ function find_column_index(data, name) {
 
 	var labels = data[0];
 
-	/* Figure out which column is called "diff" */
 	for (var i = 0; i < labels.length; i++) {
 		if (labels[i] == name) {
 			return i

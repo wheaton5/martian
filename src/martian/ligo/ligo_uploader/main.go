@@ -24,14 +24,16 @@ func LookupCallInfo(basepath string) (string, string, string) {
 
 	_, _, ast, err := core.Compile(basepath+"/_mrosource", []string{}, false)
 	if err != nil {
-		panic(err)
+		log.Printf("Could not compile your _mrosource file: %v", err);
+		os.Exit(1);
 	}
 
 	call := ast.Call.Id
 
 	sampleid := core.SearchPipestanceParams(ast, "sample_id")
 	if sampleid == nil {
-		panic("WTF2")
+		log.Printf("Could not find a sample_id parameter. Giving up.")
+		os.Exit(1);
 	}
 
 	desc := core.SearchPipestanceParams(ast, "sample_desc")
