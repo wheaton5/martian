@@ -93,6 +93,27 @@ func (m MetricResultSorter) Len() int           { return len(m) }
 func (m MetricResultSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m MetricResultSorter) Less(i, j int) bool { return m[i].JSONPath < m[j].JSONPath }
 
+
+/*
+ * This is a kludge to handle newline characters in JSON strings. We simply redact them.
+ * This makes it easier to express obnoxious SQL statements inside JSON and to handle odd
+ * things web browsers might to.
+ */
+func removeBadChars(in []byte) []byte {
+	output := make([]byte, len(in))
+	output_index := 0
+
+	for _, c := range in {
+		if c == '\n' || c == '\r' {
+
+		} else {
+			output[output_index] = c
+			output_index++
+		}
+	}
+	return (output[0:output_index])
+}
+
 /*
  * Load a new temporary project, and return a key to find that project
  * later.
@@ -105,7 +126,7 @@ func (pc *ProjectsCache) NewTempProject(txt string) (string, error) {
 	var project Project
 
 	/* Load and parse the JSON for it */
-	err := json.Unmarshal([]byte(txt), &project)
+	err := json.Unmarshal(removeBadChars([]byte(txt)), &project)
 	if err != nil {
 		return "", err
 	}
@@ -138,7 +159,7 @@ func LoadProject(path string) (*Project, error) {
 
 	var project Project
 
-	err = json.Unmarshal(file_contents, &project)
+	err = json.Unmarshal(removeBadChars(file_contents), &project)
 
 	if err != nil {
 		return nil, err
