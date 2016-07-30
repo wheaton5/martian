@@ -618,7 +618,7 @@ func logProcessProgress(pkey string, label string, start time.Time) time.Time {
 	now := time.Now()
 	// use this daisy-chain pattern if you want to see the interval between
 	// labels, not time since begining of cycle/goroutine
-	core.LogInfo("piperun", "%s|%s: %v", label, pkey, now.Sub(start).String())
+	//core.LogInfo("piperun", "%s|%s: %v", label, pkey, now.Sub(start).String())
 	return now
 }
 
@@ -632,7 +632,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 		running[pkey] = pipestance
 	}
 	self.mutex.Unlock()
-	core.LogInfo("piperun", "--start cycle (length %d)--", len(running))
+	//core.LogInfo("piperun", "--start cycle (length %d)--", len(running))
 
 	// Concurrently step all pipestances in the run list copy.
 	var wg sync.WaitGroup
@@ -642,7 +642,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 		go func(pkey string, pipestance *core.Pipestance, wg *sync.WaitGroup) {
 			startTime := time.Now()
 			var interval time.Time
-			core.LogInfo("piperun", "StartProcess|%s", pkey)
+			//core.LogInfo("piperun", "StartProcess|%s", pkey)
 			pipestance.RefreshState()
 
 			state := pipestance.GetState()
