@@ -20,6 +20,7 @@ const versionParts = 3
 
 type PackageManager interface {
 	GetPipestanceEnvironment(string, string, string) ([]string, string, string, map[string]string, error)
+	GetPackageEnvironment(string) ([]string, string, string, map[string]string, error)
 }
 
 type Package struct {

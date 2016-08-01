@@ -131,6 +131,17 @@ func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline 
 	return self.getPipestanceEnvironment(psid)
 }
 
+func (self *PackageManager) GetPackageEnvironment(pkg string) ([]string, string, string, map[string]string, error) {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+	p, ok := self.packages[pkg];
+	if (!ok) {
+		return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil;
+	} else {
+		return nil, "", "", nil, &core.MartianError{fmt.Sprintf("PackageManagerError: No such package: %v", pkg)}
+	}
+}
+
 func (self *PackageManager) getPipestanceEnvironment(psid string) ([]string, string, string, map[string]string, error) {
 	if sample := self.lena.GetSampleWithId(psid); sample != nil {
 		if p, ok := self.packages[sample.Product]; ok {

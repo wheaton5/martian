@@ -163,7 +163,8 @@ func EnqueuePreprocess(fcid string, rt *core.Runtime, packages *PackageManager, 
 		return fmt.Sprintf("Could not find run with fcid %s.", fcid)
 	}
 	tags := GetPreprocessTags(run, fcid, instanceName)
-	if err := pman.Enqueue(fcid, "BCL_PROCESSOR_PD", fcid, packages.BuildCallSourceForRun(rt, run), tags); err != nil {
+	// COULD THIS POSSIBLY BE RIGHT?
+	if err := pman.Enqueue(fcid, "BCL_PROCESSOR_PD", fcid, packages.BuildCallSourceForRun(rt, run), tags, ""); err != nil {
 		return err.Error()
 	}
 	return ""
@@ -202,7 +203,7 @@ func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, p
 			fastqPaths,
 			sample,
 			real_product, callsrc);
-		if err := pman.Enqueue(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), callsrc, tags); err != nil {
+		if err := pman.Enqueue(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), callsrc, tags, real_product); err != nil {
 			errors = append(errors, err.Error())
 		}
 	}
@@ -707,7 +708,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		martianVersion, mroVersion, _ := pman.GetPipestanceVersions(container, pname, psid)
 		psinfo["version"] = martianVersion
 		psinfo["mroversion"] = mroVersion
-		mroPaths, mroVersion, _, _, _ := pman.GetPipestanceEnvironment(container, pname, psid)
+		mroPaths, mroVersion, _, _, _ := pman.GetPipestanceEnvironment(container, pname, psid, nil)
 		psinfo["mropath"] = core.FormatMroPath(mroPaths)
 		psinfo["mroversion"] = mroVersion
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")

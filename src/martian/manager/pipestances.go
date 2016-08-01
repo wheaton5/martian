@@ -56,9 +56,46 @@ type PipestanceQueueRecord struct {
 	Timestamp string   `json:"timestamp"`
 }
 
-func NewPipestanceQueueRecord(pkey string, size int64, src string, tags []string) *PipestanceQueueRecord {
+func AmendTagsWithPackage(tags []string, pkg string) []string {
+	return append(tags, fmt.Sprintf("_pkg:%v", pkg));
+}
+
+func ExtractPackageFromTags(tags []string) *string {
+
+	for _, tstring := range(tags) {
+
+		if (len(tstring) > 5 && tstring[0:5] == "_pkg:") {
+			x := (tstring[5:]);
+			return &x;
+		}
+	}
+	return nil;
+}
+
+func GetPackageNameFromDir(dir string) (*string, error){
+	data, err := ioutil.ReadFile(path.Join(dir, "_tags"));
+
+	if (err != nil) {
+		return nil, err;
+	}
+
+	tags_array := []string{};
+
+	err = json.Unmarshal(data, &tags_array);
+
+	if (err != nil) {
+		return nil,err;
+	}
+	
+	pkg := ExtractPackageFromTags(tags_array);
+	return pkg, nil;
+}
+
+
+func NewPipestanceQueueRecord(pkey string, size int64, src string, tags []string, pkg string) *PipestanceQueueRecord {
 	recordTags := make([]string, len(tags))
 	copy(recordTags, tags)
+	recordTags = AmendTagsWithPackage(recordTags, pkg);
 	return &PipestanceQueueRecord{
 		Name:      pkey,
 		InvokeSrc: src,
@@ -839,7 +876,7 @@ func (self *PipestanceManager) sendStorageQueueError(pkey string, event string, 
 	)
 }
 
-func (self *PipestanceManager) GetAllocation(container string, pipeline string, psid string, invokeSrc string) (*PipestanceStorageAllocation, error) {
+func (self *PipestanceManager) GetAllocation(container string, pipeline string, psid string, invokeSrc string, pkg * string) (*PipestanceStorageAllocation, error) {
 	if invokeSrc == "" {
 		existingSrc, err := self.GetPipestanceInvokeSrc(container, pipeline, psid)
 		if err != nil {
@@ -847,7 +884,7 @@ func (self *PipestanceManager) GetAllocation(container string, pipeline string, 
 		}
 		invokeSrc = existingSrc
 	}
-	mroPaths, _, argshimPath, _, err := self.GetPipestanceEnvironment(container, pipeline, psid)
+	mroPaths, _, argshimPath, _, err := self.GetPipestanceEnvironment(container, pipeline, psid, pkg)
 	if err != nil {
 		return nil, err
 	}
@@ -863,20 +900,20 @@ func (self *PipestanceManager) GetAllocation(container string, pipeline string, 
 	return alloc, nil
 }
 
-func (self *PipestanceManager) Enqueue(container string, pipeline string, psid string, src string, tags []string) error {
+func (self *PipestanceManager) Enqueue(container string, pipeline string, psid string, src string, tags []string, pkg string) error {
 	if state, ok := self.GetPipestanceState(container, pipeline, psid); ok {
 		core.LogInfo("storage", "Pipestance already tracked: %s (%s)",
 			makePipestanceKey(container, pipeline, psid), state)
 		return &core.PipestanceExistsError{psid}
 	}
-	alloc, err := self.GetAllocation(container, pipeline, psid, src)
+	alloc, err := self.GetAllocation(container, pipeline, psid, src, &pkg)
 	if err != nil {
 		pkey := makePipestanceKey(container, pipeline, psid)
 		self.sendStorageQueueError(pkey, "Sizing error", err)
 		return &core.PipestanceSizeError{psid}
 	}
 	pkey := makePipestanceKey(container, pipeline, psid)
-	queueRecord := NewPipestanceQueueRecord(pkey, alloc.weightedSize, src, tags)
+	queueRecord := NewPipestanceQueueRecord(pkey, alloc.weightedSize, src, tags, pkg)
 	core.LogInfo("storage", "Enqueued pipestance: %s (%d bytes)", pkey, alloc.weightedSize)
 	self.storageMutex.Lock()
 	self.storageQueue = append(self.storageQueue, queueRecord)
@@ -905,7 +942,11 @@ func (self *PipestanceManager) allocateLoadedPipestance(pkey string) {
 		return
 	}
 	container, pipeline, psid := parsePipestanceKey(pkey)
-	alloc, err := self.GetAllocation(container, pipeline, psid, "")
+	psPath := self.makePipestancePath(container, pipeline, psid);
+
+	pkg, _:= GetPackageNameFromDir(psPath);
+	
+	alloc, err := self.GetAllocation(container, pipeline, psid, "", pkg)
 	if err != nil {
 		self.sendStorageQueueError(pkey, "sizing cached pipestance", err)
 		return
@@ -981,6 +1022,7 @@ func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
 	src := stance.InvokeSrc
 	tags := make([]string, len(stance.Tags))
 	copy(tags, stance.Tags)
+	pkg := ExtractPackageFromTags(tags)
 
 	self.mutex.Lock()
 	// Check if pipestance has already been invoked
@@ -993,7 +1035,7 @@ func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
 		self.mutex.Unlock()
 		return err
 	}
-	mroPaths, mroVersion, argshimPath, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid)
+	mroPaths, mroVersion, argshimPath, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid, pkg)
 	if err != nil {
 		self.mutex.Unlock()
 		return err
@@ -1274,7 +1316,14 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 }
 
 func (self *PipestanceManager) ReattachToPipestance(container string, pipeline string, psid string, psPath string, readOnly bool) (*core.Pipestance, error) {
-	mroPaths, mroVersion, _, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid)
+
+	pkg, err := GetPackageNameFromDir(psPath)
+	if (err != nil) {
+		return nil, err
+	}
+
+
+	mroPaths, mroVersion, _, envs, err := self.GetPipestanceEnvironment(container, pipeline, psid, pkg)
 	if err != nil {
 		return nil, err
 	}
@@ -1325,6 +1374,11 @@ func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline stri
 	return map[string]interface{}{}
 }
 
-func (self *PipestanceManager) GetPipestanceEnvironment(container string, pipeline string, psid string) ([]string, string, string, map[string]string, error) {
-	return self.packages.GetPipestanceEnvironment(container, pipeline, psid)
+func (self *PipestanceManager) GetPipestanceEnvironment(container string, pipeline string, psid string, pkg *string) ([]string, string, string, map[string]string, error) {
+
+	if (pkg != nil) {
+		return self.packages.GetPackageEnvironment(*pkg);
+	} else {
+		return self.packages.GetPipestanceEnvironment(container, pipeline, psid)
+	}
 }
