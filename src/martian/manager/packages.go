@@ -60,7 +60,8 @@ func NewPackage(packagePath string, debug bool) *Package {
 
 func (self *Package) IsDirty() bool {
 	mroVersion := strings.TrimPrefix(self.MroVersion, self.Name+"-")
-	parts := strings.Split(mroVersion, ".")
+	core.PrintInfo("package", "%s mroVersion: %s", self.Name, mroVersion)
+        parts := strings.Split(mroVersion, ".")
 
 	if len(parts) != versionParts {
 		return true

@@ -359,7 +359,7 @@ Options:
 	enableMonitor := true
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
-		stackVars, zip, skipPreflight, enableMonitor, debug, false, onfinish)
+		true, stackVars, zip, skipPreflight, enableMonitor, debug, false, onfinish)
 
 	//=========================================================================
 	// Setup Mailer.
