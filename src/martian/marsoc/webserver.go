@@ -198,11 +198,6 @@ func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, p
 			fastqPaths,
 			sample,
 			real_product)
-		core.PrintInfo("COOLNESS", "x: %v %v %v %v::: %v",
-			lena.GetSampleBagWithId(strconv.Itoa(sample.Id)),
-			fastqPaths,
-			sample,
-			real_product, callsrc)
 		if err := pman.Enqueue(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), callsrc, tags, real_product); err != nil {
 			errors = append(errors, err.Error())
 		}
