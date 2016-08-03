@@ -42,18 +42,17 @@ func NewPackageManager(packagesPath string, defaultPackage string, debug bool, l
 }
 
 func (self *PackageManager) ListPackages() []string {
-	packages := make([]string, 0, 0);
+	packages := make([]string, 0, 0)
 	for k, _ := range self.packages {
-		packages = append(packages, k);
+		packages = append(packages, k)
 	}
 
-	return packages;
+	return packages
 }
 
 func (self *PackageManager) CheckProduct(product string) bool {
 	return self.packages[product] != nil
 }
-
 
 func (self *PackageManager) getPackages(packageFunc PackageFunc) []*manager.Package {
 	packages := []*manager.Package{}
@@ -134,9 +133,9 @@ func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline 
 func (self *PackageManager) GetPackageEnvironment(pkg string) ([]string, string, string, map[string]string, error) {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
-	p, ok := self.packages[pkg];
-	if (!ok) {
-		return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil;
+	p, ok := self.packages[pkg]
+	if ok {
+		return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil
 	} else {
 		return nil, "", "", nil, &core.MartianError{fmt.Sprintf("PackageManagerError: No such package: %v", pkg)}
 	}

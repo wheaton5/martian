@@ -5,13 +5,13 @@ package manager
 
 import (
 	"fmt"
+	"martian/core"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
-	"martian/core"
 )
 
 const SEQ_MISEQ string = "miseq"
@@ -21,19 +21,19 @@ const SEQ_NEXTSEQ string = "nextseq"
 const SEQ_XTEN string = "xten"
 const SEQ_UNKNOWN string = "unknown"
 
-var SEQUENCER_PREFIXES = map[string]string {
-	SEQ_MISEQ: "miseq",
+var SEQUENCER_PREFIXES = map[string]string{
+	SEQ_MISEQ:      "miseq",
 	SEQ_HISEQ_2500: "hiseq",
 	SEQ_HISEQ_4000: "4kseq",
-	SEQ_NEXTSEQ: "nxseq",
-	SEQ_XTEN: "xtseq",
+	SEQ_NEXTSEQ:    "nxseq",
+	SEQ_XTEN:       "xtseq",
 }
 
 //
 // Return the id of the sequencer from the root path
 //
 func BclProcessorSequencer(rootPath string) string {
-	for seq, prefix := range(SEQUENCER_PREFIXES) {
+	for seq, prefix := range SEQUENCER_PREFIXES {
 		if strings.Contains(rootPath, prefix) {
 			return seq
 		}
@@ -105,7 +105,7 @@ func BclProcessorFastqPaths(rootPath string, readType string, sampleIndex string
 
 func InputSizeTotal(paths []string) int64 {
 	var size int64
-	for _, path := range(paths) {
+	for _, path := range paths {
 		if fileInfo, err := os.Stat(path); err == nil {
 			size += fileInfo.Size()
 		} else {

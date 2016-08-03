@@ -33,7 +33,7 @@ type MainPage struct {
 	PipelinesVersion string
 	PipestanceCount  int
 	State            string
-	Products	[]string
+	Products         []string
 }
 type GraphPage struct {
 	InstanceName string
@@ -67,7 +67,7 @@ type PipestanceForm struct {
 	Fcid     string
 	Pipeline string
 	Psid     string
-	Product string
+	Product  string
 }
 
 type RedstoneFile struct {
@@ -185,24 +185,24 @@ func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, p
 		tags := GetSampleTags(sample, fastqPaths, instanceName)
 		//DSTAFF
 		real_product := sample.Product
-		if (product != "" && product != "Default") {
-			real_product = product;
+		if product != "" && product != "Default" {
+			real_product = product
 		}
 
-		if (!packages.CheckProduct(real_product)) {
-			return fmt.Sprintf("Bad product '%s'.", real_product);
-			
+		if !packages.CheckProduct(real_product) {
+			return fmt.Sprintf("Bad product '%s'.", real_product)
+
 		}
 		callsrc := packages.BuildCallSourceForSample(rt,
 			lena.GetSampleBagWithId(strconv.Itoa(sample.Id)),
 			fastqPaths,
 			sample,
 			real_product)
-		core.PrintInfo("COOLNESS","x: %v %v %v %v::: %v",
+		core.PrintInfo("COOLNESS", "x: %v %v %v %v::: %v",
 			lena.GetSampleBagWithId(strconv.Itoa(sample.Id)),
 			fastqPaths,
 			sample,
-			real_product, callsrc);
+			real_product, callsrc)
 		if err := pman.Enqueue(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), callsrc, tags, real_product); err != nil {
 			errors = append(errors, err.Error())
 		}
@@ -296,7 +296,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
-				Products:	 packages.ListPackages(),
+				Products:         packages.ListPackages(),
 			})
 	})
 
@@ -309,7 +309,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
-				Products:	 packages.ListPackages(),
+				Products:         packages.ListPackages(),
 			})
 	})
 
@@ -419,7 +419,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
-				Products:	 packages.ListPackages(),
+				Products:         packages.ListPackages(),
 			})
 	})
 
@@ -443,7 +443,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
-				Products:	 packages.ListPackages(),
+				Products:         packages.ListPackages(),
 			})
 	})
 
