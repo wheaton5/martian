@@ -115,8 +115,6 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 			sample.Ready_to_invoke = false
 		}
 	}
-	// DSTAFF: Don't do this here anymore!
-	//sample.Callsrc = packages.BuildCallSourceForSample(rt, lena.GetSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample)
 	return fastqPaths
 }
 
@@ -183,7 +181,6 @@ func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, p
 	}
 	if every {
 		tags := GetSampleTags(sample, fastqPaths, instanceName)
-		//DSTAFF
 		real_product := sample.Product
 		if product != "" && product != "Default" {
 			real_product = product
@@ -630,8 +627,6 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Id)
 		}
-		//return EnqueueSample(sample, rt, packages, pman, lena, instanceName, body.Product)
-		//DSTAFF: Metasamples not handled right here!!!!!
 		return EnqueueSample(sample, rt, packages, pman, lena, instanceName, sample.Product)
 	})
 
