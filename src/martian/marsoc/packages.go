@@ -41,6 +41,19 @@ func NewPackageManager(packagesPath string, defaultPackage string, debug bool, l
 	return self
 }
 
+func (self *PackageManager) ListPackages() []string {
+	packages := make([]string, 0, 0)
+	for k, _ := range self.packages {
+		packages = append(packages, k)
+	}
+
+	return packages
+}
+
+func (self *PackageManager) CheckProduct(product string) bool {
+	return self.packages[product] != nil
+}
+
 func (self *PackageManager) getPackages(packageFunc PackageFunc) []*manager.Package {
 	packages := []*manager.Package{}
 	for _, p := range self.packages {
@@ -100,8 +113,8 @@ func (self *PackageManager) BuildCallSourceForRun(rt *core.Runtime, run *Run) st
 }
 
 func (self *PackageManager) BuildCallSourceForSample(rt *core.Runtime, sbag interface{}, fastqPaths map[string]string,
-	sample *Sample) string {
-	if p, ok := self.packages[sample.Product]; ok {
+	sample *Sample, product string) string {
+	if p, ok := self.packages[product]; ok {
 		return p.Argshim.BuildCallSourceForTest(rt, "lena", strconv.Itoa(sample.Id), sbag, fastqPaths, p.MroPaths)
 	} else {
 		core.LogInfo("packages", "Could not build call source for package %s for sample %d", sample.Product, strconv.Itoa(sample.Id))
@@ -115,6 +128,17 @@ func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline 
 		return self.getDefaultPipestanceEnvironment()
 	}
 	return self.getPipestanceEnvironment(psid)
+}
+
+func (self *PackageManager) GetPackageEnvironment(pkg string) ([]string, string, string, map[string]string, error) {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+	p, ok := self.packages[pkg]
+	if ok {
+		return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil
+	} else {
+		return nil, "", "", nil, &core.MartianError{fmt.Sprintf("PackageManagerError: No such package: %v", pkg)}
+	}
 }
 
 func (self *PackageManager) getPipestanceEnvironment(psid string) ([]string, string, string, map[string]string, error) {

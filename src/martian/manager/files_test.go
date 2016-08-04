@@ -22,7 +22,7 @@ func TestFilesBclProcessorFastqPaths(t *testing.T) {
 	paths := BclProcessorFastqPaths(bclPath, "RA", "AAAGCATA", nil, 2)
 	assert.Len(t, paths, 3)
 
-	lanes := []int{1,2}
+	lanes := []int{1, 2}
 	paths = BclProcessorFastqPaths(bclPath, "RA", "AAAGCATA", lanes, 2)
 	assert.Len(t, paths, 2)
 
@@ -53,7 +53,7 @@ func TestFilesBclProcessorWGSFastqPaths(t *testing.T) {
 }
 
 func TestFilesSequencerBclPaths(t *testing.T) {
-	flowcell := getTestFilePath("sequencers/hiseq004/HTESTBCXX");
+	flowcell := getTestFilePath("sequencers/hiseq004/HTESTBCXX")
 	assert.NotEmpty(t, flowcell)
 
 	paths := SequencerBclPaths(flowcell)

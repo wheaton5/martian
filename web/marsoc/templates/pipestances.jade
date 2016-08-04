@@ -125,6 +125,10 @@ html(ng-app="app")
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="unfailPipestance(p)") Unfail
                             button.btn.btn-default(ng-if="p.state == 'failed' && admin && showbutton" ng-click="wipePipestance(p)") Wipe
                             button.btn.btn-default(ng-if="p.state == 'running' && admin && showbutton" ng-click="killPipestance(p)") Kill
+                        td(ng-if=admin)
+                                select(ng-model="p.product").
+                                        <option selected>Default</option>
+                                        [[range .Products]] <option value="[[.]]"> [[.]] </options> [[end]]
                 tfoot
                     td(colspan="6")
                         ul.pagination.pull-right

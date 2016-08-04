@@ -17,7 +17,7 @@ callApiWithConfirmation = ($scope, $http, $p, $url) ->
 
 callApi = ($scope, $http, $p, $url) ->
     $scope.showbutton = false
-    $http.post($url, { fcid: $p.fcid, pipeline: $p.pipeline, psid: $p.psid }).success((data) ->
+    $http.post($url, { product:$p.product, fcid: $p.fcid, pipeline: $p.pipeline, psid: $p.psid }).success((data) ->
         $scope.refreshPipestances()
         if data then window.alert(data.toString())
     )
