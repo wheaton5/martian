@@ -57,7 +57,11 @@ type PipestanceQueueRecord struct {
 }
 
 func AmendTagsWithPackage(tags []string, pkg string) []string {
-	return append(tags, fmt.Sprintf("_pkg:%v", pkg))
+	if (pkg == "") {
+		return tags;
+	} else {
+		return append(tags, fmt.Sprintf("_pkg:%v", pkg))
+	}
 }
 
 func ExtractPackageFromTags(tags []string) *string {
