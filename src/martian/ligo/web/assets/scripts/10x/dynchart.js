@@ -91,6 +91,24 @@ function setup_project_dropdown() {
 
 
 /*
+ * Handle next/previous page clicks on paginated views.
+ */
+function changepage(delta) {
+	update_model_from_ui()
+	
+	if (global_view_state.page == null) {
+		global_view_state.page  = 0;
+	}
+	global_view_state.page += delta
+	if (global_view_state.page < 0) {
+		global_view_state.page = 0;
+	}
+
+	global_view_state.render();
+}
+
+
+/*
  * Handle clicks that change the current project.
  */
 function project_dropdown_click(x) {
@@ -162,11 +180,12 @@ function ViewState() {
 	this.project = "Default.json";
 	this.compareidnew= null;
 	this.compareidold= null;
-	this.chartx = null;
+	this.chartx = "SHA";
 	this.charty = null;
 	this.sample_search = null;
-	this.sortby = null;
+	this.sortby = "finishdate"
 	this.chart_mode="line";
+	this.page = 0;
 
 	return this;
 }
@@ -176,7 +195,7 @@ function ViewState() {
  */
 ViewState.prototype.GetURL = function() {
 	var url = document.location;
-	var str = url.host + url.pathname + "?params=" +
+	var str = "http://" + url.host + url.pathname + "?params=" +
 		encodeURIComponent(JSON.stringify(this));
 	return str;
 }
@@ -286,7 +305,7 @@ ViewState.prototype.render = function() {
 		}
 
 	}
-	$("#myurl").text(this.GetURL());
+	set_permalink_url(this.GetURL());
 }
 
 ViewState.prototype.update_playground = function () {
@@ -375,6 +394,8 @@ ViewState.prototype.table_update = function()  {
 	} else {
 		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
 	}
+
+	url+="&page=" + this.page;
 
 	url += "&metrics_def=" + this.project;
 
@@ -568,6 +589,14 @@ function set_error_box(s) {
 
 function clear_error_box() {
 	$("#errorbox").hide();
+}
+
+function set_permalink_url(l) {
+	var link = document.getElementById("myurl");
+	link.text = l
+	link.href = l
+	console.log(l)
+
 }
 
 function set_csv_download_url(l) {

@@ -93,7 +93,6 @@ func (m MetricResultSorter) Len() int           { return len(m) }
 func (m MetricResultSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m MetricResultSorter) Less(i, j int) bool { return m[i].JSONPath < m[j].JSONPath }
 
-
 /*
  * This is a kludge to handle newline characters in JSON strings. We simply redact them.
  * This makes it easier to express obnoxious SQL statements inside JSON and to handle odd
@@ -349,7 +348,9 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 	log.Printf("Comparing %v and %v", base, newguy)
 	basedata, err := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", base)),
 		list_of_metrics,
-		"")
+		"",
+		nil,
+		nil)
 
 	if err != nil {
 		return nil, err
@@ -357,7 +358,9 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 
 	newdata, err := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", newguy)),
 		list_of_metrics,
-		"")
+		"",
+		nil,
+		nil)
 
 	if err != nil {
 		return nil, err

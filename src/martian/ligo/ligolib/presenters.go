@@ -120,7 +120,7 @@ func (c *CoreConnection) ListAllMetrics(mets *Project) (*Plot, error) {
  * ok is true if the row passes all specifications.
  *
  */
-func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) (*Plot, error) {
+func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit *int, offset *int) (*Plot, error) {
 
 	/* Create an array with every field of interest */
 	fields := make([]string, 0, 0)
@@ -134,7 +134,7 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) (*Plo
 		fields = append(fields, k)
 	}
 
-	data, err := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate")
+	data, err := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate", limit, offset)
 
 	if err != nil {
 		return nil, err
@@ -194,8 +194,8 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project) (*Plo
 /*
  * Produce data suitable for plotting in a table or chart.
  */
-func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, fields []string, sortby string) (*Plot, error) {
-	data, err := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, sortby)
+func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, fields []string, sortby string, limit *int, offset *int) (*Plot, error) {
+	data, err := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, sortby, limit, offset)
 
 	if err != nil {
 		return nil, err
@@ -253,7 +253,9 @@ func (c *CoreConnection) DetailsPresenter(id int, mets *Project) (*Plot, error) 
 	/* Grab the data for the metrics that we care about */
 	data, err := c.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", id)),
 		list_of_metrics,
-		"")
+		"",
+		nil,
+		nil)
 
 	if err != nil {
 		return nil, err

@@ -215,7 +215,7 @@ func addKey(key string, joins *[]string, tref_map map[string]string, next_tref_i
  * "universal_fract_snps_phased" in the SUMMARIZE_REPORTS_PD/summary.json
  * directory for every test with the sample id of 12345.
  */
-func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey string) ([]map[string]interface{}, error) {
+func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey string, limit *int, offset *int) ([]map[string]interface{}, error) {
 
 	var err error
 	/* List of all the JOIN statements we need */
@@ -295,13 +295,24 @@ func (c *CoreConnection) JSONExtract2(where WhereAble, keys []string, sortkey st
 		return []byte(sql_exp)
 	})
 
+	limitoffset := ""
+
+	if limit != nil {
+		limitoffset = fmt.Sprintf(" LIMIT %v ", *limit)
+	}
+
+	if offset != nil {
+		limitoffset += fmt.Sprintf("OFFSET %v", *offset)
+	}
+
 	/* Step 4: Put the parts of the query together */
-	query := "SELECT " + strings.Join(selects, ",") + " FROM test_reports " +
-		strings.Join(joins, " ")
-
-	query += string(expanded_where_clause)
-
-	query += order_by_clause
+	query := "SELECT " +
+		strings.Join(selects, ",") +
+		" FROM test_reports " +
+		strings.Join(joins, " ") +
+		string(expanded_where_clause) +
+		order_by_clause +
+		limitoffset
 
 	log.Printf("QUERY: %v", query)
 

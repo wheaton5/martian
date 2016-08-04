@@ -63,9 +63,15 @@ html
 					div.panel-heading
 						h2.panel-title Table view
 					div.panel-body
-						div(class="btn-group" role="group")
+						div(class="btn-group" role="group" style="float:left")
 							button(type="button" class="btn btn-default" onclick="changetablemode('basic')") Basic  
 							button(type="button" class="btn btn-default" onclick="changetablemode('metrics')") Metrics
+						div(class="btn-group" role="group" style="float:right")
+							button(type="button" class="btn btn-default" onclick="changepage(-1)")
+								span(class="glyphicon glyphicon-chevron-left" aria-hidden="true" onclick="changepage(-1)")
+							button(type="button" class="btn btn-default" onclick="changepage(1)")
+								span(class="glyphicon glyphicon-chevron-right" aria-hidden="true" onclick="changepage(1)")
+						div(style="clear:both")
 						div#table1(style="width:100%")
 			div#compare
 				div.panel.panel-primary
@@ -131,7 +137,8 @@ html
 				
 			span Stable url
 			br
-			span#myurl.permaurl
+			span
+				a#myurl.permaurl(href="")
 			br
 			span CSV link
 			br

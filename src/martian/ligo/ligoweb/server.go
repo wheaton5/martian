@@ -253,7 +253,29 @@ func (s *LigoServer) ListMetrics(p *ligolib.Project, v url.Values) (interface{},
 
 /* Produce a table for every defined metric */
 func (s *LigoServer) PlotAll(p *ligolib.Project, params url.Values) (interface{}, error) {
-	return s.DB.PresentAllMetrics(ligolib.NewStringWhere(params.Get("where")), p)
+	limit, offset, err := GetLimitOffset(params)
+	if err != nil {
+		return nil, err
+	}
+	return s.DB.PresentAllMetrics(ligolib.NewStringWhere(params.Get("where")), p, limit, offset)
+}
+
+func GetLimitOffset(params url.Values) (*int, *int, error) {
+
+	page_str := params.Get("page")
+	if page_str == "" {
+		return nil, nil, nil
+	} else {
+		page_int, err := strconv.Atoi(page_str)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		limit := 250
+		offset := page_int * 250
+		return &limit, &offset, nil
+	}
+
 }
 
 /* Produce data (suitable for table or plot) for a given set of metrics. */
@@ -270,10 +292,17 @@ func (s *LigoServer) Plot(p *ligolib.Project, params url.Values) (interface{}, e
 		sortby = "-finishdate"
 	}
 
+	limit, offset, err := GetLimitOffset(params)
+	if err != nil {
+		return nil, err
+	}
+
 	plot, err := s.DB.GenericChartPresenter(ligolib.NewStringWhere(params.Get("where")),
 		p,
 		variables,
-		sortby)
+		sortby,
+		limit,
+		offset)
 
 	return plot, err
 }
