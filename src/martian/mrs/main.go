@@ -106,6 +106,20 @@ Options:
 		}
 	}
 
+	// Flag for full stage reset, default is chunk-granular
+	fullStageReset := false
+	if value := os.Getenv("MRO_FULLSTAGERESET"); len(value) > 0 {
+		fullStageReset = true
+		core.LogInfo("options", "MRO_FULLSTAGERESET=%v", fullStageReset)
+	}
+
+	// Special to resources mappings
+	jobResources := ""
+	if value := os.Getenv("MRO_JOBRESOURCES"); len(value) > 0 {
+		jobResources = value
+		core.LogInfo("options", "MRO_JOBRESOURCES=%s", jobResources)
+	}
+
 	// Compute MRO path.
 	cwd, _ := filepath.Abs(path.Dir(os.Args[0]))
 	mroPaths := core.ParseMroPath(cwd)
@@ -154,8 +168,9 @@ Options:
 	// Configure Martian runtime.
 	//=========================================================================
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
-		skipPreflight, enableMonitor, debug, false, "")
+		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
+		fullStageReset, stackVars, zip, skipPreflight, enableMonitor,
+		debug, false, "")
 	rt.MroCache.CacheMros(mroPaths)
 
 	// Invoke stagestance.

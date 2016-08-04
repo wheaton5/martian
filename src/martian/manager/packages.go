@@ -20,6 +20,7 @@ const versionParts = 3
 
 type PackageManager interface {
 	GetPipestanceEnvironment(string, string, string) ([]string, string, string, map[string]string, error)
+	GetPackageEnvironment(string) ([]string, string, string, map[string]string, error)
 }
 
 type Package struct {
@@ -59,6 +60,7 @@ func NewPackage(packagePath string, debug bool) *Package {
 
 func (self *Package) IsDirty() bool {
 	mroVersion := strings.TrimPrefix(self.MroVersion, self.Name+"-")
+	core.PrintInfo("package", "%s mroVersion: %s", self.Name, mroVersion)
 	parts := strings.Split(mroVersion, ".")
 
 	if len(parts) != versionParts {

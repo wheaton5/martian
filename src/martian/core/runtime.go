@@ -33,6 +33,7 @@ type Metadata struct {
 	path          string
 	contents      map[string]bool
 	filesPath     string
+	journalPath   string
 	lastHeartbeat time.Time
 	mutex         *sync.Mutex
 }
@@ -48,7 +49,14 @@ func NewMetadata(fqname string, p string) *Metadata {
 	self.path = p
 	self.contents = map[string]bool{}
 	self.filesPath = path.Join(p, "files")
+	self.journalPath = ""
 	self.mutex = &sync.Mutex{}
+	return self
+}
+
+func NewMetadataWithJournalPath(fqname string, p string, journalPath string) *Metadata {
+	self := NewMetadata(fqname, p)
+	self.journalPath = journalPath
 	return self
 }
 
@@ -66,9 +74,11 @@ func (self *Metadata) mkdirs() {
 	mkdir(self.filesPath)
 }
 
-func (self *Metadata) removeAll() {
-	os.RemoveAll(self.path)
-	os.RemoveAll(self.filesPath)
+func (self *Metadata) removeAll() error {
+	if err := os.RemoveAll(self.path); err != nil {
+		return err
+	}
+	return os.RemoveAll(self.filesPath)
 }
 
 func (self *Metadata) getState(name string) (string, bool) {
@@ -145,6 +155,29 @@ func (self *Metadata) remove(name string) { os.Remove(self.makePath(name)) }
 
 func (self *Metadata) resetHeartbeat() {
 	self.lastHeartbeat = time.Time{}
+}
+
+func (self *Metadata) checkedReset() error {
+	if state, _ := self.getState(""); state == "failed" {
+		// Remove all related files from journal directory.
+		if len(self.journalPath) > 0 {
+			if files, err := filepath.Glob(path.Join(self.journalPath, self.fqname+"*")); err == nil {
+				for _, file := range files {
+					os.Remove(file)
+				}
+			}
+		}
+		if err := self.removeAll(); err != nil {
+			PrintInfo("runtime", "Cannot reset the stage because some folder contents could not be deleted.\n\nPlease resolve this error in order to continue running the pipeline:")
+			return err
+		}
+		PrintInfo("runtime", "(reset-partial)   %s", self.fqname)
+		self.mkdirs()
+		self.mutex.Lock()
+		self.contents = map[string]bool{}
+		self.mutex.Unlock()
+	}
+	return nil
 }
 
 func (self *Metadata) checkHeartbeat() {
@@ -524,7 +557,7 @@ func NewChunk(nodable Nodable, fork *Fork, index int, chunkDef map[string]interf
 	self.chunkDef = chunkDef
 	self.path = path.Join(fork.path, fmt.Sprintf("chnk%d", index))
 	self.fqname = fork.fqname + fmt.Sprintf(".chnk%d", index)
-	self.metadata = NewMetadata(self.fqname, self.path)
+	self.metadata = NewMetadataWithJournalPath(self.fqname, self.path, self.node.journalPath)
 	self.hasBeenRun = false
 	if !self.node.split {
 		// If we're not splitting, just set the sole chunk's filesPath
@@ -562,7 +595,7 @@ func (self *Chunk) step() {
 		self.hasBeenRun = true
 	}
 
-	threads, memGB := self.node.setJobReqs(self.chunkDef)
+	threads, memGB, special := self.node.setJobReqs(self.chunkDef)
 
 	// Resolve input argument bindings and merge in the chunk defs.
 	resolvedBindings := resolveBindings(self.node.argbindings, self.fork.argPermute)
@@ -575,7 +608,7 @@ func (self *Chunk) step() {
 	self.metadata.write("outs", makeOutArgs(self.node.outparams, self.metadata.filesPath))
 
 	// Run the chunk.
-	self.node.runChunk(self.fqname, self.metadata, threads, memGB)
+	self.node.runChunk(self.fqname, self.metadata, threads, memGB, special)
 }
 
 func (self *Chunk) serializeState() *ChunkInfo {
@@ -588,7 +621,7 @@ func (self *Chunk) serializeState() *ChunkInfo {
 }
 
 func (self *Chunk) serializePerf() *ChunkPerfInfo {
-	numThreads, _ := self.node.getJobReqs(self.chunkDef)
+	numThreads, _, _ := self.node.getJobReqs(self.chunkDef)
 	stats := self.metadata.serializePerf(numThreads)
 	return &ChunkPerfInfo{
 		Index:      self.index,
@@ -671,6 +704,21 @@ func (self *Fork) reset() {
 	self.chunks = []*Chunk{}
 	self.split_has_run = false
 	self.join_has_run = false
+}
+
+func (self *Fork) resetPartial() error {
+	if err := self.split_metadata.checkedReset(); err != nil {
+		return err
+	}
+	if err := self.join_metadata.checkedReset(); err != nil {
+		return err
+	}
+	for _, chunk := range self.chunks {
+		if err := chunk.metadata.checkedReset(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (self *Fork) collectMetadatas() []*Metadata {
@@ -829,11 +877,11 @@ func (self *Fork) step() {
 		if state == "ready" {
 			self.writeInvocation()
 			self.split_metadata.write("args", resolveBindings(self.node.argbindings, self.argPermute))
-			threads, memGB := self.node.setJobReqs(nil)
+			threads, memGB, special := self.node.setJobReqs(nil)
 			if self.node.split {
 				if !self.split_has_run {
 					self.split_has_run = true
-					self.node.runSplit(self.fqname, self.split_metadata, threads, memGB)
+					self.node.runSplit(self.fqname, self.split_metadata, threads, memGB, special)
 				}
 			} else {
 				self.split_metadata.write("stage_defs", self.stageDefs)
@@ -856,7 +904,7 @@ func (self *Fork) step() {
 				}
 			}
 		} else if state == "chunks_complete" {
-			threads, memGB := self.node.setJobReqs(self.stageDefs.JoinDef)
+			threads, memGB, special := self.node.setJobReqs(self.stageDefs.JoinDef)
 			resolvedBindings := resolveBindings(self.node.argbindings, self.argPermute)
 			for id, value := range self.stageDefs.JoinDef {
 				resolvedBindings[id] = value
@@ -873,7 +921,7 @@ func (self *Fork) step() {
 				self.join_metadata.write("outs", makeOutArgs(self.node.outparams, self.metadata.filesPath))
 				if !self.join_has_run {
 					self.join_has_run = true
-					self.node.runJoin(self.fqname, self.join_metadata, threads, memGB)
+					self.node.runJoin(self.fqname, self.join_metadata, threads, memGB, special)
 				}
 			} else {
 				self.join_metadata.write("outs", self.chunks[0].metadata.read("outs"))
@@ -1002,9 +1050,14 @@ func (self *Fork) postProcess() {
 					if _, err := os.Stat(filePath); err == nil {
 						if filePath, err := filepath.Rel(outsPath, filePath); err == nil {
 							mkdirAll(outsPath)
-							newValue := path.Join(outsPath, id)
-							if param.getTname() != "path" {
-								newValue += "." + param.getTname()
+							newValue := outsPath
+							if len(param.getOutName()) > 0 {
+								newValue = path.Join(newValue, param.getOutName())
+							} else {
+								newValue = path.Join(newValue, id)
+								if param.getTname() != "path" {
+									newValue += "." + param.getTname()
+								}
 							}
 							if err := os.Symlink(filePath, newValue); err != nil {
 								errMsg := err.Error()[strings.Index(err.Error(), newValue)+len(newValue)+1:]
@@ -1128,13 +1181,13 @@ func (self *Fork) serializePerf() (*ForkPerfInfo, *VDRKillReport) {
 		}
 	}
 
-	numThreads, _ := self.node.getJobReqs(nil)
+	numThreads, _, _ := self.node.getJobReqs(nil)
 	splitStats := self.split_metadata.serializePerf(numThreads)
 	if splitStats != nil {
 		stats = append(stats, splitStats)
 	}
 
-	numThreads, _ = self.node.getJobReqs(self.stageDefs.JoinDef)
+	numThreads, _, _ = self.node.getJobReqs(self.stageDefs.JoinDef)
 	joinStats := self.join_metadata.serializePerf(numThreads)
 	if joinStats != nil {
 		stats = append(stats, joinStats)
@@ -1502,31 +1555,38 @@ func (self *Node) getState() string {
 }
 
 func (self *Node) reset() error {
-	PrintInfo("runtime", "(reset)           %s", self.fqname)
+	if self.rt.fullStageReset {
+		PrintInfo("runtime", "(reset)           %s", self.fqname)
 
-	// Blow away the entire stage node.
-	if err := os.RemoveAll(self.path); err != nil {
-		PrintInfo("runtime", "mrp cannot reset the stage because its folder contents could not be deleted. Error was:\n\n%s\n\nPlease resolve the error in order to continue running the pipeline.", err.Error())
-		return err
-	}
-	// Remove all related files from journal directory.
-	if files, err := filepath.Glob(path.Join(self.journalPath, self.fqname+"*")); err == nil {
-		for _, file := range files {
-			os.Remove(file)
+		// Blow away the entire stage node.
+		if err := os.RemoveAll(self.path); err != nil {
+			PrintInfo("runtime", "Cannot reset the stage because its folder contents could not be deleted.\n\nPlease resolve this error in order to continue running the pipeline:")
+			return err
+		}
+		// Remove all related files from journal directory.
+		if files, err := filepath.Glob(path.Join(self.journalPath, self.fqname+"*")); err == nil {
+			for _, file := range files {
+				os.Remove(file)
+			}
+		}
+
+		// Clear chunks in the forks so they can be rebuilt on split.
+		for _, fork := range self.forks {
+			fork.reset()
+		}
+
+		// Create stage node directories.
+		self.mkdirs()
+	} else {
+		for _, fork := range self.forks {
+			if err := fork.resetPartial(); err != nil {
+				return err
+			}
 		}
 	}
 
-	// Clear chunks in the forks so they can be rebuilt on split.
-	for _, fork := range self.forks {
-		fork.reset()
-	}
-
-	// Create stage node directories.
-	self.mkdirs()
-
-	// Load the metadata.
+	// Refresh the metadata.
 	self.loadMetadata()
-
 	return nil
 }
 
@@ -1807,9 +1867,12 @@ func (self *Node) serializePerf() *NodePerfInfo {
 //=============================================================================
 // Job Runners
 //=============================================================================
-func (self *Node) getJobReqs(jobDef map[string]interface{}) (int, int) {
+func (self *Node) getJobReqs(jobDef map[string]interface{}) (int, int, string) {
 	threads := -1
 	memGB := -1
+	special := ""
+
+	// Get values passed from the stage code
 	if jobDef != nil {
 		if v, ok := jobDef["__threads"].(float64); ok {
 			threads = int(v)
@@ -1817,42 +1880,49 @@ func (self *Node) getJobReqs(jobDef map[string]interface{}) (int, int) {
 		if v, ok := jobDef["__mem_gb"].(float64); ok {
 			memGB = int(v)
 		}
+		if v, ok := jobDef["__special"].(string); ok {
+			special = string(v)
+		}
 	}
 
+	// Override with job manager caps specified from commandline
 	if self.local {
 		threads, memGB = self.rt.LocalJobManager.GetSystemReqs(threads, memGB)
 	} else {
 		threads, memGB = self.rt.JobManager.GetSystemReqs(threads, memGB)
 	}
 
-	return threads, memGB
+	// Return modified values
+	return threads, memGB, special
 }
 
-func (self *Node) setJobReqs(jobDef map[string]interface{}) (int, int) {
-	threads, memGB := self.getJobReqs(jobDef)
+func (self *Node) setJobReqs(jobDef map[string]interface{}) (int, int, string) {
+	// Get values and possibly modify them
+	threads, memGB, special := self.getJobReqs(jobDef)
 
+	// Write modified values back
 	if jobDef != nil {
 		jobDef["__threads"] = float64(threads)
 		jobDef["__mem_gb"] = float64(memGB)
 	}
 
-	return threads, memGB
+	return threads, memGB, special
 }
 
-func (self *Node) runSplit(fqname string, metadata *Metadata, threads int, memGB int) {
-	self.runJob("split", fqname, metadata, threads, memGB)
+func (self *Node) runSplit(fqname string, metadata *Metadata, threads int, memGB int, special string) {
+	self.runJob("split", fqname, metadata, threads, memGB, special)
 }
 
-func (self *Node) runJoin(fqname string, metadata *Metadata, threads int, memGB int) {
-	self.runJob("join", fqname, metadata, threads, memGB)
+func (self *Node) runJoin(fqname string, metadata *Metadata, threads int, memGB int, special string) {
+	self.runJob("join", fqname, metadata, threads, memGB, special)
 }
 
-func (self *Node) runChunk(fqname string, metadata *Metadata, threads int, memGB int) {
-	self.runJob("main", fqname, metadata, threads, memGB)
+func (self *Node) runChunk(fqname string, metadata *Metadata, threads int, memGB int, special string) {
+	self.runJob("main", fqname, metadata, threads, memGB, special)
 }
 
 func (self *Node) runJob(shellName string, fqname string, metadata *Metadata,
-	threads int, memGB int) {
+	threads int, memGB int, special string) {
 
 	// Configure local variable dumping.
 	stackVars := "disable"
@@ -1895,8 +1965,9 @@ func (self *Node) runJob(shellName string, fqname string, metadata *Metadata,
 		jobMode = "local"
 		jobManager = self.rt.LocalJobManager
 	}
-	padding := strings.Repeat(" ", int(math.Max(0, float64(10-len(jobMode)))))
-	msg := fmt.Sprintf("(run:%s) %s %s.%s", jobMode, padding, fqname, shellName)
+	jobModeLabel := strings.Replace(jobMode, ".template", "", -1)
+	padding := strings.Repeat(" ", int(math.Max(0, float64(10-len(path.Base(jobModeLabel))))))
+	msg := fmt.Sprintf("(run:%s) %s %s.%s", path.Base(jobModeLabel), padding, fqname, shellName)
 	if self.preflight {
 		LogInfo("runtime", msg)
 	} else {
@@ -1915,7 +1986,7 @@ func (self *Node) runJob(shellName string, fqname string, metadata *Metadata,
 		"invocation":     self.invocation,
 		"version":        version,
 	})
-	jobManager.execJob(shellCmd, argv, envs, metadata, threads, memGB, fqname, shellName)
+	jobManager.execJob(shellCmd, argv, envs, metadata, threads, memGB, special, fqname, shellName)
 	ExitCriticalSection()
 }
 
@@ -1995,9 +2066,7 @@ func (self *Pipestance) OnFinishHook() {
 
 		/* Set up attributes for exec */
 		var pa os.ProcAttr
-		stdout := os.NewFile(1, "/dev/stdout")
-		stderr := os.NewFile(2, "/dev/stderr")
-		pa.Files = []*os.File{nil, stdout, stderr}
+		pa.Files = []*os.File{os.Stdin, os.Stdout, os.Stderr}
 
 		/* Find the real path to the script */
 		real_path, err := exec.LookPath(exec_path)
@@ -2519,6 +2588,7 @@ type Runtime struct {
 	MroCache        *MroCache
 	JobManager      JobManager
 	LocalJobManager JobManager
+	fullStageReset  bool
 	enableStackVars bool
 	enableZip       bool
 	skipPreflight   bool
@@ -2529,12 +2599,12 @@ type Runtime struct {
 
 func NewRuntime(jobMode string, vdrMode string, profileMode string, martianVersion string) *Runtime {
 	return NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, -1, -1, -1, false, false, false, false, false, false, "")
+		-1, -1, -1, -1, -1, "", false, false, false, false, false, false, false, "")
 }
 
 func NewRuntimeWithCores(jobMode string, vdrMode string, profileMode string, martianVersion string,
-	reqCores int, reqMem int, reqMemPerCore int, maxJobs int, jobFreqMillis int,
-	enableStackVars bool, enableZip bool, skipPreflight bool, enableMonitor bool,
+	reqCores int, reqMem int, reqMemPerCore int, maxJobs int, jobFreqMillis int, jobQueues string,
+	fullStageReset bool, enableStackVars bool, enableZip bool, skipPreflight bool, enableMonitor bool,
 	debug bool, stest bool, onFinishExec string) *Runtime {
 
 	self := &Runtime{}
@@ -2543,6 +2613,7 @@ func NewRuntimeWithCores(jobMode string, vdrMode string, profileMode string, mar
 	self.jobMode = jobMode
 	self.vdrMode = vdrMode
 	self.profileMode = profileMode
+	self.fullStageReset = fullStageReset
 	self.enableStackVars = enableStackVars
 	self.enableZip = enableZip
 	self.skipPreflight = skipPreflight
@@ -2556,7 +2627,7 @@ func NewRuntimeWithCores(jobMode string, vdrMode string, profileMode string, mar
 		self.JobManager = self.LocalJobManager
 	} else {
 		self.JobManager = NewRemoteJobManager(self.jobMode, reqMemPerCore, maxJobs,
-			jobFreqMillis, debug)
+			jobFreqMillis, jobQueues, debug)
 	}
 	VerifyVDRMode(self.vdrMode)
 	VerifyProfileMode(self.profileMode)
@@ -2856,28 +2927,14 @@ func (self *MroCache) GetCallable(mroPaths []string, name string) (Callable, err
 }
 
 func buildVal(param Param, val interface{}) string {
-	// MRO value expression syntax is identical to JSON. Just need to make
-	// sure floats get printed with decimal points.
-	switch {
-	case param.getTname() == "float" && param.getArrayDim() == 0 && val != nil:
-		switch val.(type) {
-		case json.Number:
-			if num, err := val.(json.Number).Float64(); err == nil {
-				return fmt.Sprintf("%f", num)
-			}
-		default:
-			return fmt.Sprintf("%f", val)
+	indent := "    "
+	if data, err := json.MarshalIndent(val, "", indent); err == nil {
+		// Indent multi-line values (but not first line).
+		sublines := strings.Split(string(data), "\n")
+		for i, _ := range sublines[1:] {
+			sublines[i+1] = indent + sublines[i+1]
 		}
-	default:
-		indent := "    "
-		if data, err := json.MarshalIndent(val, "", indent); err == nil {
-			// Indent multi-line values (but not first line).
-			sublines := strings.Split(string(data), "\n")
-			for i, _ := range sublines[1:] {
-				sublines[i+1] = indent + sublines[i+1]
-			}
-			return strings.Join(sublines, "\n")
-		}
+		return strings.Join(sublines, "\n")
 	}
 	return fmt.Sprintf("<ParseError: %v>", val)
 }
@@ -2886,6 +2943,7 @@ func (self *Runtime) BuildCallSource(incpaths []string, name string, args map[st
 	sweepargs []string, mroPaths []string) (string, error) {
 	callable, err := self.MroCache.GetCallable(mroPaths, name)
 	if err != nil {
+		LogInfo("package", "Could not get callable: %s", name)
 		return "", err
 	}
 

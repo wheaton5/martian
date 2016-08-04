@@ -144,6 +144,9 @@ Options:
 		}
 	}
 
+	// Special to resources mappings
+	jobResources := env["SERE_JOBRESOURCES"]
+
 	// Prepare configuration variables.
 	uiport := env["SERE_PORT"]
 	instanceName := env["SERE_INSTANCE_NAME"]
@@ -175,15 +178,15 @@ Options:
 		if mb < 0 {
 			maxStorageBytes = manager.STORAGE_UNLIMITED_BYTES
 		} else {
-			maxStorageBytes = int64(1024 * 1024) * int64(mb)
+			maxStorageBytes = int64(1024*1024) * int64(mb)
 		}
 	}
 	core.LogInfo("options", "Storage high water mark: %d bytes", maxStorageBytes)
 
 	// Runtime
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
-		skipPreflight, enableMonitor, debug, false, "")
+		-1, -1, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
+		true, stackVars, zip, skipPreflight, enableMonitor, debug, false, "")
 
 	// Mailer
 	mailer := manager.NewMailer(instanceName, emailHost, emailSender,

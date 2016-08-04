@@ -63,6 +63,20 @@ func (self *PackageManager) GetPipestanceEnvironment(container string, pipeline 
 	return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil
 }
 
+func (self *PackageManager) GetPackageEnvironment(pkg string) ([]string, string, string, map[string]string, error) {
+	programName, cycleId, roundId := parseContainerKey(pkg)
+	round, err := self.db.GetRound(programName, cycleId, roundId)
+	if err != nil {
+		return nil, "", "", nil, err
+	}
+	p, err := self.GetPackage(round.PackageName, round.PackageTarget, round.PackageVersion)
+	if err != nil {
+		return nil, "", "", nil, err
+	}
+	return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil
+}
+
+
 func (self *PackageManager) ManagePackages() []*manager.Package {
 	packages := []*manager.Package{}
 

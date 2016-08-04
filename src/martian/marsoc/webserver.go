@@ -33,6 +33,7 @@ type MainPage struct {
 	PipelinesVersion string
 	PipestanceCount  int
 	State            string
+	Products         []string
 }
 type GraphPage struct {
 	InstanceName string
@@ -66,6 +67,7 @@ type PipestanceForm struct {
 	Fcid     string
 	Pipeline string
 	Psid     string
+	Product  string
 }
 
 type RedstoneFile struct {
@@ -113,7 +115,9 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 			sample.Ready_to_invoke = false
 		}
 	}
-	sample.Callsrc = packages.BuildCallSourceForSample(rt, lena.GetSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample)
+
+	/* Prepopulate the sample Callsrc to help the web UI. */
+	sample.Callsrc_for_js = packages.BuildCallSourceForSample(rt, lena.GetSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample, sample.Product)
 	return fastqPaths
 }
 
@@ -160,13 +164,14 @@ func EnqueuePreprocess(fcid string, rt *core.Runtime, packages *PackageManager, 
 		return fmt.Sprintf("Could not find run with fcid %s.", fcid)
 	}
 	tags := GetPreprocessTags(run, fcid, instanceName)
-	if err := pman.Enqueue(fcid, "BCL_PROCESSOR_PD", fcid, packages.BuildCallSourceForRun(rt, run), tags); err != nil {
+	// COULD THIS POSSIBLY BE RIGHT?
+	if err := pman.Enqueue(fcid, "BCL_PROCESSOR_PD", fcid, packages.BuildCallSourceForRun(rt, run), tags, ""); err != nil {
 		return err.Error()
 	}
 	return ""
 }
 
-func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *Lena, instanceName string) string {
+func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, pman *manager.PipestanceManager, lena *Lena, instanceName string, product string) string {
 	// Invoke the pipestance.
 	fastqPaths := updateSampleState(sample, rt, lena, packages, pman)
 	errors := []string{}
@@ -179,7 +184,21 @@ func EnqueueSample(sample *Sample, rt *core.Runtime, packages *PackageManager, p
 	}
 	if every {
 		tags := GetSampleTags(sample, fastqPaths, instanceName)
-		if err := pman.Enqueue(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), sample.Callsrc, tags); err != nil {
+		real_product := sample.Product
+		if product != "" && product != "Default" {
+			real_product = product
+		}
+
+		if !packages.CheckProduct(real_product) {
+			return fmt.Sprintf("Bad product '%s'.", real_product)
+
+		}
+		callsrc := packages.BuildCallSourceForSample(rt,
+			lena.GetSampleBagWithId(strconv.Itoa(sample.Id)),
+			fastqPaths,
+			sample,
+			real_product)
+		if err := pman.Enqueue(sample.Pscontainer, sample.Pname, strconv.Itoa(sample.Id), callsrc, tags, real_product); err != nil {
 			errors = append(errors, err.Error())
 		}
 	}
@@ -193,7 +212,7 @@ func EnqueueAllSamples(fcid string, rt *core.Runtime, packages *PackageManager, 
 	// Invoke the appropriate pipeline on each sample.
 	errors := []string{}
 	for _, sample := range samples {
-		if error := EnqueueSample(sample, rt, packages, pman, lena, instanceName); len(error) > 0 {
+		if error := EnqueueSample(sample, rt, packages, pman, lena, instanceName, sample.Product); len(error) > 0 {
 			errors = append(errors, error)
 		}
 	}
@@ -272,6 +291,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
+				Products:         packages.ListPackages(),
 			})
 	})
 
@@ -284,6 +304,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
+				Products:         packages.ListPackages(),
 			})
 	})
 
@@ -393,6 +414,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
+				Products:         packages.ListPackages(),
 			})
 	})
 
@@ -416,6 +438,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				MarsocVersion:    martianVersion,
 				PipelinesVersion: packages.GetMroVersion(),
 				PipestanceCount:  pman.CountRunningPipestances(),
+				Products:         packages.ListPackages(),
 			})
 	})
 
@@ -550,7 +573,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Psid)
 		}
-		return EnqueueSample(sample, rt, packages, pman, lena, instanceName)
+
+		return EnqueueSample(sample, rt, packages, pman, lena, instanceName, body.Product)
 	})
 
 	//=========================================================================
@@ -606,7 +630,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		if sample == nil {
 			return fmt.Sprintf("Sample '%s' not found.", body.Id)
 		}
-		return EnqueueSample(sample, rt, packages, pman, lena, instanceName)
+		return EnqueueSample(sample, rt, packages, pman, lena, instanceName, sample.Product)
 	})
 
 	// API: Restart failed metasample analysis.
@@ -677,7 +701,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		martianVersion, mroVersion, _ := pman.GetPipestanceVersions(container, pname, psid)
 		psinfo["version"] = martianVersion
 		psinfo["mroversion"] = mroVersion
-		mroPaths, mroVersion, _, _, _ := pman.GetPipestanceEnvironment(container, pname, psid)
+		mroPaths, mroVersion, _, _, _ := pman.GetPipestanceEnvironment(container, pname, psid, nil)
 		psinfo["mropath"] = core.FormatMroPath(mroPaths)
 		psinfo["mroversion"] = mroVersion
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")

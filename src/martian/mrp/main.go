@@ -6,8 +6,6 @@
 package main
 
 import (
-	"github.com/10XDev/docopt.go"
-	"github.com/dustin/go-humanize"
 	"io/ioutil"
 	"martian/core"
 	"net/http"
@@ -19,6 +17,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/10XDev/docopt.go"
+	"github.com/dustin/go-humanize"
 )
 
 //=============================================================================
@@ -38,10 +39,6 @@ func runLoop(pipestance *core.Pipestance, stepSecs int, vdrMode string,
 		// Check for completion states.
 		state := pipestance.GetState()
 		if state == "complete" {
-			if !showedComplete {
-				pipestance.OnFinishHook()
-				showedComplete = true
-			}
 			if vdrMode == "disable" {
 				core.LogInfo("runtime", "VDR disabled. No files killed.")
 			} else {
@@ -51,6 +48,10 @@ func runLoop(pipestance *core.Pipestance, stepSecs int, vdrMode string,
 			}
 			pipestance.Unlock()
 			pipestance.PostProcess()
+			if !showedComplete {
+				pipestance.OnFinishHook()
+				showedComplete = true
+			}
 			if noExit {
 				core.Println("Pipestance completed successfully, staying alive because --noexit given.")
 				break
@@ -216,6 +217,20 @@ Options:
 		}
 	}
 
+	// Special to resources mappings
+	jobResources := ""
+	if value := os.Getenv("MRO_JOBRESOURCES"); len(value) > 0 {
+		jobResources = value
+		core.LogInfo("options", "MRO_JOBRESOURCES=%s", jobResources)
+	}
+
+	// Flag for full stage reset, default is chunk-granular
+	fullStageReset := false
+	if value := os.Getenv("MRO_FULLSTAGERESET"); len(value) > 0 {
+		fullStageReset = true
+		core.LogInfo("options", "MRO_FULLSTAGERESET=%v", fullStageReset)
+	}
+
 	// Compute MRO path.
 	cwd, _ := filepath.Abs(path.Dir(os.Args[0]))
 	mroPaths := core.ParseMroPath(cwd)
@@ -319,8 +334,9 @@ Options:
 	// Configure Martian runtime.
 	//=========================================================================
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, stackVars, zip,
-		skipPreflight, enableMonitor, debug, stest, onfinish)
+		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
+		fullStageReset, stackVars, zip, skipPreflight, enableMonitor,
+		debug, stest, onfinish)
 	rt.MroCache.CacheMros(mroPaths)
 
 	// Print this here because the log makes more sense when this appears before

@@ -226,7 +226,7 @@ func enqueuePipestance(container string, pipeline string, psid string, rt *core.
 	src := p.Argshim.BuildCallSourceForTest(rt, test.Category, test.Id, sampleBag, fastqPaths, p.MroPaths)
 	tags := []string{}
 
-	return pman.Enqueue(container, pipeline, psid, src, tags)
+	return pman.Enqueue(container, pipeline, psid, src, tags, container)
 }
 
 func callPipestancesAPI(pipestances []PipestanceForm, pipestanceFunc manager.PipestanceFunc) string {
@@ -519,7 +519,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 		martianVersion, mroVersion, _ := pman.GetPipestanceVersions(container, pname, psid)
 		psinfo["version"] = martianVersion
 		psinfo["mroversion"] = mroVersion
-		mroPaths, mroVersion, _, _, _ := pman.GetPipestanceEnvironment(container, pname, psid)
+		mroPaths, mroVersion, _, _, _ := pman.GetPipestanceEnvironment(container, pname, psid, nil)
 		psinfo["mropath"] = core.FormatMroPath(mroPaths)
 		psinfo["mroversion"] = mroVersion
 		ser, _ := pman.GetPipestanceSerialization(container, pname, psid, "finalstate")
