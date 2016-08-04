@@ -115,6 +115,9 @@ func updateSampleState(sample *Sample, rt *core.Runtime, lena *Lena,
 			sample.Ready_to_invoke = false
 		}
 	}
+
+	/* Prepopulate the sample Callsrc to help the web UI. */
+	sample.Callsrc_for_js = packages.BuildCallSourceForSample(rt, lena.GetSampleBagWithId(strconv.Itoa(sample.Id)), fastqPaths, sample, sample.Product)
 	return fastqPaths
 }
 
