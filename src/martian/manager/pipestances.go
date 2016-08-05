@@ -1378,7 +1378,7 @@ func (self *PipestanceManager) GetPipestanceOuts(container string, pipeline stri
 
 func (self *PipestanceManager) GetPipestanceEnvironment(container string, pipeline string, psid string, pkg *string) ([]string, string, string, map[string]string, error) {
 
-	if pkg != nil {
+	if pkg != nil && *pkg != "" {
 		return self.packages.GetPackageEnvironment(*pkg)
 	} else {
 		return self.packages.GetPipestanceEnvironment(container, pipeline, psid)
