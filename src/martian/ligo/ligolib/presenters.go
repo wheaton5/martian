@@ -134,6 +134,8 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit
 		fields = append(fields, k)
 	}
 
+	fields = AugmentMetrics(fields, "sampleid")
+
 	data, err := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate", limit, offset)
 
 	if err != nil {
@@ -148,11 +150,13 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit
 		row := data[i]
 
 		all_ok := true
+		// XXX DANGER
+		sampleid := row["sampleid"].(string)
 		for metric_name, val := range row {
 			metric := mets.Metrics[metric_name]
 			if metric != nil {
 
-				ok := CheckOK(mets.Metrics[metric_name], val)
+				ok := ResolveAndCheckOK(mets, metric_name, sampleid, val)
 				if !ok {
 					all_ok = false
 				}
@@ -250,6 +254,8 @@ func (c *CoreConnection) DetailsPresenter(id int, mets *Project) (*Plot, error) 
 		list_of_metrics = append(list_of_metrics, metric_name)
 	}
 
+	list_of_metrics = AugmentMetrics(list_of_metrics, "sampleid")
+
 	/* Grab the data for the metrics that we care about */
 	data, err := c.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.id = %v", id)),
 		list_of_metrics,
@@ -278,9 +284,11 @@ func (c *CoreConnection) DetailsPresenter(id int, mets *Project) (*Plot, error) 
 
 	details := make([][]interface{}, 0, 0)
 	details = append(details, []interface{}{"Metric", "Value", "OK"})
+	// XXX DANGER!
+	sampleid := d1["sampleid"].(string)
 
 	for metric_name, metric_value := range d1 {
-		met_ok := CheckOK(mets.Metrics[metric_name], metric_value)
+		met_ok := ResolveAndCheckOK(mets, metric_name, sampleid, metric_value)
 		row := []interface{}{metric_name, fmt.Sprintf("%v", metric_value), met_ok}
 		details = append(details, row)
 	}

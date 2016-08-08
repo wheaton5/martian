@@ -4,6 +4,7 @@ package ligolib
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -37,9 +38,16 @@ type MetricDef struct {
  * A collection of metrics
  */
 type Project struct {
-	Metrics   map[string]*MetricDef
-	Where     string
-	WhereAble WhereAble `json:"-"`
+	Metrics    map[string]*MetricDef
+	Where      string
+	SampleIDs  []string
+	WhereAble  WhereAble `json:"-"`
+	TargetSets []TargetSet
+}
+
+type TargetSet struct {
+	SampleIDs []string
+	Targets   map[string]*MetricDef
 }
 
 /*
@@ -252,9 +260,67 @@ func Abs(x float64) float64 {
 }
 
 /*
+ * This implements the project definition resolution algorithm.  The idea is
+ * that we have a "generic" set of targets in Project.Metrics. However, for a
+ * particular metric might be overrided for a particular sample set.  we try to
+ * find a sample set that includes this sample_ida nd defines this metric, if
+ * we do, we use it.  Otherwise, we fall back to the generic definition. If
+ * that is missing, you get nil.
+ *
+ * This function returns (nil,nil) if the metric is justmissing, and (nil,err)
+ * if yo uare a horrible person.
+ */
+func (p *Project) LookupMetricDef(json_path string, sample_id string) (*MetricDef, error) {
+
+	/* Generic metric to use? */
+	base := p.Metrics[json_path]
+
+	/* Did we find a better one? */
+	var got_one *MetricDef
+
+	/* Check every target set */
+	for _, ts := range p.TargetSets {
+		found := false
+		for _, s := range ts.SampleIDs {
+			if s == sample_id {
+				found = true
+				break
+			}
+		}
+		/* Does this target set include sample_id and does it define this metric? */
+		if found && ts.Targets[json_path] != nil {
+			if got_one == nil {
+				got_one = ts.Targets[json_path]
+			} else {
+				/* Uh oh! This target is defined twice. Get upset about it */
+				return nil, errors.New(
+					fmt.Sprintf("Is nothing sacred? Sample id %v, metric %v has multiple targets. Run! Run from the demons of fate. Now, everything is ruined.",
+						sample_id, json_path))
+			}
+		}
+	}
+
+	/*
+	 * TODO: We want to be more clever here! We want to merge |got_one| and |base| here,
+	 * using the old definitions for anything not explicitly overrided.
+	 */
+	if got_one != nil {
+		log.Printf("OVERRIDE: %v %v", json_path, sample_id)
+		return got_one, nil
+	} else {
+		return base, nil
+	}
+}
+
+/*
  * Does a metric meet the specification?
  */
 func CheckOK(m *MetricDef, value interface{}) bool {
+
+	/* Stuff misisng a target gets a pass */
+	if m == nil {
+		return true
+	}
 
 	asfloat, ok := value.(float64)
 
@@ -281,6 +347,28 @@ func CheckOK(m *MetricDef, value interface{}) bool {
 
 	return true
 
+}
+
+/*
+ * Look up the correct targets for a given sample ID and then check the given metric
+ * against those targets.
+ */
+func ResolveAndCheckOK(p *Project, metric_name string, sampleid string, value interface{}) bool {
+
+	// Find the target to use
+	m, err := p.LookupMetricDef(metric_name, sampleid)
+
+	/* XXX This is wrong! We'll drop an important error on the floor here! */
+	if err != nil {
+		panic(err)
+	}
+
+	if m == nil {
+		// Undefined metrics pass by default
+		return true
+	} else {
+		return CheckOK(m, value)
+	}
 }
 
 /*
@@ -334,6 +422,20 @@ func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 }
 
 /*
+ * Append a string to a list, unless it is already in the list.
+ */
+func AugmentMetrics(metrics []string, newmetric string) []string {
+
+	for _, m := range metrics {
+		if m == newmetric {
+			return metrics
+		}
+	}
+
+	return append(metrics, newmetric)
+}
+
+/*
  * Compare two pipestance invocations, specified by pipestance invocation ID.
  */
 func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricResult, error) {
@@ -343,6 +445,11 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 	for metric_name, _ := range m.Metrics {
 		list_of_metrics = append(list_of_metrics, metric_name)
 	}
+
+	/* We absolutely need to keep the sample ID so that we can
+	 * resolve the right targets on a per-sample ID basis later.
+	 */
+	list_of_metrics = AugmentMetrics(list_of_metrics, "sampleid")
 
 	/* Grab the metric for each pipestance */
 	log.Printf("Comparing %v and %v", base, newguy)
@@ -366,6 +473,9 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 		return nil, err
 	}
 
+	/* XXX This can blow up! kaboom! */
+	new_sampleid := basedata[0]["sampleid"].(string)
+	old_sampleid := newdata[0]["sampleid"].(string)
 	results := make([]MetricResult, 0, 0)
 
 	/* Iterate over all metric definitions and compare the respective metrics */
@@ -395,8 +505,8 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 			mr.OK = false
 		}
 
-		mr.NewOK = CheckOK(m.Metrics[one_metric], newval)
-		mr.OldOK = CheckOK(m.Metrics[one_metric], baseval)
+		mr.NewOK = ResolveAndCheckOK(m, one_metric, new_sampleid, newval)
+		mr.OldOK = ResolveAndCheckOK(m, one_metric, old_sampleid, baseval)
 
 		results = append(results, mr)
 	}

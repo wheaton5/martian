@@ -1,14 +1,6 @@
 
 {
 	"Metrics": {
-		"/SUMMARIZE_REPORTS_PD/universal_fract_snps_phased": {
-			"HumanName": "Davids Metric",
-			"Owner": "dstaff"
-		},
-		"/SUMMARIZE_REPORTS_PD/r1_q30_bases": {
-			"HumanName": "Davids Other Metric",
-			"Owner": "dstaff"
-		},
 		"/ANALYZE_KNOWN_BREAKS_PD/sv_sensitivity_5.0to10.0K_Q100": {
 			"HUmanName": "More metris!!!!!",
 			"Owner": "dstaff",
@@ -18,14 +10,18 @@
 		"SHA":{},
 		"finishdate":{},
 		"/SUMMARIZE_REPORTS_PD/universal_N50_phase_block": {"RelDiffAllow": 25},
-		"/SUMMARIZE_REPORTS_PD/universal_long_switch_error": {},
-		"/SUMMARIZE_REPORTS_PD/universal_fract_genes_lt_100kb_phased": {},
-		"/SUMMARIZE_REPORTS_PD/universal_sensitivity_filtered_snp_conf_regions": {},
-		"/SUMMARIZE_REPORTS_PD/universal_ppv_filtered_snp_conf_regions": {},
 		"/SUMMARIZE_REPORTS_PD/universal_novel_calls_filtered_degen_regions": {},
 		"/SUMMARIZE_REPORTS_PD/universal_novel_validate_ppv_filtered_degen_regions": {},
-		"/_perf/0/forks/0/fork_stats/core_hours": { "Low": 200, "High":1000},
+		"/_perf/0/forks/0/fork_stats/core_hours": { "Low": 100, "High":5000},
 		"/_lena/sample_bag/cell_line/name": {}
-	}
+	},
+	"TargetSets": [
+		{
+			"SampleIDs":["21149","20076","26144"],
+			"Targets": {
+				"/_perf/0/forks/0/fork_stats/core_hours": {"Low":0, "High": 5}
+			}
+		}
+	]
 }
 
