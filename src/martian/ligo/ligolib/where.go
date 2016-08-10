@@ -1,6 +1,7 @@
 // Copyright (c) 2016 10X Genomics, Inc. All rights reserved.
 package ligolib
 
+import "fmt"
 import "log"
 
 /*
@@ -29,7 +30,7 @@ func (e *EmptyWhere) Empty() bool {
 
 func (e *EmptyWhere) Stringify() string {
 	log.Printf("WARNING: Trying to stringify an empty WHERE clause!")
-	return "1==1"
+	return "1=1"
 }
 
 /*
@@ -46,6 +47,35 @@ func (w *StringWhere) Empty() bool {
 
 func (w *StringWhere) Stringify() string {
 	return w.WhereClause
+}
+
+/* Implement a where clause using SQL IN syntax to select from a list */
+type ListWhere struct {
+	Items  []string
+	Column string
+}
+
+func (w *ListWhere) Empty() bool {
+	return len(w.Items) == 0
+}
+
+func (w *ListWhere) Stringify() string {
+	result := ""
+
+	for i := 0; i < len(w.Items); i++ {
+		if i == 0 {
+			result += fmt.Sprintf("'%v'", w.Items[i])
+		} else {
+			result += fmt.Sprintf(",'%v'", w.Items[i])
+		}
+	}
+
+	return w.Column + " IN (" + result + ")"
+}
+
+func NewListWhere(column string, items []string) *ListWhere {
+	return &ListWhere{items, column}
+
 }
 
 /*

@@ -1,27 +1,13 @@
 
 {
 	"Metrics": {
-		"/ANALYZE_KNOWN_BREAKS_PD/sv_sensitivity_5.0to10.0K_Q100": {
-			"HUmanName": "More metris!!!!!",
-			"Owner": "dstaff",
-			"AbsDiffAllow": 0.0000000001
-		},
 		"sampleid": {},
 		"SHA":{},
 		"finishdate":{},
-		"/SUMMARIZE_REPORTS_PD/universal_N50_phase_block": {"RelDiffAllow": 25},
 		"/SUMMARIZE_REPORTS_PD/universal_novel_calls_filtered_degen_regions": {},
-		"/SUMMARIZE_REPORTS_PD/universal_novel_validate_ppv_filtered_degen_regions": {},
-		"/_perf/0/forks/0/fork_stats/core_hours": { "Low": 100, "High":5000},
-		"/_lena/sample_bag/cell_line/name": {}
+		"/_lena/sample_bag/cell_line/name": {},
+		"/_perf/0/forks/0/fork_stats/core_hours": { "Low": 100, "High":5000}
 	},
-	"TargetSets": [
-		{
-			"SampleIDs":["21149","20076","26144"],
-			"Targets": {
-				"/_perf/0/forks/0/fork_stats/core_hours": {"Low":0, "High": 5}
-			}
-		}
-	]
+	"SampleIDs": ["20486", "90234", "12345", "65456"]
 }
 

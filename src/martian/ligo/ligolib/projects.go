@@ -144,7 +144,7 @@ func (pc *ProjectsCache) NewTempProject(txt string) (string, error) {
 	for k, _ := range project.Metrics {
 		project.Metrics[k].JSONPath = k
 	}
-	project.WhereAble = NewStringWhere(project.Where)
+	project.WhereAble = MergeWhereClauses(NewStringWhere(project.Where), NewListWhere("sampleid", project.SampleIDs))
 	pc.TempProjects[temp_project_name] = &project
 
 	return temp_project_name, nil
@@ -181,7 +181,7 @@ func LoadProject(path string) (*Project, error) {
 	}
 
 	log.Printf("Loading metric from %v: %v (%v)", path, len(project.Metrics), project.Where)
-	project.WhereAble = NewStringWhere(project.Where)
+	project.WhereAble = MergeWhereClauses(NewStringWhere(project.Where), NewListWhere("sampleid", project.SampleIDs))
 	return &project, nil
 }
 
