@@ -423,7 +423,7 @@ ViewState.prototype.table_update = function()  {
 		var gdata = google.visualization.arrayToDataTable(data.ChartData);
 		//var options = {width: 1200, allowHtml:true};
 		var options = {allowHtml:true, cssClassNames: {tableCell:"chart-cell"}};
-		colorize_table(data.ChartData, gdata, "OK", "out-of-spec")
+		colorize_by_annotations(data.ChartData, gdata, data.Annotations, STYLEMAP);
 		global_table.draw(gdata, options)
 		set_csv_download_url(url);
 
@@ -594,6 +594,47 @@ function colorize_table2(data, datatable, column_from, column_to, style) {
 		}
 	}
 }
+
+/*
+ * How to the bit patterns in the server-side annotations array correspond to
+ * styles?
+ * 1--> out of spec
+ * 2--> different
+ * 4--> broken
+ */
+var STYLEMAP = ["out-of-spec", "different", "broken"]
+
+/* Colorize a table given some annotations. 
+ * Annotations are an array optionally sent from the server that specifies a bit pattern for
+ * each cell. 
+ *
+ * We corrolate the annotation array with the data array and apply styles from |style| map
+ * to the appropriate cells.  We simply index the bit position of each set bit in annotations
+ * (for each cell) into stylemap and apply that style.
+ */
+function colorize_by_annotations(data, datatable, annotations, style_map) {
+	if (annotations == null) {
+		return;
+	}
+	for (var i = 1; i < data.length; i++) {
+		for (var j = 0; j < data[0].length; j++) {
+			for (var k = 0; k < style_map.length; k++) {
+				if (annotations[i][j] & (1<<k)) {
+					var style = style_map[k];
+					var old = datatable.getProperty(i - 1, j, 'className');
+					var ns = "";
+					if (old != null) {
+						ns = old + " ";
+					}
+					ns += style;
+
+					datatable.setProperty(i - 1, j, 'className', ns);
+				}
+			}
+		}
+	}
+}
+
 
 function reload() {
 	document.location="/api/reload_metrics"

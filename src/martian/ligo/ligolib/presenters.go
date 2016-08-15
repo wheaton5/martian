@@ -29,6 +29,25 @@ type Plot struct {
 	 * subsequent rows contain the column data.
 	 */
 	ChartData [][]interface{}
+
+	/*
+	 * This annotations matrix specifies attributes (that convert to CSS) for
+	 * each element of chartdata.
+	 *
+	 * It is a bitmask of the following operations
+	 * 1 Datum failed to meet it's target
+	 * 2 Datum is significantly different from its comparant
+	 * 4 Datum wasn't successfully extracted from the summary/db info.
+	 */
+	Annotations [][]int
+}
+
+func MakeAnnotation(rows int, cols int) [][]int {
+	r := make([][]int, rows)
+	for i := 0; i < rows; i++ {
+		r[i] = make([]int, cols)
+	}
+	return r
 }
 
 /*
@@ -47,7 +66,7 @@ func (c *CoreConnection) AllDataForPipestance(where WhereAble, pid int) (*Plot, 
 	rotated := RotateStructs(result)
 	log.Printf("Processed %v json entries", len(result))
 
-	return &Plot{"", rotated}, nil
+	return &Plot{"", rotated, nil}, nil
 }
 
 /*
@@ -62,7 +81,7 @@ func (c *CoreConnection) ListAllMetrics(mets *Project) (*Plot, error) {
 		fields = append(fields, []interface{}{k})
 	}
 
-	return &Plot{"Some stuff", fields}, nil
+	return &Plot{"Some stuff", fields, nil}, nil
 }
 
 /*
@@ -96,54 +115,48 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit
 		return nil, err
 	}
 
-	/*
-	 * Iterate over all of the data and see if it meets the required metrics.
-	 */
-	for i := 0; i < len(data); i++ {
-
-		row := data[i]
-
-		all_ok := true
-		// XXX DANGER
-		sampleid := row["sampleid"].(string)
-		for metric_name, val := range row {
-			metric := mets.Metrics[metric_name]
-			if metric != nil {
-
-				ok := ResolveAndCheckOK(mets, metric_name, sampleid, val)
-				if !ok {
-					all_ok = false
-				}
-			}
-		}
-		data[i]["OK"] = all_ok
-	}
-
 	var plot Plot
 	fields = append(fields, "OK")
 	gendata := RotateN(data, fields)
 	plot.ChartData = gendata
 	plot.Name = ""
+	plot.Annotations = MakeAnnotation(len(gendata), len(gendata[0]))
 
-	/* Now iterate through the column names in the first row
-	 * of plot.ChartData and munge them.  Swap the key name with
-	 * a human readable name when possible and truncate the length.
+	/* This is a horrible bloody mess! Note that subtle dependence on the exact what that
+	 * RotateN orginizaes the values that it returns!
+	 *
+	 * This loops through the output column by column . For each cell, (except the 0th row
+	 * which is the column labels) it runs ResolveAndCheck to see the Annotations bitmap for
+	 * that cell correctly. This turns cells that fail their targets red.
+	 *
+	 * While we're at it, we change the label of each column to try to be more human friendly.
 	 */
-	for i := 0; i < len(gendata[0]); i++ {
-		str := gendata[0][i].(string)
-		m := mets.Metrics[str]
+	for which_metric_idx := 0; which_metric_idx < len(gendata[0]); which_metric_idx++ {
+		metric_name := gendata[0][which_metric_idx].(string)
+		for row_idx := 1; row_idx < len(gendata); row_idx++ {
+
+			/* Off by 1 here because RotateN added a header row with column names */
+			sampleid := data[row_idx-1]["sampleid"].(string)
+			ok := ResolveAndCheckOK(mets, metric_name, sampleid, gendata[row_idx][which_metric_idx])
+			if !ok {
+				plot.Annotations[row_idx][which_metric_idx] = 1
+			}
+		}
+
+		/* Adjust the metric name */
+		m := mets.Metrics[metric_name]
 		if m != nil && m.HumanName != "" {
-			str = m.HumanName
+			metric_name = m.HumanName
 		} else {
-			ma := strings.Split(str, "/")
-			str = ma[len(ma)-1]
+			ma := strings.Split(metric_name, "/")
+			metric_name = ma[len(ma)-1]
 		}
 
-		if len(str) > 16 {
-			str = str[0:16]
+		if len(metric_name) > 16 {
+			metric_name = metric_name[0:16]
 		}
 
-		gendata[0][i] = str
+		gendata[0][which_metric_idx] = metric_name
 	}
 
 	return &plot, nil
@@ -160,7 +173,7 @@ func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, f
 	}
 
 	ChartData := RotateN(data, fields)
-	return &Plot{"A plot", ChartData}, nil
+	return &Plot{"A plot", ChartData, nil}, nil
 }
 
 func (c *CoreConnection) SuperCompare(baseid int, newid int, mets *Project, where WhereAble) (*Plot, error) {
@@ -207,7 +220,7 @@ func (c *CoreConnection) FixCompareResults(comps []MetricResult) *Plot {
 
 	data := RotateStructs(comps)
 
-	return &Plot{"A chart", data}
+	return &Plot{"A chart", data, nil}
 }
 
 /*
@@ -251,17 +264,27 @@ func (c *CoreConnection) DetailsPresenter(id int, mets *Project) (*Plot, error) 
 	d1 := data[0]
 
 	details := make([][]interface{}, 0, 0)
-	details = append(details, []interface{}{"Metric", "Value", "OK"})
+	details = append(details, []interface{}{"Metric", "Value", "OK", "Low", "High"})
 	// XXX DANGER!
 	sampleid := d1["sampleid"].(string)
+	annotations := MakeAnnotation(len(d1)+1, len(details[0]))
 
 	for metric_name, metric_value := range d1 {
 		met_ok := ResolveAndCheckOK(mets, metric_name, sampleid, metric_value)
-		row := []interface{}{metric_name, fmt.Sprintf("%v", metric_value), met_ok}
+		metric_def, _ := mets.LookupMetricDef(metric_name, sampleid)
+		row := []interface{}{metric_name, fmt.Sprintf("%v", metric_value), met_ok, metric_def.Low, metric_def.High}
+
+		/* Red-out the entire row if we didn't pass the metric target */
+		if !met_ok {
+			for j := 0; j < len(details[0]); j++ {
+				log.Printf("%v %v %v %v", len(d1), len(details[0]), len(details), j)
+				annotations[len(details)][j] = 1
+			}
+		}
 		details = append(details, row)
 	}
 
-	return &Plot{"", details}, nil
+	return &Plot{"", details, annotations}, nil
 }
 
 /*
