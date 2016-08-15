@@ -9,7 +9,6 @@ package ligolib
  */
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -32,11 +31,6 @@ type Plot struct {
 	ChartData [][]interface{}
 }
 
-type Datum struct {
-	Path  string
-	Value interface{}
-}
-
 /*
  * Grab all of the data for a given pipestance.
  * Note: This can run into problems because there is a LOT
@@ -45,55 +39,15 @@ type Datum struct {
  * to sub-select the stages for which we want to grab data.
  */
 func (c *CoreConnection) AllDataForPipestance(where WhereAble, pid int) (*Plot, error) {
-
-	my_where := NewStringWhere(fmt.Sprintf("ReportRecordId = %v", pid))
-	reports_i, err := c.GrabRecords(MergeWhereClauses(where, my_where),
-		"test_report_summaries",
-		ReportSummaryFile{})
-
+	result, err := c.GrabAllMetricsRaw(where, pid)
 	if err != nil {
 		return nil, err
-	}
-
-	reports := reports_i.([]ReportSummaryFile)
-
-	result := []Datum{}
-	for _, r := range reports {
-		var toplevel interface{}
-		err := json.Unmarshal([]byte(r.SummaryJSON), &toplevel)
-		if err != nil {
-			log.Printf("Can't unmarshal JSON at %v: %v", r.StageName, err)
-		} else {
-			FlattenJSON("/"+r.StageName, toplevel, &result)
-		}
 	}
 
 	rotated := RotateStructs(result)
 	log.Printf("Processed %v json entries", len(result))
 
 	return &Plot{"", rotated}, nil
-}
-
-/*
- * Take an entire JSON structure and flatten it into a bunch of
- * {Path:.... Key:.... } objects.
- */
-func FlattenJSON(base string, json_blob interface{}, result *[]Datum) {
-	switch json_blob.(type) {
-	case map[string]interface{}:
-		/* Iterate over maps and recurse into them */
-		for key, val := range json_blob.(map[string]interface{}) {
-			FlattenJSON(base+"/"+key, val, result)
-		}
-	case []interface{}:
-		/* Iterate over arrays and recurse into them */
-		for idx, val := range json_blob.([]interface{}) {
-			FlattenJSON(fmt.Sprintf("%v/%v", base, idx), val, result)
-		}
-	default:
-		/* Render values as strings. */
-		*result = append(*result, Datum{base, fmt.Sprintf("%v", json_blob)})
-	}
 }
 
 /*
@@ -209,6 +163,15 @@ func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, f
 	return &Plot{"A plot", ChartData}, nil
 }
 
+func (c *CoreConnection) SuperCompare(baseid int, newid int, mets *Project, where WhereAble) (*Plot, error) {
+	comps, err := CompareAll(mets, c, baseid, newid, where)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.FixCompareResults(comps), nil
+}
+
 /*
  * Produce data suitable for plotting in a table that compares two samples.
  */
@@ -220,6 +183,11 @@ func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, mets *Pr
 		return nil, err
 	}
 
+	return c.FixCompareResults(comps), nil
+
+}
+
+func (c *CoreConnection) FixCompareResults(comps []MetricResult) *Plot {
 	/*
 	 * This is a hack to render numbers on the server-side for float-like data.
 	 * We do this to prevent obnoxious behavior for mixed-type columns in
@@ -239,7 +207,7 @@ func (c *CoreConnection) GenericComparePresenter(baseid int, newid int, mets *Pr
 
 	data := RotateStructs(comps)
 
-	return &Plot{"A chart", data}, nil
+	return &Plot{"A chart", data}
 }
 
 /*

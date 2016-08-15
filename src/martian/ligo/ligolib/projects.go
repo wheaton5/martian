@@ -10,6 +10,7 @@ import (
 	"log"
 	"reflect"
 	"sort"
+	"strconv"
 )
 
 /*
@@ -80,7 +81,8 @@ type MetricResult struct {
 	OK bool
 
 	/* Are the values different (according to Def)*/
-	Diff bool
+	Diff     bool
+	DiffPerc float64
 
 	NewOK bool
 	OldOK bool
@@ -100,6 +102,12 @@ type MetricResultSorter []MetricResult
 func (m MetricResultSorter) Len() int           { return len(m) }
 func (m MetricResultSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m MetricResultSorter) Less(i, j int) bool { return m[i].JSONPath < m[j].JSONPath }
+
+type MetricResultByPercentSorter []MetricResult
+
+func (m MetricResultByPercentSorter) Len() int           { return len(m) }
+func (m MetricResultByPercentSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m MetricResultByPercentSorter) Less(i, j int) bool { return m[i].DiffPerc > m[j].DiffPerc }
 
 /*
  * This is a kludge to handle newline characters in JSON strings. We simply redact them.
@@ -376,9 +384,17 @@ func ResolveAndCheckOK(p *Project, metric_name string, sampleid string, value in
  */
 func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 
+	var AbsDiffAllow *float64
+	var RelDiffAllow *float64
+
+	if m != nil {
+		AbsDiffAllow = m.AbsDiffAllow
+		RelDiffAllow = m.RelDiffAllow
+	}
+
 	/* If an absolute different threshhold is specified, use it */
-	if m.AbsDiffAllow != nil {
-		if Abs(oldguy-newguy) > *m.AbsDiffAllow {
+	if AbsDiffAllow != nil {
+		if Abs(oldguy-newguy) > *AbsDiffAllow {
 			return true
 		}
 	}
@@ -389,8 +405,8 @@ func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 	 * If nothing at all is specified then, assume a max difference of
 	 * 1.0.
 	 */
-	if m.RelDiffAllow == nil {
-		if m.AbsDiffAllow == nil {
+	if RelDiffAllow == nil {
+		if AbsDiffAllow == nil {
 			max_percent = 1.0
 		} else {
 			/* If something else was specified, and RedDiffAllow was not
@@ -399,7 +415,7 @@ func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 			return false
 		}
 	} else {
-		max_percent = *m.RelDiffAllow
+		max_percent = *RelDiffAllow
 	}
 
 	/* Handle division by zero: if oldguy==newguy there is no difference
@@ -433,6 +449,171 @@ func AugmentMetrics(metrics []string, newmetric string) []string {
 	}
 
 	return append(metrics, newmetric)
+}
+
+/*
+ * Compare absolutely every metric between two pipestances.
+ * |project| the project to use to color passing/failing metrics
+ * ida, idb the test report IDs of the projects
+ * |where| a where clause applied to the selection of metrics. We can use this to
+ * ignore certain summary reports (like _perf which is HUGE)
+ */
+func CompareAll(project *Project, db *CoreConnection, ida int, idb int, where WhereAble) ([]MetricResult, error) {
+
+	/* Grab every single reported metric for IDa and IDb */
+	a_mets, err := db.GrabAllMetricsRaw(where, ida)
+	if err != nil {
+		return nil, err
+	}
+
+	b_mets, err := db.GrabAllMetricsRaw(where, idb)
+	if err != nil {
+		return nil, err
+	}
+
+	/* grab teh basic metadata for ida and idb so that we can look up which
+	 * target set to apply for metric that happen to be defined in the project
+	 */
+	basedata_a_i, err := db.GrabRecords(NewStringWhere(fmt.Sprintf("ID='%v'", ida)),
+		"test_reports",
+		ReportRecord{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	basedata_b_i, err := db.GrabRecords(NewStringWhere(fmt.Sprintf("ID='%v'", idb)),
+		"test_reports",
+		ReportRecord{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	basedata_a := (basedata_a_i.([]ReportRecord))[0]
+	basedata_b := (basedata_b_i.([]ReportRecord))[0]
+
+	metric_map := make(map[string]*MetricResult)
+
+	/* Iterate over all of the metrics from IDA and IDB and place them in a huge.
+	 * map that assocaites the metric name (Datum.Path) with the metric result info.
+	 *
+	 *... First do it from ida and fill in MetricResult.BaseVal
+	 */
+	for _, met := range a_mets {
+		ptr := metric_map[met.Path]
+		if ptr == nil {
+			ptr = new(MetricResult)
+			metric_map[met.Path] = ptr
+		}
+
+		ptr.JSONPath = met.Path
+		ptr.BaseVal = met.Value
+	}
+
+	/*
+	 * Now do it for idb and fill in MetricResult.NewVal
+	 */
+	for _, met := range b_mets {
+		ptr := metric_map[met.Path]
+		if ptr == nil {
+			ptr = new(MetricResult)
+			metric_map[met.Path] = ptr
+		}
+		ptr.JSONPath = met.Path
+		ptr.NewVal = met.Value
+	}
+
+	/* Iterate over that map and copy it into an array. While we're duing this,
+	 * use AssignMetricResultInfo to compute the
+	 * percent different and set various pass/fail fields.
+	 */
+	metric_array := make([]MetricResult, 0, 0)
+	for k := range metric_map {
+		md := metric_map[k]
+		AssignMetricResultInfo(project, md, basedata_a.SampleId, basedata_b.SampleId)
+		metric_array = append(metric_array, *md)
+	}
+
+	/* Sort the metric_array by percent difference */
+	sort.Sort((MetricResultByPercentSorter)(metric_array))
+
+	return metric_array, nil
+
+}
+
+/*
+ * This function tries to convert an interface to a float64.
+ * The return value is the float64 value and an error flag. (true on success).
+ * These rules apply:
+ * If  i is an integer, cast it to a float and return that.
+ * If  i is a string, try to strconv it to a float
+ * If  I is a float64, just return it.
+ *
+ * BUT.... Never Ever return NaN. If we catch that i is really a NaN, treat it
+ * like an error instead.
+ */
+func i2f(i interface{}) (float64, bool) {
+
+	/* is I a float64? */
+	f, ok := i.(float64)
+	if ok {
+		/* NaN check */
+		if f != f {
+			return 0, false
+		}
+		return f, true
+	}
+
+	/* is I an int? */
+	fi, ok := i.(int)
+	if ok {
+		return float64(fi), true
+	}
+
+	/* is I a string that looks like a float? */
+	s, ok := i.(string)
+	if ok {
+		f, err := strconv.ParseFloat(s, 64)
+		/* error and NaN check? */
+		if err == nil && f == f {
+			return f, true
+		}
+	}
+
+	return 0, false
+}
+
+func AssignMetricResultInfo(project *Project, mr *MetricResult, base_sid string, new_sid string) {
+
+	bok := ResolveAndCheckOK(project, mr.JSONPath, base_sid, mr.BaseVal)
+	nok := ResolveAndCheckOK(project, mr.JSONPath, new_sid, mr.NewVal)
+
+	var diffperc float64
+	var diff bool
+	if mr.BaseVal == mr.NewVal {
+		diffperc = 0
+		diff = false
+	} else {
+		bfloat, bok1 := i2f(mr.BaseVal)
+		nfloat, nok1 := i2f(mr.NewVal)
+		if nok1 && bok1 {
+			diff = CheckDiff(project.Metrics[mr.JSONPath], bfloat, nfloat)
+			if nfloat == bfloat {
+				diffperc = 0.0
+			} else {
+				diffperc = Abs((nfloat - bfloat) / (nfloat + bfloat) / 2)
+			}
+		} else {
+			diff = true
+			diffperc = 1000000000.0
+		}
+	}
+
+	mr.NewOK = nok
+	mr.OldOK = bok
+	mr.Diff = !diff
+	mr.DiffPerc = diffperc
 }
 
 /*

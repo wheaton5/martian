@@ -78,6 +78,9 @@ html
 					div.panel-heading
 						h2.panel-title Comparison view
 					div.panel-body
+						div(class="btn-group" role="group")
+							button(type="button" class="btn btn-default" onclick="changecomparemode('project')") Project
+							button(type="button" class="btn btn-default" onclick="changecomparemode('all')") All
 						div#compare1(style="width:1200px; height:500px")
 			div#plot
 				div.panel.panel-primary

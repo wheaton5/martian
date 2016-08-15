@@ -8,6 +8,7 @@ package ligolib
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
@@ -31,6 +32,11 @@ type CoreConnection struct {
 	Conn *sql.DB
 	Tx   *sql.Tx
 	Q    Queryable
+}
+
+type Datum struct {
+	Path  string
+	Value interface{}
 }
 
 /*
@@ -456,6 +462,61 @@ func (c *CoreConnection) GrabRecords(where WhereAble, table string, outtype inte
 		index++
 	}
 	return out_array.Interface(), nil
+}
+
+/*
+ * Grab all of the data for a given pipestance.
+ * Note: This can run into problems because there is a LOT
+ * of data for a pipestance!!!! In this case, the |where| argument
+ * applies to the test_report_summaries table and can be used
+ * to sub-select the stages for which we want to grab data.
+ */
+func (c *CoreConnection) GrabAllMetricsRaw(where WhereAble, pid int) ([]Datum, error) {
+
+	my_where := NewStringWhere(fmt.Sprintf("ReportRecordId = %v", pid))
+	reports_i, err := c.GrabRecords(MergeWhereClauses(where, my_where),
+		"test_report_summaries",
+		ReportSummaryFile{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	reports := reports_i.([]ReportSummaryFile)
+
+	result := []Datum{}
+	for _, r := range reports {
+		var toplevel interface{}
+		err := json.Unmarshal([]byte(r.SummaryJSON), &toplevel)
+		if err != nil {
+			log.Printf("Can't unmarshal JSON at %v: %v", r.StageName, err)
+		} else {
+			FlattenJSON("/"+r.StageName, toplevel, &result)
+		}
+	}
+	return result, nil
+}
+
+/*
+ * Take an entire JSON structure and flatten it into a bunch of
+ * {Path:.... Key:.... } objects.
+ */
+func FlattenJSON(base string, json_blob interface{}, result *[]Datum) {
+	switch json_blob.(type) {
+	case map[string]interface{}:
+		/* Iterate over maps and recurse into them */
+		for key, val := range json_blob.(map[string]interface{}) {
+			FlattenJSON(base+"/"+key, val, result)
+		}
+	case []interface{}:
+		/* Iterate over arrays and recurse into them */
+		for idx, val := range json_blob.([]interface{}) {
+			FlattenJSON(fmt.Sprintf("%v/%v", base, idx), val, result)
+		}
+	default:
+		/* Render values as strings. */
+		*result = append(*result, Datum{base, fmt.Sprintf("%v", json_blob)})
+	}
 }
 
 /*

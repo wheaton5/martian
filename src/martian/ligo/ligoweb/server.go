@@ -65,6 +65,7 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string, projectba
 	m.Get("/api/plot", ls.MakeWrapper(ls.Plot))
 
 	m.Get("/api/compare", ls.MakeWrapper(ls.Compare))
+	m.Get("/api/compareall", ls.MakeWrapper(ls.SuperCompare))
 
 	m.Get("/api/plotall", ls.MakeWrapper(ls.PlotAll))
 
@@ -305,6 +306,21 @@ func (s *LigoServer) Plot(p *ligolib.Project, params url.Values) (interface{}, e
 		offset)
 
 	return plot, err
+}
+
+/*
+ * Produce comparison data for two pipestances
+ */
+func (s *LigoServer) SuperCompare(p *ligolib.Project, params url.Values) (interface{}, error) {
+
+	id1s := params.Get("base")
+	id2s := params.Get("new")
+
+	id1, _ := strconv.Atoi(id1s)
+	id2, _ := strconv.Atoi(id2s)
+
+	res, err := s.DB.SuperCompare(id1, id2, p, ligolib.NewStringWhere(params.Get("where")))
+	return res, err
 }
 
 /*

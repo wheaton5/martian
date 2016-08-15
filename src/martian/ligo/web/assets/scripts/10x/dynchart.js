@@ -168,6 +168,13 @@ function updateprojecttextarea() {
 	//global_view_state.render();
 }
 
+function changecomparemode(mode) {
+	update_model_from_ui();
+	global_view_state.comparemode = mode;
+	global_view_state.render();
+
+}
+
 
 /*
  * The view state object tracks *ALL* of the data that defines the current view.
@@ -186,6 +193,7 @@ function ViewState() {
 	this.sortby = "finishdate"
 	this.chart_mode="line";
 	this.page = 0;
+	this.comparemode="project";
 
 	return this;
 }
@@ -358,9 +366,19 @@ ViewState.prototype.compare_update = function() {
 		"&new=" + document.getElementById("idnew").value +
 		"&metrics_def=met1.json"
 		*/
-	var url = "/api/compare?base=" + this.compareidold +
-		"&new=" + this.compareidnew+ 
-		"&metrics_def=" + this.project;
+
+	var url=""
+	if (this.comparemode == 'all') {
+	
+		url = "/api/compareall?base=" + this.compareidold +
+			"&new=" + this.compareidnew+ 
+			"&metrics_def=" + this.project +
+			"&where=" + encodeURIComponent("StageName NOT IN ('REPORT_COVERAGE','REPORT_LENGTH_MASS','_perf')")
+	} else {
+		url = "/api/compare?base=" + this.compareidold +
+			"&new=" + this.compareidnew+ 
+			"&metrics_def=" + this.project;
+	}
 	
 	console.log(url)
 	get_json_safe(url, function(data) {
