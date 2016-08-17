@@ -175,7 +175,7 @@ func (self *LocalJobManager) Enqueue(shellCmd string, argv []string, envs map[st
 		}
 		self.coreSem.P(threads)
 		if self.debug {
-			LogInfo("jobmngr", "Acquiring %d core%s (%d/%d in use)", threads,
+			LogInfo("jobmngr", "Acquired %d core%s (%d/%d in use)", threads,
 				Pluralize(threads), self.coreSem.len(), self.maxCores)
 		}
 
@@ -288,12 +288,14 @@ func NewRemoteJobManager(jobMode string, memGBPerCore int, maxJobs int, jobFreqM
 	// Parse jobresources mappings
 	self.jobResourcesMappings = map[string]string{}
 	for _, mapping := range strings.Split(jobResources, ";") {
-		parts := strings.Split(mapping, ":")
-		if len(parts) == 2 {
-			self.jobResourcesMappings[parts[0]] = parts[1]
-			LogInfo("jobmngr", "Mapping %s to %s", parts[0], parts[1])
-		} else {
-			LogInfo("jobmngr", "Could not parse mapping: %s", mapping)
+		if len(mapping) > 0 {
+			parts := strings.Split(mapping, ":")
+			if len(parts) == 2 {
+				self.jobResourcesMappings[parts[0]] = parts[1]
+				LogInfo("jobmngr", "Mapping %s to %s", parts[0], parts[1])
+			} else {
+				LogInfo("jobmngr", "Could not parse mapping: %s", mapping)
+			}
 		}
 	}
 

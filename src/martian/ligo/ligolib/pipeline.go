@@ -115,6 +115,7 @@ func InsertSummary(db *CoreConnection, test_report_id int, path string, name str
 	contents, err := ioutil.ReadFile(path)
 
 	if err != nil {
+		log.Printf("Failed to read file %v: %v", path, err)
 		return err
 	}
 
@@ -122,6 +123,7 @@ func InsertSummary(db *CoreConnection, test_report_id int, path string, name str
 	err = json.Unmarshal(contents, &as_json)
 
 	if err != nil {
+		log.Printf("Failed to parse json file %v: %v", path, err)
 		return err
 	}
 
@@ -131,6 +133,8 @@ func InsertSummary(db *CoreConnection, test_report_id int, path string, name str
 	if err != nil {
 		panic(err)
 	}
+
+	log.Printf("Found summary at %v (to be called %v)", path, name)
 	return nil
 }
 

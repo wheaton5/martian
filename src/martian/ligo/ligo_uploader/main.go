@@ -50,7 +50,9 @@ func LookupCallInfo(basepath string) (string, string, string) {
  */
 func GrabFromLena(host string, lena_id int) string {
 
-	req, err := http.Get("http://" + host + "/api/shimulate/" + fmt.Sprintf("%v", lena_id))
+	url := ("http://" + host + "/api/shimulate/" + fmt.Sprintf("%v", lena_id))
+	log.Printf("Requesting lena data from: %v", url)
+	req, err := http.Get(url)
 	defer req.Body.Close()
 
 	if err != nil {
@@ -146,6 +148,10 @@ func main() {
 		extras_list := strings.Split(*flag_extras, ",")
 		for _, e := range extras_list {
 			parts := strings.Split(e, ":")
+			if len(parts) != 2 {
+				log.Printf("Cannot parse -extras flag.")
+				return
+			}
 			name := parts[0]
 			path := parts[1]
 			ligolib.InsertSummary(c, id, *flag_pipestance_path+"/"+path, name)
