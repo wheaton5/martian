@@ -110,18 +110,38 @@ func (m MetricResultByPercentSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[
 func (m MetricResultByPercentSorter) Less(i, j int) bool { return m[i].DiffPerc > m[j].DiffPerc }
 
 /*
- * This is a kludge to handle newline characters in JSON strings. We simply redact them.
- * This makes it easier to express obnoxious SQL statements inside JSON and to handle odd
- * things web browsers might to.
+ * This is a kludge to handle newline characters in JSON strings and comments
+ * in JSON.
+ * A newline in a JSON string will be redacted. Any line starting with '#' will
+ * also be ignored.
  */
+
 func removeBadChars(in []byte) []byte {
 	output := make([]byte, len(in))
 	output_index := 0
 
-	for _, c := range in {
-		if c == '\n' || c == '\r' {
+	/* state keeps track of a trivial stage machine that we use to yank comments.
+	 * 0: normal text
+	 * 1: just got a NL
+	 * 2: in a comment (NL followed by #)
+	 */
+	state := 0
 
-		} else {
+	for _, c := range in {
+
+		if state == 1 {
+			if c == '#' {
+				state = 2
+			} else {
+				state = 0
+			}
+		}
+
+		if c == '\n' || c == '\r' {
+			state = 1
+		}
+
+		if state == 0 {
 			output[output_index] = c
 			output_index++
 		}
