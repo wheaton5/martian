@@ -652,8 +652,8 @@ function clear_error_box() {
 
 function set_permalink_url(l) {
 	var link = document.getElementById("myurl");
-	link.text = l
-	link.href = l
+	//link.text = "permalink"
+	link.href = "http://t.fuzzplex.com/save?url=" + encodeURIComponent(l);
 	console.log(l)
 
 }
@@ -665,7 +665,7 @@ function set_csv_download_url(l) {
 	if (l) {
 		l = l +"&csv=yes";
 	}
-	csv.text = l;
+	//csv.text = l;
 	csv.href = l;
 }
 

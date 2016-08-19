@@ -124,26 +124,13 @@ html
 						h2.panel-title Halp!
 					div.panel-body
 						p
-							| Use the table view to see available datums for inspection. 
-							| Select two rows from the table view and click "compare" two
-							| compare two pipestances. 
-							| To plot a pipestance summary paremeter, select "plot" and select
-							| the metrics to plot on the X and Y axis. For example:
-							| X: SHA, y: /SUMMARIZE_REPORTS_PD/universal_N50_phase_block.
-							| You can use the 'where' field to force subselection. For example,
-							| "userid='dstaff'" or "sampleid=20486".
-							| Use the rightmost button to select which project you want to look at
-							| a project defines a set of metrics as well as a set of datums to
-							| consider.
-							| Use the tiny URL at the bottom of the page for a permanent link
-							| to what you're currently looking at.
+							| See the ligo instruction manual at 
+							a(href="https://10xtech.atlassian.net/wiki/display/SW/LIGO+Instruction+manual") Confluence.
 				
-			span Stable url
 			br
 			span
-				a#myurl.permaurl(href="")
-			br
-			span CSV link
+				a#myurl(href="") Click for a permanent URL to this view
 			br
 			span
-				a#csvlink.permaurl(href="") 
+				a#csvlink.permaurl(href="") Click to download data for this page in CSV format
+			br
