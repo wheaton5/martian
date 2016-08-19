@@ -45,7 +45,9 @@ html
 			div#details
 				div.panel.panel-primary
 					div.panel-heading
-						h2.panel-title Table view
+						h2.panel-title 
+							|Details for test id&nbsp;
+							span#detailid
 					div.panel-body
 						div(class="btn-group" role="group")
 							button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('project')") Project
@@ -76,15 +78,21 @@ html
 							button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('metrics')") Metrics
 						div.pagination-group(class="btn-group" role="group")
 							button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
-								span(class="glyphicon glyphicon-chevron-left" aria-hidden="true" onclick="changepage(-1)")
+								span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
+							button(type="button" class="btn btn-default btn-sm")
+								span#page
 							button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
-								span(class="glyphicon glyphicon-chevron-right" aria-hidden="true" onclick="changepage(1)")
+								span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
 						.clear
 						div#table1(style="width:100%")
 			div#compare
 				div.panel.panel-primary
 					div.panel-heading
-						h2.panel-title Comparison view
+						h2.panel-title 
+							|Comparing test id&nbsp;
+							span#compareid1
+							| &nbsp;versus&nbsp;
+							span#compareid2
 					div.panel-body
 						div(class="btn-group" role="group")
 							button(type="button" class="btn btn-default" onclick="changecomparemode('project')") Project

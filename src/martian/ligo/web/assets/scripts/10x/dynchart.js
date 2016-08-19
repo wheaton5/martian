@@ -272,7 +272,11 @@ var model_view_bindings = [
 	{model:"charty", element:"#charty", method:"val"},
 	{model:"where", element:"#where", method:"val"},
 	{model:"project", element:"#project_cur", method:"text"},
-	{model:"chart_mode", element:"#chart_mode", method:"text"}
+	{model:"chart_mode", element:"#chart_mode", method:"text"},
+	{model:"compareidold", element:"#compareid1", method:"text"},
+	{model:"compareidold", element:"#detailid", method:"text"},
+	{model:"compareidnew", element:"#compareid2", method:"text"},
+	{model:"page", element:"#page", method:"text"}
 ]
 
 /*
@@ -543,19 +547,24 @@ function update_model_from_ui() {
 	v.where = document.getElementById("where").value;
 	v.sortby= document.getElementById("sortby").value;
 	var selected = global_table.getSelection();
-	if (selected[0]) {
-		v.sample_search=(get_data_at_row(global_table_data, "sampleid", selected[0].row));
 
-		v.compareidold= get_data_at_row(global_table_data, "test_reports.id", selected[0].row);
-	} else {
-		v.compareidold = null;
+	/* This is a nasty kludge.  We only update compareid{old,new} if welre actually in
+	 * table context.  This prevents us from wiping that data out when we follow a link
+	 * into the comparison view.
+	 */
+	if (v.mode == "table") {
+		if (selected[0]) {
+			v.sample_search = (get_data_at_row(global_table_data, "sampleid", selected[0].row));
+			v.compareidold = get_data_at_row(global_table_data, "test_reports.id", selected[0].row);
+		} else {
+			v.compareidold = null;
+		}
+		if (selected[1]) {
+			v.compareidnew = get_data_at_row(global_table_data, "test_reports.id", selected[1].row);
+		} else {
+			v.compareidnew = null;
+		}
 	}
-	if (selected[1]) {
-		v.compareidnew= get_data_at_row(global_table_data, "test_reports.id", selected[1].row);
-	} else {
-		v.compareidnew = null;
-	}
-
 }
 
 /*
