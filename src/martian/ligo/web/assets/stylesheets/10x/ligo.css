@@ -19,3 +19,20 @@
 	text-align: left !important;
 }
 
+.input-field {
+	width: 850px;
+}
+
+.clear {
+	clear:both;
+}
+
+.red-text {
+	color: red;
+}
+
+.pagination-group {
+	float: right;
+}
+
+

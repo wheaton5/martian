@@ -23,8 +23,7 @@ html
 					div(class="btn-group" role="group")
 						button(type="button" class="btn btn-default" onclick="pickwindow('plot')") Plot
 						button(type="button" class="btn btn-default" onclick="pickwindow('table')") Table
-						button(type="button" class="btn btn-default" onclick="changetablemode('details')") Details
-						button(type="button" class="btn btn-default" onclick="changetablemode('everything')") Everything
+						button(type="button" class="btn btn-default" onclick="pickwindow('details')") Details
 						button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
 						button(type="button" class="btn btn-success" onclick="pickwindow('playground')") Playground
 						button(type="button" class="btn btn-danger" onclick="pickwindow('help')") Help
@@ -36,23 +35,32 @@ html
 					br
 			span Where (empty or a SQL where clause)
 			br
-			input#where(name="where" style="width:450px")
+			input#where.input-field(name="where")
 			div.panel.panel-danger#errorbox
 				div.panel-heading
 					h2.panel-title Error
 				div.panel-body
 					p#errortext
 
-
+			div#details
+				div.panel.panel-primary
+					div.panel-heading
+						h2.panel-title Table view
+					div.panel-body
+						div(class="btn-group" role="group")
+							button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('project')") Project
+							button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('everything')") Everything
+						div#details1(style="width:100%")
 			div#playground
 				div.panel.panel-primary
 					div.panel-heading
 						h2.panel-title Playground
 					div.panel-body
-						p(style="color:red") 
-							| The 'playground' is for exploratory and temporary work on
-							| project definitions. Nothing you do here is saved to disk.
-							| When you are done, check in any changes you want to ligo via git.
+						div.panel.panel-danger
+							p.red-text
+								| The 'playground' is for exploratory and temporary work on
+								| project definitions. Nothing you do here is saved to disk.
+								| When you are done, check in any changes you want to ligo via git.
 						textarea#project_def(cols=128 rows=25)
 						br
 						div(class="btn-group" role="group")
@@ -63,15 +71,15 @@ html
 					div.panel-heading
 						h2.panel-title Table view
 					div.panel-body
-						div(class="btn-group" role="group" style="float:left")
-							button(type="button" class="btn btn-default" onclick="changetablemode('basic')") Basic  
-							button(type="button" class="btn btn-default" onclick="changetablemode('metrics')") Metrics
-						div(class="btn-group" role="group" style="float:right")
-							button(type="button" class="btn btn-default" onclick="changepage(-1)")
+						div(class="btn-group" role="group")
+							button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('basic')") Basic  
+							button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('metrics')") Metrics
+						div.pagination-group(class="btn-group" role="group")
+							button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
 								span(class="glyphicon glyphicon-chevron-left" aria-hidden="true" onclick="changepage(-1)")
-							button(type="button" class="btn btn-default" onclick="changepage(1)")
+							button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
 								span(class="glyphicon glyphicon-chevron-right" aria-hidden="true" onclick="changepage(1)")
-						div(style="clear:both")
+						.clear
 						div#table1(style="width:100%")
 			div#compare
 				div.panel.panel-primary
@@ -92,15 +100,15 @@ html
 								tr
 									td.plot-table-td Sort By
 									td.plot-table-td
-										input#sortby(name="x" style="width:850px;" value="finishdate")
+										input#sortby.input-field(name="x" value="finishdate")
 								tr
 									td.plot-table-td X
 									td.plot-table-td
-										input#chartx(name="x" style="width:850px;" value="SHA")
+										input#chartx.input-field(name="x" value="SHA")
 								tr
 									td.plot-table-td Y
 									td.plot-table-td
-										input#charty(name="y" style="width:850px;")
+										input#charty.input-field(name="y")
 								tr
 									td.plot-table-td
 									td.plot-table-td

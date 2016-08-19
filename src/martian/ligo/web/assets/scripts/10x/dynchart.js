@@ -1,6 +1,8 @@
 
 "use strict";
 
+var global_details;
+var global_details_data;
 var global_chart;
 var global_table;
 var global_table_data;
@@ -17,10 +19,11 @@ function main() {
 	google.charts.load('current', {'packages':['corechart', 'table']});
 	google.charts.setOnLoadCallback(function() {
 
-		global_chart= new google.visualization.LineChart(document.getElementById('plot1'));
+		global_chart = new google.visualization.LineChart(document.getElementById('plot1'));
 		global_table = new google.visualization.Table(document.getElementById('table1'));
+		global_details = new google.visualization.Table(document.getElementById('details1'));
 		global_compare = new google.visualization.Table(document.getElementById('compare1'));
-		global_metrics_table= new google.visualization.Table(document.getElementById('list1'));
+		global_metrics_table = new google.visualization.Table(document.getElementById('list1'));
 		google.visualization.events.addListener(global_metrics_table, 'select', global_view_state.metrics_list_click);
 
 		//pickwindow("table")
@@ -31,10 +34,7 @@ function main() {
 		}
 		global_view_state.render();
 	});
-	
-
 	setup_project_dropdown();
-
 }
 
 
@@ -294,6 +294,7 @@ ViewState.prototype.apply_view_bindings= function() {
  */
 ViewState.prototype.render = function() {
 	$("#table").hide();
+	$("#details").hide();
 	$("#compare").hide();
 	$("#plot").hide();
 	$("#help").hide();
@@ -325,30 +326,44 @@ ViewState.prototype.render = function() {
 			this.compare_update();
 			$("#compare").show();
 		}
-	} else {
-		$("#" + w).show();
+	}
 
-		if (w == "table") {
-			this.table_update();
+	/* Similar special logic for the details button */
+	if (w == "details" ) {
+		/* Can't show pipestance details if we don't have a pipestance selected */
+		if (this.compareidold) {
+			$("#details").show()
+			this.details_update();
+		} else {
+			set_error_box("Please select one row to view. Then click details again.")
+			$("#table").show();
+			this.table_update()
 		}
+	}
 
-		if (w == "plot") {
-			/* Grab the metric definitions that we want to show as options in the plot view */
-			get_json_safe("/api/list_metrics?metrics_def=" + this.project, function(data) {
-				global_metrics_db = data.ChartData;
-				var mdata = google.visualization.arrayToDataTable(global_metrics_db);
-				global_metrics_table.draw(mdata, {})
-			})
+	if (w == "table") {
+		$("#table").show()
+		this.table_update();
+	}
 
-			this.chart_update();
+	if (w == "plot") {
+		/* Grab the metric definitions that we want to show as options in the plot view */
+		get_json_safe("/api/list_metrics?metrics_def=" + this.project, function(data) {
+			global_metrics_db = data.ChartData;
+			var mdata = google.visualization.arrayToDataTable(global_metrics_db);
+			global_metrics_table.draw(mdata, {})
+		})
 
-		}
-
-		if (w == "playground") {
-			this.update_playground();
-		}
+		this.chart_update();
+		$("#plot").show()
 
 	}
+
+	if (w == "playground") {
+		this.update_playground();
+		$("#playground").show()
+	}
+
 
 	/* This is an obnoxious hack. We need to disable permalinks if the
 	 * project is in the playground because....... playgrounds aren't
@@ -439,6 +454,32 @@ ViewState.prototype.compare_update = function() {
 	})
 }
 
+ViewState.prototype.details_update = function() {
+	var mode = this.table_mode;
+	var urll
+	if (mode == "everything") {
+		url = "/api/everything?id=" + this.compareidold +
+			"&where=" + encodeURIComponent("StageName NOT IN ('REPORT_COVERAGE','REPORT_LENGTH_MASS','_perf')")
+	} else {
+		var url = "/api/details?id=" + this.compareidold
+	}
+
+	url += "&metrics_def=" + this.project;
+
+	get_json_safe(url, function(data) {
+		global_details_data = data;
+		console.log(data);
+		var gdata = google.visualization.arrayToDataTable(data.ChartData);
+		//var options = {width: 1200, allowHtml:true};
+		var options = {allowHtml:true, cssClassNames: {tableCell:"chart-cell"}};
+		colorize_by_annotations(data.ChartData, gdata, data.Annotations, STYLEMAP);
+		global_details.draw(gdata, options)
+		set_csv_download_url(url);
+
+	})
+}
+
+
 /* Render the various table views.*/
 ViewState.prototype.table_update = function() { 
 	var where = this.where;
@@ -449,12 +490,6 @@ ViewState.prototype.table_update = function() {
 	/* Which table view are we actually rendering?*/
 	if (mode=="metrics") {
 		var url = "/api/plotall?where=" + where 
-	} else if (mode=="everything" && this.compareidold) {
-		/* XXX Need to show an error if this.compareidold is null */
-		var url = "/api/everything?id=" + this.compareidold +
-			"&where=" + encodeURIComponent("StageName NOT IN ('REPORT_COVERAGE','REPORT_LENGTH_MASS','_perf')")
-	} else if (mode=="details" && this.compareidold) {
-		var url = "/api/details?id=" + this.compareidold
 	} else {
 		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
 	}
