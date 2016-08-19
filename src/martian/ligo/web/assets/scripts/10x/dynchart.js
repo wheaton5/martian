@@ -71,8 +71,9 @@ function get_json_safe(path, success) {
 		}
 	})
 }
+
 /*
- * Grab the data to fill in the project dropdown.
+ * Grab the data to fill in the project dropdown. This runs once on pageload.
  */
 function setup_project_dropdown() {
 	get_json_safe("/api/list_metric_sets", function(data) {
@@ -97,7 +98,7 @@ function changepage(delta) {
 	update_model_from_ui()
 	
 	if (global_view_state.page == null) {
-		global_view_state.page  = 0;
+		global_view_state.page = 0;
 	}
 	global_view_state.page += delta
 	if (global_view_state.page < 0) {
@@ -115,7 +116,9 @@ function project_dropdown_click(x) {
 	changeproject(event.target.textContent);
 }
 
-
+/*
+ * Actually change a project. 
+ */
 function changeproject(p) {
 	global_view_state.project = p;
 	update_model_from_ui();
@@ -168,11 +171,13 @@ function updateprojecttextarea() {
 	//global_view_state.render();
 }
 
+/*
+ * Switch comparison modes.
+ */
 function changecomparemode(mode) {
 	update_model_from_ui();
 	global_view_state.comparemode = mode;
 	global_view_state.render();
-
 }
 
 
@@ -181,18 +186,49 @@ function changecomparemode(mode) {
  * It can be serialized (as JSON) and then the page can be reconstituded from it.
  */
 function ViewState() {
+
+	/* What "mode" are we in. This controls which of the various
+	 * google charts div's is unhidden.
+	 */
 	this.mode = "table";
+
+	/* if in table mode, which table are we showing: details, everything, basic, metrics*/
 	this.table_mode = "";
+
+	/* What is the contents of the "where" input field */
 	this.where = "";
+
+	/* Which project are we using */
 	this.project = "Default.json";
+
+	/* Which sample IDs are selected (relevent for compare and details mode) */
 	this.compareidnew= null;
 	this.compareidold= null;
+
+	/* What field to use for the X axis of the chart */
 	this.chartx = "SHA";
+
+	/* What field to use for the Y axis of the chart */
 	this.charty = null;
+
+	/* Are we restricting results to a particular sample ID?
+	 * (This comes up because of a UI affordance where hitting compare
+	 * with only one pipestance selected gets you a view with all pipestances
+	 * for that sample ID)
+	 */
 	this.sample_search = null;
+
+	/* How is the data in the X axis to be sorted in the plot view */
 	this.sortby = "finishdate"
+
+	/* Are we making scatter plots or line plots*/
 	this.chart_mode="line";
+
+	/* On the metrics and basic view which paginate results, which page are we on? */
 	this.page = 0;
+
+	/* If we're comparing samples, are we comparing the project defines metrics?
+	 * or everything*/
 	this.comparemode="project";
 
 	return this;
@@ -313,7 +349,17 @@ ViewState.prototype.render = function() {
 		}
 
 	}
-	set_permalink_url(this.GetURL());
+
+	/* This is an obnoxious hack. We need to disable permalinks if the
+	 * project is in the playground because....... playgrounds aren't
+	 * permanent and the server may forget about it later.
+	 */
+	if (this.project[0] != "_") {
+		set_permalink_url(this.GetURL());
+	} else {
+		set_permalink_url(null);
+
+	}
 }
 
 ViewState.prototype.update_playground = function () {
@@ -394,7 +440,7 @@ ViewState.prototype.compare_update = function() {
 }
 
 /* Render the various table views.*/
-ViewState.prototype.table_update = function()  { 
+ViewState.prototype.table_update = function() { 
 	var where = this.where;
 
 	var mode = this.table_mode;
@@ -444,7 +490,7 @@ ViewState.prototype.metrics_list_click = function() {
 		}
 		var idx = global_metrics_table.getSelection()[i].row;
 
-		v = v  +global_metrics_db[idx+1];
+		v = v + global_metrics_db[idx+1];
 	}
 	y.value = v;
 }
@@ -542,6 +588,11 @@ function find_column_index(data, name) {
 
 /*
  * Set colorization for the comparison page.
+ * This function applys |style| to every cell in every column
+ * for which a given column name (in that row) is exactly false.
+ * 
+ * We use this for applying the pink background to rows that fail
+ * comparison tests in the comparison views.
  */
 function colorize_table(data, datatable, column_name, style) {
 	var diff_index;
@@ -570,12 +621,16 @@ function colorize_table(data, datatable, column_name, style) {
 			}
 			ns += style;
 			datatable.setProperty(i - 1, j, 'className', ns);
-	//				datatable.setProperty(di, j, 'className', style)
 			}
 		}
 	}
 }
 
+/*
+ * This function is obsoleted by colorize_by_annotations but we still use
+ * this in one case. It colorizes a specific cell of each row in datatable
+ * depending on the value of another cell.
+ */
 function colorize_table2(data, datatable, column_from, column_to, style) {
 	var from = find_column_index(data, column_from);
 	var to = find_column_index(data, column_to);
@@ -609,7 +664,7 @@ var STYLEMAP = ["out-of-spec", "different", "broken"]
  * each cell. 
  *
  * We corrolate the annotation array with the data array and apply styles from |style| map
- * to the appropriate cells.  We simply index the bit position of each set bit in annotations
+ * to the appropriate cells. We simply index the bit position of each set bit in annotations
  * (for each cell) into stylemap and apply that style.
  */
 function colorize_by_annotations(data, datatable, annotations, style_map) {
@@ -635,10 +690,9 @@ function colorize_by_annotations(data, datatable, annotations, style_map) {
 	}
 }
 
-
+/* Function to tell the server to reload its metrics from disk */
 function reload() {
 	document.location="/api/reload_metrics"
-
 }
 
 function set_error_box(s) {
@@ -653,8 +707,13 @@ function clear_error_box() {
 function set_permalink_url(l) {
 	var link = document.getElementById("myurl");
 	//link.text = "permalink"
-	link.href = "http://t.fuzzplex.com/save?url=" + encodeURIComponent(l);
-	console.log(l)
+	
+	if (l) {
+		link.href = "http://t.fuzzplex.com/save?url=" + encodeURIComponent(l);
+		$(link).show()
+	} else {
+		$(link).hide()
+	}
 
 }
 
@@ -664,9 +723,12 @@ function set_csv_download_url(l) {
 	/* Use empty string to "hide" the link */
 	if (l) {
 		l = l +"&csv=yes";
+		csv.href = l;
+		$(csv).show();
+	} else {
+		$(csv).hide();
 	}
 	//csv.text = l;
-	csv.href = l;
 }
 
 
