@@ -15,24 +15,8 @@ html
 
 	body
 		div.container(style="width:auto")
+            include "_header.jade"
 			br
-			div.panel.panel-primary
-				div.panel-heading
-					h2.panel-title Please select a mode
-				div.panel-body
-					div(class="btn-group" role="group")
-						button(type="button" class="btn btn-default" onclick="pickwindow('plot')") Plot
-						button(type="button" class="btn btn-default" onclick="pickwindow('table')") Table
-						button(type="button" class="btn btn-default" onclick="pickwindow('details')") Details
-						button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
-						button(type="button" class="btn btn-success" onclick="pickwindow('playground')") Playground
-						button(type="button" class="btn btn-danger" onclick="pickwindow('help')") Help
-						div(class="btn-group")
-							button(class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false")  
-								span#project_cur
-								span(class="caret")
-							ul#projects_dropdown(class="dropdown-menu")
-					br
 			span Where (empty or a SQL where clause)
 			br
 			input#where.input-field(name="where")
