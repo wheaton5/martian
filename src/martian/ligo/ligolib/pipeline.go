@@ -79,7 +79,7 @@ func InsertPipestanceSummaries(db *CoreConnection, test_report_id int, pipestanc
 			 */
 			return filepath.SkipDir
 		}
-		if info.Name() == "summary.json" {
+		if info.Name() == "summary.json" || info.Name() == "metrics_summary_json.json" {
 			/* Woohoo! found a summary file.*/
 			log.Printf("Found summary at %v", path)
 
