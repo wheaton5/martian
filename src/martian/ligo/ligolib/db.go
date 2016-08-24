@@ -16,6 +16,7 @@ import (
 	"math"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -38,6 +39,12 @@ type Datum struct {
 	Path  string
 	Value interface{}
 }
+
+type DatumSorter []Datum
+
+func (d DatumSorter) Len() int           { return len(d) }
+func (d DatumSorter) Swap(i, j int)      { d[i], d[j] = d[j], d[i] }
+func (d DatumSorter) Less(i, j int) bool { return d[i].Path < d[j].Path }
 
 /*
  * Build a connection to the SERE database.  TODO: This should look at
@@ -494,6 +501,7 @@ func (c *CoreConnection) GrabAllMetricsRaw(where WhereAble, pid int) ([]Datum, e
 			FlattenJSON("/"+r.StageName, toplevel, &result)
 		}
 	}
+	sort.Sort(DatumSorter(result))
 	return result, nil
 }
 
