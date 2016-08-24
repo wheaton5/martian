@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -85,6 +87,84 @@ func (c *CoreConnection) ListAllMetrics(mets *Project) (*Plot, error) {
 }
 
 /*
+ * Compare software version numbers in the format X.Y.Z.
+ * Returns true if a is less than b.
+ */
+func CompareSHA(a string, b string) bool {
+	aa := strings.Split(a, ".")
+	ba := strings.Split(b, ".")
+
+	/* Iterate over each component of the version */
+	for i := 0; i < Min(len(aa), len(ba)); i++ {
+		ai, aerr := strconv.Atoi(aa[i])
+		bi, berr := strconv.Atoi(ba[i])
+		if aerr == nil && berr == nil {
+			/* Do they look like integers? compare as such! */
+			if ai != bi {
+				return ai < bi
+			}
+		} else {
+			/* Do they look like strings? Fall back to
+			 * lexographic comparison.
+			 */
+			if aa[i] != ba[i] {
+				return aa[i] < ba[i]
+			}
+		}
+	}
+
+	/* If strings are otherwise identical, the shortest one is "smaller" */
+
+	return len(ba) < len(ba)
+}
+
+/*
+ * This function takes an array of JSONExtra2 results that contain SHA and sampleid.
+ * for each sampleID, it selects only the latest SHA (according to comparesha, above)
+ * and retains that in the output.  not-latest-data will not be in the output. The
+ * input array is not modified.
+ */
+func LatestOnly(data []map[string]interface{}) []map[string]interface{} {
+
+	/* Where we store output */
+	newguy := make([]map[string]interface{}, 0, len(data))
+
+	/* Keep a map of sha--> latest version */
+	versiontable := make(map[string]string)
+
+	/* Iterate over each datum and build up a table of
+	 * sampleid --> latest sha present for this sample id
+	 */
+	for i := range data {
+		sid := data[i]["sampleid"].(string)
+		sha := data[i]["SHA"].(string)
+
+		oldsha, hasold := versiontable[sid]
+		if !hasold {
+			versiontable[sid] = sha
+		} else if !CompareSHA(sha, oldsha) {
+			versiontable[sid] = sha
+		}
+	}
+
+	/* Now iterate over each datum and filter based on versiontable.
+	 * only accept results whose sha matches the best sha found for that
+	 * sample.  This means that if the same sample appears twice with the
+	 * same sha, it will end up in the output twice.
+	 */
+	for i := range data {
+		sid := data[i]["sampleid"].(string)
+		sha := data[i]["SHA"].(string)
+
+		if versiontable[sid] == sha {
+			newguy = append(newguy, data[i])
+		}
+	}
+
+	return newguy
+}
+
+/*
  * Produce a plot that lists all of the metrics for a subset of the data
  * for this project.
  *
@@ -93,7 +173,7 @@ func (c *CoreConnection) ListAllMetrics(mets *Project) (*Plot, error) {
  * ok is true if the row passes all specifications.
  *
  */
-func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit *int, offset *int) (*Plot, error) {
+func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit *int, offset *int, latest bool) (*Plot, error) {
 
 	/* Create an array with every field of interest */
 	fields := make([]string, 0, 0)
@@ -107,12 +187,27 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit
 		fields = append(fields, k)
 	}
 
+	sort.Strings(fields[1:len(fields)])
+
 	fields = AugmentMetrics(fields, "sampleid")
+	fields = AugmentMetrics(fields, "SHA")
 
 	data, err := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, "-finishdate", limit, offset)
 
 	if err != nil {
 		return nil, err
+	}
+
+	/* Trim duplicate records */
+	if latest {
+		/* The LatestOnly filter only works if we actually have all of the data
+		 * for this query. If offset or limit has truncated the data, bail out
+		 * now.
+		 */
+		if limit != nil && ((offset != nil && *offset > 0) || (len(data) >= *limit)) {
+			return nil, errors.New("Too much data for latest filter to work correctly.")
+		}
+		data = LatestOnly(data)
 	}
 
 	var plot Plot
@@ -165,11 +260,22 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit
 /*
  * Produce data suitable for plotting in a table or chart.
  */
-func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, fields []string, sortby string, limit *int, offset *int) (*Plot, error) {
+func (c *CoreConnection) GenericChartPresenter(where WhereAble, mets *Project, fields []string, sortby string, limit *int, offset *int, latest bool) (*Plot, error) {
 	data, err := c.JSONExtract2(MergeWhereClauses(mets.WhereAble, where), fields, sortby, limit, offset)
 
 	if err != nil {
 		return nil, err
+	}
+
+	if latest {
+		/* The LatestOnly filter only works if we actually have all of the data
+		 * for this query. If offset or limit has truncated the data, bail out
+		 * now.
+		 */
+		if limit != nil && ((offset != nil && *offset > 0) || (len(data) >= *limit)) {
+			return nil, errors.New("Too much data for latest filter to work correctly.")
+		}
+		data = LatestOnly(data)
 	}
 
 	ChartData := RotateN(data, fields)

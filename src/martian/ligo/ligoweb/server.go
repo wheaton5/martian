@@ -35,6 +35,16 @@ type GenericResponse struct {
 }
 
 /*
+ * What SQL do we need to enable when the "latest official" flag is set.
+ */
+var OFFICIAL_ONLY_CLAUSE = "userid = 'mario' AND success = true"
+
+/*
+ * How many samples do we allow per page.
+ */
+var PAGE_SIZE = 250
+
+/*
  * Setup a server.
  * |port| is the port to run on
  * db is an instance of the database connection (and other config)
@@ -211,6 +221,23 @@ func FormatResponse(result interface{}, err error, w http.ResponseWriter) {
 	w.Write(js)
 }
 
+func GetLimitOffset(params url.Values) (*int, *int, error) {
+
+	page_str := params.Get("page")
+	if page_str == "" {
+		return nil, nil, nil
+	} else {
+		page_int, err := strconv.Atoi(page_str)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		limit := PAGE_SIZE
+		offset := page_int * PAGE_SIZE
+		return &limit, &offset, nil
+	}
+}
+
 /*
  * Rig to test error handling in FormatResponse.
  */
@@ -246,7 +273,7 @@ func (s *LigoServer) Everything(p *ligolib.Project, v url.Values) (interface{}, 
 }
 
 /*
- * List ever metric in a given project.
+ * List every metric in a given project.
  */
 func (s *LigoServer) ListMetrics(p *ligolib.Project, v url.Values) (interface{}, error) {
 	return s.DB.ListAllMetrics(p)
@@ -258,29 +285,27 @@ func (s *LigoServer) PlotAll(p *ligolib.Project, params url.Values) (interface{}
 	if err != nil {
 		return nil, err
 	}
-	return s.DB.PresentAllMetrics(ligolib.NewStringWhere(params.Get("where")), p, limit, offset)
-}
+	where := ligolib.NewStringWhere(params.Get("where"))
+	latest := params.Get("latest") == "yes"
 
-func GetLimitOffset(params url.Values) (*int, *int, error) {
-
-	page_str := params.Get("page")
-	if page_str == "" {
-		return nil, nil, nil
-	} else {
-		page_int, err := strconv.Atoi(page_str)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		limit := 250
-		offset := page_int * 250
-		return &limit, &offset, nil
+	if latest {
+		where = ligolib.MergeWhereClauses(
+			where,
+			ligolib.NewStringWhere(OFFICIAL_ONLY_CLAUSE))
 	}
-
+	res, err := s.DB.PresentAllMetrics(where, p, limit, offset, latest)
+	return res, err
 }
 
 /* Produce data (suitable for table or plot) for a given set of metrics. */
 func (s *LigoServer) Plot(p *ligolib.Project, params url.Values) (interface{}, error) {
+	latest := params.Get("latest") == "yes"
+	where := ligolib.NewStringWhere(params.Get("where"))
+	if latest {
+		where = ligolib.MergeWhereClauses(
+			where,
+			ligolib.NewStringWhere(OFFICIAL_ONLY_CLAUSE))
+	}
 
 	if params.Get("columns") == "" {
 		return nil, errors.New("No columns to plot!")
@@ -298,12 +323,13 @@ func (s *LigoServer) Plot(p *ligolib.Project, params url.Values) (interface{}, e
 		return nil, err
 	}
 
-	plot, err := s.DB.GenericChartPresenter(ligolib.NewStringWhere(params.Get("where")),
+	plot, err := s.DB.GenericChartPresenter(where,
 		p,
 		variables,
 		sortby,
 		limit,
-		offset)
+		offset,
+		latest)
 
 	return plot, err
 }

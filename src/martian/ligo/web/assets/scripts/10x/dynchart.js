@@ -231,6 +231,9 @@ function ViewState() {
 	 * or everything*/
 	this.comparemode="project";
 
+	/* Only show the latest pipestance for each LENA ID */
+	this.latestonly = false;
+
 	return this;
 }
 
@@ -276,7 +279,8 @@ var model_view_bindings = [
 	{model:"compareidold", element:"#compareid1", method:"text"},
 	{model:"compareidold", element:"#detailid", method:"text"},
 	{model:"compareidnew", element:"#compareid2", method:"text"},
-	{model:"page", element:"#page", method:"text"}
+	{model:"page", element:"#page", method:"text"},
+	{model:"latestonly", element:"#latestonly", prop:"checked"}
 ]
 
 /*
@@ -287,7 +291,17 @@ var model_view_bindings = [
 ViewState.prototype.apply_view_bindings= function() {
 	for (var i = 0; i < model_view_bindings.length; i++) {
 		var b = model_view_bindings[i];
-		$(b.element)[b.method](this[b.model])
+		if (b.method) {
+			$(b.element)[b.method](this[b.model])
+		}
+		
+		/* Because javascript and html and jquery are all horrible!
+		 * there's no consistent mechanism that can handle text and
+		 * element properties......
+		 */
+		if (b.prop) {
+			$(b.element).prop(b.prop, this[b.model])
+		}
 	}
 }
 
@@ -502,6 +516,10 @@ ViewState.prototype.table_update = function() {
 
 	url += "&metrics_def=" + this.project;
 
+	if (this.latestonly) {
+		url += "&latest=yes"
+	}
+
 	get_json_safe(url, function(data) {
 		global_table_data = data;
 		console.log(data);
@@ -546,6 +564,7 @@ function update_model_from_ui() {
 	v.charty = document.getElementById("charty").value;
 	v.where = document.getElementById("where").value;
 	v.sortby= document.getElementById("sortby").value;
+	v.latestonly = document.getElementById("latestonly").checked
 	var selected = global_table.getSelection();
 
 	/* This is a nasty kludge.  We only update compareid{old,new} if welre actually in
