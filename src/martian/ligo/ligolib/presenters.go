@@ -341,6 +341,8 @@ func (c *CoreConnection) DetailsPresenter(id int, mets *Project) (*Plot, error) 
 		list_of_metrics = append(list_of_metrics, metric_name)
 	}
 
+	sort.Strings(list_of_metrics)
+
 	list_of_metrics = AugmentMetrics(list_of_metrics, "sampleid")
 
 	/* Grab the data for the metrics that we care about */
@@ -375,7 +377,8 @@ func (c *CoreConnection) DetailsPresenter(id int, mets *Project) (*Plot, error) 
 	sampleid := d1["sampleid"].(string)
 	annotations := MakeAnnotation(len(d1)+1, len(details[0]))
 
-	for metric_name, metric_value := range d1 {
+	for _, metric_name := range list_of_metrics {
+		metric_value := d1[metric_name]
 		met_ok := ResolveAndCheckOK(mets, metric_name, sampleid, metric_value)
 		metric_def, _ := mets.LookupMetricDef(metric_name, sampleid)
 		row := []interface{}{metric_name, fmt.Sprintf("%v", metric_value), met_ok, metric_def.Low, metric_def.High}

@@ -647,6 +647,8 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 		list_of_metrics = append(list_of_metrics, metric_name)
 	}
 
+	sort.Strings(list_of_metrics)
+
 	/* We absolutely need to keep the sample ID so that we can
 	 * resolve the right targets on a per-sample ID basis later.
 	 */
