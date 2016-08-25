@@ -155,8 +155,8 @@ func checkDirtyLoop(pman *manager.PipestanceManager, packages *PackageManager, m
 
 func verifyMros(packages *PackageManager, rt *core.Runtime, checkSrcPath bool) {
 	for _, p := range packages.GetPackages() {
-		if _, err := rt.CompileAll(p.MroPaths, checkSrcPath); err != nil {
-			core.Println(err.Error())
+		if _, _, errs := rt.CompileAll(p.MroPaths, checkSrcPath); len(errs) > 0 {
+			core.Println(errs[0].Error())
 			os.Exit(1)
 		}
 		rt.MroCache.CacheMros(p.MroPaths)
