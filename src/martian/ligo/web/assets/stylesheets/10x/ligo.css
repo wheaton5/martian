@@ -33,7 +33,7 @@
 
 #table1 {
     padding: 0;
-    height: calc(100vh - 220px);
+    height: calc(100vh - 250px);  /* emperically found px value to fit in viewport */
     overflow: scroll;
 }
 
