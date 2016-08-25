@@ -15,12 +15,16 @@ html
 
 	body
 		include "_header.jade"
-		div.container(style="width:auto")
-			br
-			span Where (empty or a SQL where clause)
-			br
-			input#where.input-field(name="where")
-			div.panel.panel-danger#errorbox
+
+		.container-fluid
+			.row
+				.col-xs-12
+					form
+						.form-group
+							label(for="where") Where (empty or a SQL where clause)
+							input#where.form-control(name="where" placeholder="Where (empty or a SQL where clause)")
+
+			div.panel.panel-danger#errorbox.hidden
 				div.panel-heading
 					h2.panel-title Error
 				div.panel-body
@@ -57,17 +61,22 @@ html
 					div.panel-heading
 						h2.panel-title Table view
 					div.panel-body
-						div(class="btn-group" role="group")
-							button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('basic')") Basic  
-							button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('metrics')") Metrics
-							input(type="checkbox" id="latestonly") Latest official version only
-						div.pagination-group(class="btn-group" role="group")
-							button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
-								span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
-							button(type="button" class="btn btn-default btn-sm")
-								span#page
-							button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
-								span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
+						form.form-inline
+							.form-group.btn-group(role="group")
+								button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('basic')") Basic
+								button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('metrics')") Metrics
+							.checkbox
+								| &nbsp;&nbsp;
+								label
+									input#latestonly(type="checkbox") &nbsp;Latest official version only
+
+							.pagination-group.pull-right(class="btn-group" role="group")
+								button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
+									span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
+								button(type="button" class="btn btn-default btn-sm")
+									span#page
+								button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
+									span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
 						.clear
 						div#table1(style="width:100%")
 			div#compare
