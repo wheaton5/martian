@@ -43,3 +43,6 @@
 [submodule "src/github.com/joker/jade"]
 	path = src/github.com/joker/jade
 	url = git@github.com:Joker/jade.git
+[submodule "src/github.com/satori/go.uuid"]
+	path = src/github.com/satori/go.uuid
+	url = git@github.com:satori/go.uuid.git
