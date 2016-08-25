@@ -17,6 +17,7 @@ html
 							label(for="where") Where (empty or a SQL where clause)
 							input#where.form-control(name="where" placeholder="Where (empty or a SQL where clause)")
 
+		.container-fluid
 			div.panel.panel-danger#errorbox.hidden
 				div.panel-heading
 					h2.panel-title Error
@@ -52,25 +53,27 @@ html
 			div#table
 				div.panel.panel-primary
 					div.panel-heading
-						h2.panel-title Table view
-					div.panel-body
-						form.form-inline
-							.form-group.btn-group(role="group")
-								button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('basic')") Basic
-								button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('metrics')") Metrics
-							.checkbox
-								| &nbsp;&nbsp;
-								label
-									input#latestonly(type="checkbox") &nbsp;Latest official version only
+                        .row
+                            .col-xs-1
+                                h2.panel-title(style="line-height:30px") Table view
+                            .col-xs-11
+                                form.form-inline
+                                    .form-group.btn-group(role="group")
+                                        button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('basic')") Basic
+                                        button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('metrics')") Metrics
+                                    .checkbox
+                                        | &nbsp;&nbsp;
+                                        label
+                                            input#latestonly(type="checkbox") &nbsp;Latest official version only
 
-							.pagination-group.pull-right(class="btn-group" role="group")
-								button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
-									span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
-								button(type="button" class="btn btn-default btn-sm")
-									span#page
-								button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
-									span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
-						.clear
+                                    .pagination-group.pull-right(class="btn-group" role="group")
+                                        button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
+                                            span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
+                                        button(type="button" class="btn btn-default btn-sm")
+                                            span#page
+                                        button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
+                                            span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
+					div.panel-body#table-panel-body
 						div#table1(style="width:100%")
 			div#compare
 				div.panel.panel-primary
