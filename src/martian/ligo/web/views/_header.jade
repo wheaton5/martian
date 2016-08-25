@@ -20,10 +20,20 @@ nav.navbar.navbar-default
           a(href='#' onclick="pickwindow('compare')") Compare
 
       ul.nav.navbar-nav.navbar-right
-        li
-          a(href='#' onclick="pickwindow('playground')") Playground
-        li
-          a(href='#' onclick="pickwindow('help')") Help
+        li.dropdown
+          a.dropdown-toggle(data-toggle="dropdown" href="#")
+            | Other Actions
+            span.caret
+          ul.dropdown-menu
+            li
+              a(href='#' onclick="pickwindow('playground')") Playground
+            li
+              a(href='#' onclick="pickwindow('help')") Help
+            li
+              a#myurl(href="#") Generate Permalink
+            li
+              a#csvlink(href="#") Download data as CSV
+
         li.dropdown
           a.dropdown-toggle(data-toggle="dropdown" href="#")
             span#project_cur

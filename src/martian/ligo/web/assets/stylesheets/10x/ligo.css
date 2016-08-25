@@ -3,10 +3,6 @@
 	border: 4px solid white;
 }
 
-.permaurl {
-	font-size:10px;
-}
-
 .out-of-spec {
 	color: red;
 }
@@ -35,7 +31,19 @@
 	float: right;
 }
 
-#table-panel-body {
-    height: calc(100vh - 220px);
+#table1 {
+    padding: 0;
+    height: calc(100vh - 220px);  /* emperically found px value to fit in viewport */
     overflow: scroll;
+}
+
+/* force scroll bar to show on table */
+/* copied from http://simurai.com/blog/2011/07/26/webkit-scrollbar */
+#table1 ::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 7px;
+}
+#table1 ::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background-color: rgba(0,0,0,.5);
 }
