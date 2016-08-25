@@ -77,15 +77,22 @@ function get_json_safe(path, success) {
  */
 function setup_project_dropdown() {
 	get_json_safe("/api/list_metric_sets", function(data) {
-		var pd = $("#projects_dropdown")
+		var pd = $("#projects_dropdown");
 
 		for (var i = 0; i < data.length; i++) {
 
-			var ng = document.createElement('li');
+			var ng = document.createElement('a');
 			ng.textContent = data[i];
-			ng.onclick = project_dropdown_click;
+			ng.href = "#";
+
 			console.log(ng.textContent);
-			pd.append(ng);
+
+			var ngContainer = document.createElement('li');
+			ngContainer.onclick = project_dropdown_click;
+			ngContainer.appendChild(ng);
+
+
+			pd.append(ngContainer);
 		}
 	})
 }
@@ -760,11 +767,11 @@ function reload() {
 
 function set_error_box(s) {
 	$("#errortext").text(s);
-	$("#errorbox").show();
+	$("#errorbox").removeClass('hidden');
 }
 
 function clear_error_box() {
-	$("#errorbox").hide();
+	$("#errorbox").addClass('hidden');
 }
 
 function set_permalink_url(l) {

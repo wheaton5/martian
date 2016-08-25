@@ -35,4 +35,7 @@
 	float: right;
 }
 
-
+#table-panel-body {
+    height: calc(100vh - 220px);
+    overflow: scroll;
+}

@@ -2,41 +2,23 @@ doctype html
 
 html
 	head
-		script(src="/assets/scripts/external/jquery-1.11.1.min.js")
-		link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous")
 
-		link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous")
+		link(href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css", rel="stylesheet", integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u", crossorigin="anonymous")
 		link(rel="stylesheet" href="/assets/stylesheets/10x/ligo.css")
 
-		script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous")
-
-		script(src="https://www.gstatic.com/charts/loader.js")
-		script(src="/assets/scripts/10x/dynchart.js")
-
 	body
-		div.container(style="width:auto")
-			br
-			div.panel.panel-primary
-				div.panel-heading
-					h2.panel-title Please select a mode
-				div.panel-body
-					div(class="btn-group" role="group")
-						button(type="button" class="btn btn-default" onclick="pickwindow('plot')") Plot
-						button(type="button" class="btn btn-default" onclick="pickwindow('table')") Table
-						button(type="button" class="btn btn-default" onclick="pickwindow('details')") Details
-						button(type="button" class="btn btn-default" onclick="pickwindow('compare')") Compare
-						button(type="button" class="btn btn-success" onclick="pickwindow('playground')") Playground
-						button(type="button" class="btn btn-danger" onclick="pickwindow('help')") Help
-						div(class="btn-group")
-							button(class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false")  
-								span#project_cur
-								span(class="caret")
-							ul#projects_dropdown(class="dropdown-menu")
-					br
-			span Where (empty or a SQL where clause)
-			br
-			input#where.input-field(name="where")
-			div.panel.panel-danger#errorbox
+		include "_header.jade"
+
+		.container-fluid
+			.row
+				.col-xs-12
+					form
+						.form-group
+							label(for="where") Where (empty or a SQL where clause)
+							input#where.form-control(name="where" placeholder="Where (empty or a SQL where clause)")
+
+		.container-fluid
+			div.panel.panel-danger#errorbox.hidden
 				div.panel-heading
 					h2.panel-title Error
 				div.panel-body
@@ -71,20 +53,27 @@ html
 			div#table
 				div.panel.panel-primary
 					div.panel-heading
-						h2.panel-title Table view
-					div.panel-body
-						div(class="btn-group" role="group")
-							button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('basic')") Basic  
-							button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('metrics')") Metrics
-							input(type="checkbox" id="latestonly") Latest official version only
-						div.pagination-group(class="btn-group" role="group")
-							button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
-								span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
-							button(type="button" class="btn btn-default btn-sm")
-								span#page
-							button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
-								span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
-						.clear
+                        .row
+                            .col-xs-1
+                                h2.panel-title(style="line-height:30px") Table view
+                            .col-xs-11
+                                form.form-inline
+                                    .form-group.btn-group(role="group")
+                                        button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('basic')") Basic
+                                        button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('metrics')") Metrics
+                                    .checkbox
+                                        | &nbsp;&nbsp;
+                                        label
+                                            input#latestonly(type="checkbox") &nbsp;Latest official version only
+
+                                    .pagination-group.pull-right(class="btn-group" role="group")
+                                        button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
+                                            span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
+                                        button(type="button" class="btn btn-default btn-sm")
+                                            span#page
+                                        button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
+                                            span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
+					div.panel-body#table-panel-body
 						div#table1(style="width:100%")
 			div#compare
 				div.panel.panel-primary
@@ -151,3 +140,8 @@ html
 			span
 				a#csvlink.permaurl(href="") Click to download data for this page in CSV format
 			br
+
+		script(src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous")
+		script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js", integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa", crossorigin="anonymous")
+		script(src="https://www.gstatic.com/charts/loader.js")
+		script(src="/assets/scripts/10x/dynchart.js")

@@ -7,11 +7,13 @@
 package ligoweb
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/go-martini/martini"
 	"github.com/joker/jade"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"martian/ligo/ligolib"
@@ -100,25 +102,53 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string, projectba
 /*
  * This is a simple interface to serve jade templates out of the "views"
  * directory.
+ *
+ * Modified to be mostly copied from the Joker/jade examples
+ * https://github.com/Joker/jade/blob/ffc5c07d8f3a63ec4bff6eb6cae2c9405e522dcd/example/jade_include/main.go#L25-L59
  */
 func (s *LigoServer) Viewer(w http.ResponseWriter, r *http.Request) {
 	psplit := strings.Split(r.URL.Path, "/")
-
 	viewfile := psplit[len(psplit)-1]
 
-	buf, err := ioutil.ReadFile(s.WebBase + "/views/" + viewfile)
+	jade_tpl := ReadAndParse(s.WebBase, viewfile)
 
-	if err != nil {
-		panic(err)
+	funcMap := template.FuncMap{
+		"include": func(includePath string) (template.HTML, error) {
+			include_tpl := ReadAndParse(s.WebBase, includePath)
+			fmt.Println(include_tpl)
+			log.Printf("%s\n\n", include_tpl)
+
+			go_partial_tpl, _ := template.New("partial").Parse(include_tpl)
+
+			buf := new(bytes.Buffer)
+			go_partial_tpl.Execute(buf, "")
+			return template.HTML(buf.String()), nil
+
+		},
 	}
 
-	j, err := jade.Parse("jade_tp", string(buf))
-
+	fmt.Println(jade_tpl)
+	go_tpl, err := template.New("html").Funcs(funcMap).Parse(jade_tpl)
 	if err != nil {
-		panic(err)
+		log.Printf("\nTemplate parse error: %v", err)
 	}
 
-	w.Write([]byte(j))
+	err = go_tpl.Execute(w, "")
+	if err != nil {
+		log.Printf("\nExecute error: %v", err)
+	}
+}
+
+func ReadAndParse(webroot, viewfile string) string {
+	dat, err := ioutil.ReadFile(webroot + "/views/" + viewfile)
+	if err != nil {
+		log.Printf("\nReadFile error: %v", err)
+	}
+	tpl, err := jade.Parse("jade_tp", string(dat))
+	if err != nil {
+		log.Printf("\nParse error: %v", err)
+	}
+	return tpl
 }
 
 /* This makes a closure suitable for passing to the martini framework */
