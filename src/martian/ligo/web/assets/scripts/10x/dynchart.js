@@ -389,6 +389,10 @@ ViewState.prototype.render = function() {
 		$("#playground").show()
 	}
 
+	if (w == "help") {
+		$("#help").show();
+	}
+
 
 	/* This is an obnoxious hack. We need to disable permalinks if the
 	 * project is in the playground because....... playgrounds aren't
