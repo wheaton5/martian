@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 /*
@@ -49,6 +51,86 @@ type Project struct {
 type TargetSet struct {
 	SampleIDs []string
 	Targets   map[string]*MetricDef
+}
+
+/*
+ * Parse a CSV file (already loaded as a byte array) into a TargetSet array.
+ * The format of the file is:
+ *
+ * JUNK,/metric/1/path,/metric/2/path,/metric/3/path
+ * sampleid1, metric_1_low/metric_1_high, metric_2_low/metric_2_high, metric_3_low/metric_3_high
+ * sampleid2, metric_1_low/metric_1_high, metric_2_low/metric_2_high, metric_3_low/metric_3_high
+ * ...
+ *
+ * Any line that astarts with # will be ignored.
+ */
+func TargetsFromCSV(csv []byte) []TargetSet {
+
+	lines := strings.Split(string(csv), "\n")
+
+	start := 0
+
+	/* Skip blank and comment lines at the start */
+	for ; len(lines[start]) == 0 || lines[start][0] == '#'; start++ {
+	}
+
+	/* Grab the metric names from the first real line */
+	metric_names := strings.Split(lines[start], ",")
+
+	/* Fast-forward to the next line */
+	start++
+
+	ts_a := make([]TargetSet, 0, len(lines))
+
+	/* metric_names[0] is nonsense. metrics_names[1] is the name of the first metric....
+	 * l[0] is the sample_id. l[1] is the target for the first metric l[2] is the larget for the second metric...
+	 */
+	for _, l := range lines[start:len(lines)] {
+
+		/* Skip blank and comment lines */
+		if len(l) == 0 || l[0] == '#' {
+			continue
+		}
+
+		/* Parse out the 'C' in CSV */
+		sid_targets := strings.Split(l, (","))
+
+		/* Allocate a targetset object for this row */
+		ts_a = append(ts_a, TargetSet{})
+		ts := &ts_a[len(ts_a)-1]
+
+		/* Target set applies to just one sample id... whoever is in column 0 */
+
+		ts.SampleIDs = sid_targets[0:1]
+
+		/* Use the other columns to compute metricdefs for this target */
+		ts.Targets = make(map[string]*MetricDef)
+
+		for i := 1; i < len(sid_targets); i++ {
+			var low_s, high_s float64
+
+			fmt.Sscanf(sid_targets[i], "%f/%f", &low_s, &high_s)
+			md := new(MetricDef)
+
+			/* Here's the magic! */
+			md.JSONPath = metric_names[i]
+
+			/* NaN check for low*/
+			if low_s == low_s {
+				lptr := new(float64)
+				*lptr = low_s
+				md.Low = lptr
+			}
+
+			/* NaN check for high */
+			if high_s == high_s {
+				hptr := new(float64)
+				*hptr = high_s
+				md.High = hptr
+			}
+		}
+	}
+	return ts_a
 }
 
 /*
@@ -209,7 +291,44 @@ func LoadProject(path string) (*Project, error) {
 	}
 
 	log.Printf("Loading metric from %v: %v (%v)", path, len(project.Metrics), project.Where)
+
+	/* Because we know path ends in .json */
+	basename := path[0:len(path)]
+	csvname := basename + ".csv"
+	_, err = os.Stat(csvname)
+	if err == nil {
+		log.Printf("Loading target data from: %v", csvname)
+		csvdata, err := ioutil.ReadFile(csvname)
+		if err != nil {
+			panic(err)
+		}
+
+		project.TargetSets = TargetsFromCSV(csvdata)
+	}
+
+	/* Merge any sample IDs that explicitly appear in any targets set with the base sample ID list */
+	for _, sid := range project.TargetSets {
+		project.SampleIDs = append(project.SampleIDs, sid.SampleIDs...)
+	}
+
+	/* Remove duplicate elements from project.SampleIDs */
+	sort.Strings(project.SampleIDs)
+
+	out_idx := 1
+	for in_idx := 1; in_idx < len(project.SampleIDs); in_idx++ {
+		if project.SampleIDs[out_idx-1] == project.SampleIDs[in_idx] {
+
+		} else {
+			project.SampleIDs[out_idx] = project.SampleIDs[in_idx]
+			out_idx++
+		}
+	}
+
+	project.SampleIDs = project.SampleIDs[0:out_idx]
+
+	/* Now merge the where clauses */
 	project.WhereAble = MergeWhereClauses(NewStringWhere(project.Where), NewListWhere("sampleid", project.SampleIDs))
+
 	return &project, nil
 }
 
@@ -227,14 +346,17 @@ func (pc *ProjectsCache) Reload() error {
 	projects := make(map[string]*Project)
 
 	for _, p := range paths {
-		/* Error handling here totally wrong XXX*/
-		mdt, err := LoadProject(pc.BasePath + "/" + p.Name())
-		if mdt != nil {
-			projects[p.Name()] = mdt
-		} else {
-			log.Printf("Failed to load project %v: %v", p.Name(), err)
-		}
+		name := p.Name()
 
+		/* only consider files that end in .json */
+		if len(name) > 5 && (name[len(name)-5:len(name)]) == ".json" {
+			mdt, err := LoadProject(pc.BasePath + "/" + p.Name())
+			if mdt != nil {
+				projects[p.Name()] = mdt
+			} else {
+				log.Printf("Failed to load project %v: %v", p.Name(), err)
+			}
+		}
 	}
 
 	pc.Projects = projects
