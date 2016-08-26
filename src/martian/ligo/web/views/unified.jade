@@ -35,20 +35,18 @@ html
 							button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('project')") Project
 							button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('everything')") Everything
 						div#details1(style="width:100%")
-			div#playground
-				div.panel.panel-primary
-					div.panel-heading
+			#playground
+				.panel.panel-primary
+					.panel-heading
 						h2.panel-title Playground
-					div.panel-body
-						div.panel.panel-danger
-							p.red-text
-								| The 'playground' is for exploratory and temporary work on
-								| project definitions. Nothing you do here is saved to disk.
-								| When you are done, check in any changes you want to ligo via git.
-						textarea#project_def(cols=128 rows=25)
-						br
-						div(class="btn-group" role="group")
-							button(type="button" class="btn btn-default" onclick="updateprojecttextarea()") Update
+					.panel-body
+						 .alert.alert-danger
+							| The 'playground' is for exploratory and temporary work on
+							| project definitions. Nothing you do here is saved to disk.
+							| When you are done, check in any changes you want to ligo via git.
+						textarea#project_def.form-control
+                        br
+                        button.btn.btn-primary.btn-lg.btn-block(type="button" onclick="updateprojecttextarea()") Update
 				
 			div#table
 				div.panel.panel-primary
@@ -137,4 +135,5 @@ html
 		script(src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous")
 		script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js", integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa", crossorigin="anonymous")
 		script(src="https://www.gstatic.com/charts/loader.js")
+		script(src="https://cdnjs.cloudflare.com/ajax/libs/autosize.js/3.0.17/autosize.min.js")
 		script(src="/assets/scripts/10x/dynchart.js")

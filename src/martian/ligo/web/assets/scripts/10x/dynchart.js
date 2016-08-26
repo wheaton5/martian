@@ -414,6 +414,7 @@ ViewState.prototype.update_playground = function () {
 		var js = JSON.stringify(data.project_def, null, 2);
 		var tx = document.getElementById("project_def");
 		tx.value = js;
+		autosize($('#project_def'));
 	})
 }
 
