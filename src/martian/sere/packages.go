@@ -166,8 +166,8 @@ func (self *PackageManager) addPackage(name string, target string, path string) 
 	p.State = "complete"
 
 	checkSrcPath := true
-	if _, _, errs := self.rt.CompileAll(p.MroPaths, checkSrcPath); len(errs) > 0 {
-		return errs[0]
+	if _, _, err := self.rt.CompileAll(p.MroPaths, checkSrcPath); err != nil {
+		return err
 	}
 	self.rt.MroCache.CacheMros(p.MroPaths)
 
