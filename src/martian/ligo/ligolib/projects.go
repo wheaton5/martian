@@ -128,10 +128,10 @@ func TargetsFromCSV(csv []byte) []TargetSet {
 				*hptr = high_s
 				md.High = hptr
 			}
-			ts.Targets[md.JSONPath] = md;
+			ts.Targets[md.JSONPath] = md
 		}
 	}
-	log.Printf("LOADED TARGETS: %v", ts_a);
+	log.Printf("LOADED TARGETS: %v", ts_a)
 	return ts_a
 }
 
@@ -295,7 +295,7 @@ func LoadProject(path string) (*Project, error) {
 	log.Printf("Loading metric from %v: %v (%v)", path, len(project.Metrics), project.Where)
 
 	/* Because we know path ends in .json */
-	basename := path[0:len(path)-5]
+	basename := path[0 : len(path)-5]
 	csvname := basename + ".csv"
 	_, err = os.Stat(csvname)
 	if err == nil {
