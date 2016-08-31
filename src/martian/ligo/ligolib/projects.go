@@ -128,8 +128,10 @@ func TargetsFromCSV(csv []byte) []TargetSet {
 				*hptr = high_s
 				md.High = hptr
 			}
+			ts.Targets[md.JSONPath] = md;
 		}
 	}
+	log.Printf("LOADED TARGETS: %v", ts_a);
 	return ts_a
 }
 
@@ -293,7 +295,7 @@ func LoadProject(path string) (*Project, error) {
 	log.Printf("Loading metric from %v: %v (%v)", path, len(project.Metrics), project.Where)
 
 	/* Because we know path ends in .json */
-	basename := path[0:len(path)]
+	basename := path[0:len(path)-5]
 	csvname := basename + ".csv"
 	_, err = os.Stat(csvname)
 	if err == nil {
@@ -455,7 +457,6 @@ func (p *Project) LookupMetricDef(json_path string, sample_id string) (*MetricDe
 	 * using the old definitions for anything not explicitly overrided.
 	 */
 	if got_one != nil {
-		log.Printf("OVERRIDE: %v %v", json_path, sample_id)
 		return got_one, nil
 	} else {
 		return base, nil
