@@ -3,11 +3,13 @@
 package ligolib
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"reflect"
 	"sort"
@@ -35,6 +37,13 @@ type MetricDef struct {
 
 	/* Warn when the percentile change is more then RelDiffAllow */
 	RelDiffAllow *float64 `json:",omitempty"`
+
+	/* Such a kludge! We set this to true if something in TargetSets references
+	 * this metric.
+	 * Except the mechanism to do this is kinda buggy and only works right of the targetsets
+	 * come from csv.
+	 */
+	TargetSetRef bool `json:"-"`
 }
 
 /*
@@ -44,13 +53,117 @@ type Project struct {
 	Metrics    map[string]*MetricDef
 	Where      string
 	SampleIDs  []string
-	WhereAble  WhereAble `json:"-"`
-	TargetSets []TargetSet
+	WhereAble  WhereAble   `json:"-"`
+	TargetSets []TargetSet `json:"-"`
 }
 
 type TargetSet struct {
 	SampleIDs []string
 	Targets   map[string]*MetricDef
+}
+
+/*
+ * This merges a bunch of targets, specified as as a big CSV matrix (parsed via TargetsFromCSV)
+ * with a project. The reconciliation proceedure is:
+ * 1. Replace Project.TargetSets with the new target sets.
+ * 2. Merge the list of sample IDs implied by ts with the project.SampleIDs and recompute WhereAble
+ * 3. Merge the list of metric names implied by ts with the project defined metrics.
+ */
+func MergeTSandProject(project *Project, ts []TargetSet) {
+
+	/* Don't do anything if there is nothing to do */
+	if len(ts) == 0 {
+		return
+	}
+
+	/* Step 1: */
+	project.TargetSets = ts
+
+	/* Step 2: */
+	/* Merge any sample IDs that explicitly appear in any targets set with the base sample ID list */
+	for _, sid := range project.TargetSets {
+		project.SampleIDs = append(project.SampleIDs, sid.SampleIDs...)
+	}
+
+	/* Remove duplicate elements from project.SampleIDs */
+	sort.Strings(project.SampleIDs)
+
+	out_idx := 1
+	for in_idx := 1; in_idx < len(project.SampleIDs); in_idx++ {
+		if project.SampleIDs[out_idx-1] == project.SampleIDs[in_idx] {
+
+		} else {
+			project.SampleIDs[out_idx] = project.SampleIDs[in_idx]
+			out_idx++
+		}
+	}
+
+	project.SampleIDs = project.SampleIDs[0:out_idx]
+
+	/* Now merge the where clauses */
+	/* XXX: This is actually redundant right now */
+	project.WhereAble = MergeWhereClauses(NewStringWhere(project.Where), NewListWhere("sampleid", project.SampleIDs))
+
+	/* Step 3 */
+	for _, met := range ts[0].Targets {
+		if project.Metrics[met.JSONPath] == nil {
+			new_met := new(MetricDef)
+			new_met.JSONPath = met.JSONPath
+			project.Metrics[met.JSONPath] = new_met
+		}
+		project.Metrics[met.JSONPath].TargetSetRef = true
+	}
+}
+
+/* Render the TargetSets part of a project as a CSV file.
+ * This uses the same format the TargetsFromCSV wants to parse.
+ */
+func CSVFromTargets(project *Project) []byte {
+	result := new(bytes.Buffer)
+
+	metric_list := make([]string, 0, 0)
+
+	/* Get a set of metric paths that only includes metrics refered to by
+	 * target-specific rules.
+	 */
+	for str, met := range project.Metrics {
+		if met.TargetSetRef {
+			metric_list = append(metric_list, str)
+
+		}
+	}
+
+	sort.Strings(metric_list)
+
+	/* Write the first line */
+	fmt.Fprintf(result, "SampleID,")
+	fmt.Fprintf(result, "%v\n", strings.Join(metric_list, ", "))
+
+	/* Write a line for every sample ID */
+	for _, one_target := range project.TargetSets {
+		for _, sid := range one_target.SampleIDs {
+			fmt.Fprintf(result, "%v", sid)
+			for _, metric_name := range metric_list {
+				low := ""
+				high := ""
+
+				metric := one_target.Targets[metric_name]
+				if metric != nil {
+					if metric.Low != nil {
+						low = fmt.Sprintf("%v", *metric.Low)
+					}
+					if metric.High != nil {
+						high = fmt.Sprintf("%v", *metric.High)
+					}
+				}
+
+				fmt.Fprintf(result, ", %v/%v", low, high)
+			}
+			fmt.Fprintf(result, "\n")
+		}
+	}
+
+	return result.Bytes()
 }
 
 /*
@@ -64,7 +177,7 @@ type TargetSet struct {
  *
  * Any line that astarts with # will be ignored.
  */
-func TargetsFromCSV(csv []byte) []TargetSet {
+func TargetsFromCSV(csv []byte) ([]TargetSet, error) {
 
 	lines := strings.Split(string(csv), "\n")
 
@@ -85,7 +198,7 @@ func TargetsFromCSV(csv []byte) []TargetSet {
 	/* metric_names[0] is nonsense. metrics_names[1] is the name of the first metric....
 	 * l[0] is the sample_id. l[1] is the target for the first metric l[2] is the larget for the second metric...
 	 */
-	for _, l := range lines[start:len(lines)] {
+	for line, l := range lines[start:len(lines)] {
 
 		/* Skip blank and comment lines */
 		if len(l) == 0 || l[0] == '#' {
@@ -95,44 +208,78 @@ func TargetsFromCSV(csv []byte) []TargetSet {
 		/* Parse out the 'C' in CSV */
 		sid_targets := strings.Split(l, (","))
 
+		if len(sid_targets) != len(metric_names) {
+			return nil, errors.New(fmt.Sprintf("Line %v has the wrong number of columns", line))
+		}
+
 		/* Allocate a targetset object for this row */
 		ts_a = append(ts_a, TargetSet{})
 		ts := &ts_a[len(ts_a)-1]
 
 		/* Target set applies to just one sample id... whoever is in column 0 */
 
-		ts.SampleIDs = sid_targets[0:1]
+		ts.SampleIDs = []string{strings.Trim(sid_targets[0], " \t")}
 
 		/* Use the other columns to compute metricdefs for this target */
 		ts.Targets = make(map[string]*MetricDef)
 
 		for i := 1; i < len(sid_targets); i++ {
-			var low_s, high_s float64
+			var err error
 
-			fmt.Sscanf(sid_targets[i], "%f/%f", &low_s, &high_s)
+			/* Do the grungy parsing. We're looking for a string in the format:
+			 * "123.345/456.789". A number can be missing (translate to NaN) and we have to
+			 * accept whitespace...... There's gotta be an easier way to structure this.
+			 */
+
+			var low_f, high_f float64
+			low_f = math.NaN()
+			high_f = math.NaN()
+
+			sa := strings.Split(sid_targets[i], "/")
+			if len(sa) != 2 {
+				return nil, (errors.New(fmt.Sprintf("Cannot parse low/high formatting at line %v row %v", line+start+1, i)))
+			}
+
+			low_s := strings.Trim(sa[0], " \t")
+			high_s := strings.Trim(sa[1], " \t")
+			if len(low_s) > 0 {
+				low_f, err = strconv.ParseFloat(low_s, 64)
+				if err != nil {
+					return nil, (errors.New(fmt.Sprintf("cannot parse '%v' as float at line %v row %v", sa[0], line+start+1, i)))
+				}
+			}
+
+			if len(high_s) > 0 {
+				high_f, err = strconv.ParseFloat(high_s, 64)
+				if err != nil {
+					return nil, (errors.New(fmt.Sprintf("cannot parse '%v' as float at line %v row %v", sa[1], line+start+1, i)))
+				}
+			}
+
+			fmt.Sscanf(sid_targets[i], "%f/%f", &low_f, &high_f)
 			md := new(MetricDef)
 
-			/* Here's the magic! */
-			md.JSONPath = metric_names[i]
+			/* Here's the magic! */ /* Huh? Why is this magic? */
+			md.JSONPath = strings.Trim(metric_names[i], " \t")
 
 			/* NaN check for low*/
-			if low_s == low_s {
+			if low_f == low_f {
 				lptr := new(float64)
-				*lptr = low_s
+				*lptr = low_f
 				md.Low = lptr
 			}
 
 			/* NaN check for high */
-			if high_s == high_s {
+			if high_f == high_f {
 				hptr := new(float64)
-				*hptr = high_s
+				*hptr = high_f
 				md.High = hptr
 			}
 			ts.Targets[md.JSONPath] = md
 		}
 	}
 	log.Printf("LOADED TARGETS: %v", ts_a)
-	return ts_a
+	return ts_a, nil
 }
 
 /*
@@ -237,7 +384,7 @@ func removeBadChars(in []byte) []byte {
  * Load a new temporary project, and return a key to find that project
  * later.
  */
-func (pc *ProjectsCache) NewTempProject(txt string) (string, error) {
+func (pc *ProjectsCache) NewTempProject(txt string, csv *string) (string, error) {
 	/* Make up a name for this project */
 	pc.TempId++
 	temp_project_name := fmt.Sprintf("_T%v", pc.TempId)
@@ -250,6 +397,9 @@ func (pc *ProjectsCache) NewTempProject(txt string) (string, error) {
 		return "", err
 	}
 
+	if project.Metrics == nil {
+		project.Metrics = make(map[string]*MetricDef)
+	}
 	/*
 	 * Fix up a bunch of stuff (see LoadProject)
 	 */
@@ -257,6 +407,14 @@ func (pc *ProjectsCache) NewTempProject(txt string) (string, error) {
 		project.Metrics[k].JSONPath = k
 	}
 	project.WhereAble = MergeWhereClauses(NewStringWhere(project.Where), NewListWhere("sampleid", project.SampleIDs))
+	if csv != nil {
+		parsed_csv, err := TargetsFromCSV([]byte(*csv))
+		if err != nil {
+			return "", err
+		}
+		MergeTSandProject(&project, parsed_csv)
+	}
+
 	pc.TempProjects[temp_project_name] = &project
 
 	return temp_project_name, nil
@@ -284,6 +442,10 @@ func LoadProject(path string) (*Project, error) {
 		return nil, err
 	}
 
+	if project.Metrics == nil {
+		project.Metrics = make(map[string]*MetricDef)
+	}
+
 	/*
 	 * Munge the result so that metricdef also knows the path to the metric
 	 * (which is the key in the map that it is in
@@ -305,28 +467,12 @@ func LoadProject(path string) (*Project, error) {
 			panic(err)
 		}
 
-		project.TargetSets = TargetsFromCSV(csvdata)
-	}
-
-	/* Merge any sample IDs that explicitly appear in any targets set with the base sample ID list */
-	for _, sid := range project.TargetSets {
-		project.SampleIDs = append(project.SampleIDs, sid.SampleIDs...)
-	}
-
-	/* Remove duplicate elements from project.SampleIDs */
-	sort.Strings(project.SampleIDs)
-
-	out_idx := 1
-	for in_idx := 1; in_idx < len(project.SampleIDs); in_idx++ {
-		if project.SampleIDs[out_idx-1] == project.SampleIDs[in_idx] {
-
-		} else {
-			project.SampleIDs[out_idx] = project.SampleIDs[in_idx]
-			out_idx++
+		ts, err := TargetsFromCSV(csvdata)
+		if err != nil {
+			return nil, err
 		}
+		MergeTSandProject(&project, ts)
 	}
-
-	project.SampleIDs = project.SampleIDs[0:out_idx]
 
 	/* Now merge the where clauses */
 	project.WhereAble = MergeWhereClauses(NewStringWhere(project.Where), NewListWhere("sampleid", project.SampleIDs))

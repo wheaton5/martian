@@ -414,15 +414,22 @@ ViewState.prototype.update_playground = function () {
 		var js = JSON.stringify(data.project_def, null, 2);
 		var tx = document.getElementById("project_def");
 		tx.value = js;
+
+		var tx2 = document.getElementById("targets_csv")
+		tx2.value = data.targets_csv
+
 		autosize($('#project_def'));
+		autosize($('#targets_csv'));
 	})
 }
 
 ViewState.prototype.write_playground = function () {
 	var url = "/api/tmpproject";
 	var data = document.getElementById("project_def").value;
+	var csvdata = document.getElementById("targets_csv").value;
 
-	$.post(url, "project_def=" + encodeURIComponent(data), function(res) {
+	console.log(csvdata);
+	$.post(url, "project_def=" + encodeURIComponent(data) + "&targets_csv=" + encodeURIComponent(csvdata), function(res) {
 		console.log(res);
 		var t=JSON.parse(res);
 		console.log(t);
