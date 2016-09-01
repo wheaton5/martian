@@ -12,7 +12,7 @@ html
 		.container-fluid
 			.row
 				.col-xs-12
-					form
+					form(onsubmit="generaluiupdate()")
 						.form-group
 							label(for="where") Where (empty or a SQL where clause)
 							input#where.form-control(name="where" placeholder="Where (empty or a SQL where clause)")

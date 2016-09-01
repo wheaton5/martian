@@ -91,7 +91,6 @@ function setup_project_dropdown() {
 			ngContainer.onclick = project_dropdown_click;
 			ngContainer.appendChild(ng);
 
-
 			pd.append(ngContainer);
 		}
 	})
@@ -127,6 +126,7 @@ function project_dropdown_click(x) {
  * Actually change a project. 
  */
 function changeproject(p) {
+	clear_error_box()
 	global_view_state.project = p;
 	global_view_state.reset_pagination();
 	update_model_from_ui();
@@ -137,11 +137,25 @@ function changeproject(p) {
  * Handle "basic" and "metrics" clicks
  */
 function changetablemode(mode) {
+	clear_error_box()
 	update_model_from_ui()
 	global_view_state.table_mode = mode;
 	global_view_state.render();
-
 }
+
+/*
+ * Handle enter key on the "where" forum as well as other operations that just
+ * requires a UI refresh with no special semantics.
+ */
+function generaluiupdate() {
+	clear_error_box()
+	event.stopPropagation();
+	event.preventDefault();
+	update_model_from_ui();
+	global_view_state.render();
+	return false;
+}
+
 
 /*
  * Handle clicks on the top-level buttons.
@@ -197,6 +211,7 @@ function pickwindow(mode) {
  * Handles clicks on the "go" button on the chart view 
  */
 function update() {
+	clear_error_box()
 	update_model_from_ui()
 	global_view_state.render();
 
@@ -206,6 +221,7 @@ function update() {
  * Handle clicks on the button to change the chart style
  */
 function update_chart_style(chart_mode) {
+	clear_error_box()
 	global_view_state.chart_mode = chart_mode;
 	global_view_state.render();
 
@@ -215,6 +231,7 @@ function update_chart_style(chart_mode) {
  * Handle clicks on the "update" button in playground mode.
  */
 function updateprojecttextarea() {
+	clear_error_box()
 	global_view_state.reset_pagination()
 	//update_model_from_ui();
 	global_view_state.write_playground();
@@ -225,6 +242,7 @@ function updateprojecttextarea() {
  * Switch comparison modes.
  */
 function changecomparemode(mode) {
+	clear_error_box()
 	update_model_from_ui();
 	global_view_state.comparemode = mode;
 	global_view_state.render();
