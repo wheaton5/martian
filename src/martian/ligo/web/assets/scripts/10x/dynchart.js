@@ -349,7 +349,9 @@ var model_view_bindings = [
 	{model:"compareidold", element:"#detailid", method:"text"},
 	{model:"compareidnew", element:"#compareid2", method:"text"},
 	{model:"page", element:"#page", method:"text"},
-	{model:"latestonly", element:"#latestonly", prop:"checked"}
+	{model:"latestonly", element:"#latestonly", prop:"checked"},
+	{model:"where_sampleid", element:"#where_sampleid", method:"val"},
+	{model:"where_user", element:"#where_user", method:"val"},
 ]
 
 /*
@@ -557,14 +559,14 @@ ViewState.prototype.details_update = function() {
 
 /* Render the various table views.*/
 ViewState.prototype.table_update = function() { 
-	var where = this.where;
+	var where = this.compute_where_param();
 
 	var mode = this.table_mode;
 	var id;
 
 	/* Which table view are we actually rendering?*/
 	if (mode=="metrics") {
-		var url = "/api/plotall?where=" + where 
+		var url = "/api/plotall?where=" + where
 	} else {
 		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
 	}
@@ -613,6 +615,34 @@ ViewState.prototype.reset_pagination= function () {
 	this.page = 0;
 }
 
+function whereify(s, key) {
+
+	if (s == "" || s == null) {
+		return null;
+	} else {
+		return key + "='" + s + "'"
+	}
+}
+	
+
+ViewState.prototype.compute_where_param = function() {
+	var clauses = [this.where, whereify(this.where_sampleid, "sampleid"),  whereify(this.where_user, "userid")];
+	var res = "";
+
+	for (var i = 0; i < clauses.length; i++) {
+		var c = clauses[i];
+		if (c != null && c != "") {
+			if (res != "") {
+				res = res + "AND (" + c + ")"
+			} else {
+				res = "(" + c + ")"
+			}
+		}
+	}
+	return res;
+}
+
+
 /*
  * THIS IS PROBABLY THE DROID YOU ARE LOOKING FOR!
  * This function binds the UI to a global instance of the ViewState object. 
@@ -625,6 +655,8 @@ function update_model_from_ui() {
 	v.charty = document.getElementById("charty").value;
 	v.where = document.getElementById("where").value;
 	v.sortby= document.getElementById("sortby").value;
+	v.where_sampleid=document.getElementById("where_sampleid").value;
+	v.where_user=document.getElementById("where_user").value;
 	v.latestonly = document.getElementById("latestonly").checked
 	var selected = global_table.getSelection();
 
@@ -653,7 +685,7 @@ function update_model_from_ui() {
 ViewState.prototype.chart_update = function() {
 	var x = this.chartx;
 	var y = this.charty;
-	var where = this.where
+	var where = this.compute_where_param()
 	var sortby = this.sortby || ""
 
 	var url = "/api/plot?where="+encodeURIComponent(where)+

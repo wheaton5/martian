@@ -13,9 +13,20 @@ html
 			.row
 				.col-xs-12
 					form(onsubmit="generaluiupdate()")
-						.form-group
-							label(for="where") Where (empty or a SQL where clause)
-							input#where.form-control(name="where" placeholder="Where (empty or a SQL where clause)")
+						.form-inline
+							.form-group
+								label(for="where") Where (empty or a SQL where clause)
+								input#where.form-control(style="width:800px" name="where" placeholder="Where (empty or a SQL where clause)")
+						br
+						.form-inline
+							.form-group
+								label(for="sampleid") Sample ID
+								input#where_sampleid.form-control(name="where_sampleid" placeholder="sampleid")
+							.form-group
+								label(for="where_user") User
+								input#where_user.form-control(name="where_user" placeholder="user")
+							button.btn.btn-default(type="submit" style="display:none") Go
+						br	
 
 		.container-fluid
 			div.panel.panel-danger#errorbox.hidden
