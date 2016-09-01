@@ -128,6 +128,7 @@ function project_dropdown_click(x) {
  */
 function changeproject(p) {
 	global_view_state.project = p;
+	global_view_state.reset_pagination();
 	update_model_from_ui();
 	global_view_state.render();
 }
@@ -152,6 +153,7 @@ function pickwindow(mode) {
 	clear_error_box();
 	
 	var g = global_view_state;
+	g.reset_pagination()
 
 	/* Some logic for handling transitions. Certain transitions to the compare and details
 	 * state are not legal. We catch those here and provide feedback.
@@ -213,6 +215,7 @@ function update_chart_style(chart_mode) {
  * Handle clicks on the "update" button in playground mode.
  */
 function updateprojecttextarea() {
+	global_view_state.reset_pagination()
 	//update_model_from_ui();
 	global_view_state.write_playground();
 	//global_view_state.render();
@@ -283,6 +286,7 @@ function ViewState() {
 
 	return this;
 }
+
 
 /*
  * Get a URL with a serialized version of this viewstate embedded in it.
@@ -585,6 +589,10 @@ ViewState.prototype.metrics_list_click = function() {
 		v = v + global_metrics_db[idx+1];
 	}
 	y.value = v;
+}
+
+ViewState.prototype.reset_pagination= function () {
+	this.page = 0;
 }
 
 /*
