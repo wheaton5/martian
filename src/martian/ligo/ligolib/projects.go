@@ -63,6 +63,79 @@ type TargetSet struct {
 }
 
 /*
+ * A cache of all projects
+ */
+
+type ProjectsCache struct {
+	/* Projects loaded from disk (and checked in */
+	Projects map[string]*Project
+	BasePath string
+
+	/* These are temporary "projects" that are only cached in memory that
+	 * people can build in the UI.
+	 */
+
+	TempProjects     map[string]*Project
+	TempProjectsPath string
+	TempId           int
+}
+
+/*
+ * The result of comparing a metric frmo two pipestances
+ */
+type MetricResult struct {
+	/* The old and new values */
+	BaseVal interface{}
+	NewVal  interface{}
+
+	/* OK is true iff both values were successfully extracted.*/
+	OK bool
+
+	/* Are the values different (according to Def)*/
+	Diff     bool
+	DiffPerc float64
+
+	NewOK bool
+	OldOK bool
+
+	/* The definition of this metric */
+	//Def *MetricDef
+
+	HumanName string
+	JSONPath  string
+}
+
+/*
+ * How to order metric results in a stable way. (Just use JSON path)
+ */
+type MetricResultSorter []MetricResult
+
+func (m MetricResultSorter) Len() int           { return len(m) }
+func (m MetricResultSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m MetricResultSorter) Less(i, j int) bool { return m[i].JSONPath < m[j].JSONPath }
+
+type MetricResultByPercentSorter []MetricResult
+
+func (m MetricResultByPercentSorter) Len() int           { return len(m) }
+func (m MetricResultByPercentSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m MetricResultByPercentSorter) Less(i, j int) bool { return m[i].DiffPerc > m[j].DiffPerc }
+
+/*
+ * This defines the minimal sensible project.  Failing to include these fields
+ * can cause wonky behavior in the UI.
+ */
+var DEFAULT_PROJECT = `
+{
+        "Metrics": {
+                "sampleid": {},
+                "SHA":{},
+                "finishdate":{},
+                "success": {}
+	}
+}
+`
+
+/*
  * This merges a bunch of targets, specified as as a big CSV matrix (parsed via TargetsFromCSV)
  * with a project. The reconciliation proceedure is:
  * 1. Replace Project.TargetSets with the new target sets.
@@ -283,64 +356,6 @@ func TargetsFromCSV(csv []byte) ([]TargetSet, error) {
 }
 
 /*
- * A cache of all projects
- */
-
-type ProjectsCache struct {
-	/* Projects loaded from disk (and checked in */
-	Projects map[string]*Project
-	BasePath string
-
-	/* These are temporary "projects" that are only cached in memory that
-	 * people can build in the UI.
-	 */
-
-	TempProjects     map[string]*Project
-	TempProjectsPath string
-	TempId           int
-}
-
-/*
- * The result of comparing a metric frmo two pipestances
- */
-type MetricResult struct {
-	/* The old and new values */
-	BaseVal interface{}
-	NewVal  interface{}
-
-	/* OK is true iff both values were successfully extracted.*/
-	OK bool
-
-	/* Are the values different (according to Def)*/
-	Diff     bool
-	DiffPerc float64
-
-	NewOK bool
-	OldOK bool
-
-	/* The definition of this metric */
-	//Def *MetricDef
-
-	HumanName string
-	JSONPath  string
-}
-
-/*
- * How to order metric results in a stable way. (Just use JSON path)
- */
-type MetricResultSorter []MetricResult
-
-func (m MetricResultSorter) Len() int           { return len(m) }
-func (m MetricResultSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
-func (m MetricResultSorter) Less(i, j int) bool { return m[i].JSONPath < m[j].JSONPath }
-
-type MetricResultByPercentSorter []MetricResult
-
-func (m MetricResultByPercentSorter) Len() int           { return len(m) }
-func (m MetricResultByPercentSorter) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
-func (m MetricResultByPercentSorter) Less(i, j int) bool { return m[i].DiffPerc > m[j].DiffPerc }
-
-/*
  * This is a kludge to handle newline characters in JSON strings and comments
  * in JSON.
  * A newline in a JSON string will be redacted. Any line starting with '#' will
@@ -380,6 +395,16 @@ func removeBadChars(in []byte) []byte {
 	return (output[0:output_index])
 }
 
+func stringIsPointless(s string) bool {
+
+	for _, c := range s {
+		if !(c == ' ' || c == '\t' || c == '\n') {
+			return false
+		}
+	}
+	return true
+}
+
 /*
  * Load a new temporary project, and return a key to find that project
  * later.
@@ -390,6 +415,11 @@ func (pc *ProjectsCache) NewTempProject(txt string, csv *string) (string, error)
 	temp_project_name := fmt.Sprintf("_T%v", pc.TempId)
 
 	var project Project
+
+	/* If the project is totally empty, replace it with the default. */
+	if stringIsPointless(txt) {
+		txt = DEFAULT_PROJECT
+	}
 
 	/* Load and parse the JSON for it */
 	err := json.Unmarshal(removeBadChars([]byte(txt)), &project)
@@ -407,7 +437,7 @@ func (pc *ProjectsCache) NewTempProject(txt string, csv *string) (string, error)
 		project.Metrics[k].JSONPath = k
 	}
 	project.WhereAble = MergeWhereClauses(NewStringWhere(project.Where), NewListWhere("sampleid", project.SampleIDs))
-	if csv != nil {
+	if csv != nil && !stringIsPointless(*csv) {
 		parsed_csv, err := TargetsFromCSV([]byte(*csv))
 		if err != nil {
 			return "", err
@@ -432,6 +462,10 @@ func LoadProject(path string) (*Project, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if stringIsPointless(string(file_contents)) {
+		file_contents = []byte(DEFAULT_PROJECT)
 	}
 
 	var project Project
@@ -467,11 +501,13 @@ func LoadProject(path string) (*Project, error) {
 			panic(err)
 		}
 
-		ts, err := TargetsFromCSV(csvdata)
-		if err != nil {
-			return nil, err
+		if !stringIsPointless(string(csvdata)) {
+			ts, err := TargetsFromCSV(csvdata)
+			if err != nil {
+				return nil, err
+			}
+			MergeTSandProject(&project, ts)
 		}
-		MergeTSandProject(&project, ts)
 	}
 
 	/* Now merge the where clauses */
