@@ -147,7 +147,47 @@ function changetablemode(mode) {
  */
 function pickwindow(mode) {
 	update_model_from_ui()
-	global_view_state.mode = mode;
+
+	/* Switching tabs always clears any errors */
+	clear_error_box();
+	
+	var g = global_view_state;
+
+	/* Some logic for handling transitions. Certain transitions to the compare and details
+	 * state are not legal. We catch those here and provide feedback.
+	 *
+	 * NOTE!!!! We explicitly don't/can't do any rendering here! We just validate things and
+	 * let the render() function render things once we've fixed stuff up. Otherwise
+	 * we'd break permalinks.
+	 */
+	switch(mode) {
+		case("compare"):
+			/* Compare mode requires that you select two pipestances */
+			if (!g.compareidnew || !g.compareidold) {
+				set_error_box("Please select two rows to compare. Then click compare again.")
+				if (g.compareidold) {
+					g.where = "sampleid='" + g.sample_search+"'"
+					console.log(g.where);
+				}
+
+				g.mode = "table";
+			} else {
+				g.mode = "compare"
+			}
+			break;
+
+		case("details"):
+			/* details mode requires that you select one pipestance */
+			if (g.compareidold) {
+				g.mode = "details"
+			} else {
+				set_error_box("Please select one row to view. Then click details again.")
+				g.mode = "table";
+			}
+			break;
+		default:
+			g.mode = mode;
+	}
 	global_view_state.render();
 }
 
@@ -326,73 +366,49 @@ ViewState.prototype.render = function() {
 	$("#playground").hide()
 	set_csv_download_url("");
 
-	clear_error_box();
 
 	this.apply_view_bindings();
 
 	var w = this.mode;
 
-	/* Special logic for handling the compare button. If you don't have exactly two
-	 * rows selected, don't compare. If you have run row selected, redo the table view
-	 * with selecting rows with the same sampleid
-	 */
-	if (w == "compare") {
-		if (!this.compareidnew || !this.compareidold) {
-			set_error_box("Please select two rows to compare. Then click compare again.")
-			//var wc=(get_data_at_row(global_table_data, "sampleid", selected[0].row));
-			if (this.compareidold) {
-				this.where = "sampleid='" + this.sample_search+"'"
-				console.log(this.where);
-			}
-
-			this.table_update();
-			$("#table").show();
-		} else{
+	switch(w) {
+		
+		case("compare"): 
 			this.compare_update();
 			$("#compare").show();
-		}
-	}
+			break;
 
-	/* Similar special logic for the details button */
-	if (w == "details" ) {
-		/* Can't show pipestance details if we don't have a pipestance selected */
-		if (this.compareidold) {
+		case("details"):
 			$("#details").show()
 			this.details_update();
-		} else {
-			set_error_box("Please select one row to view. Then click details again.")
-			$("#table").show();
-			this.table_update()
-		}
+			break;
+		
+		case("table"):
+			$("#table").show()
+			this.table_update();
+			break;
+
+		case("plot"):
+			/* Grab the metric definitions that we want to show as options in the plot view */
+			get_json_safe("/api/list_metrics?metrics_def=" + this.project, function(data) {
+				global_metrics_db = data.ChartData;
+				var mdata = google.visualization.arrayToDataTable(global_metrics_db);
+				global_metrics_table.draw(mdata, {})
+			})
+
+			this.chart_update();
+			$("#plot").show()
+			break;
+		
+		case("playground"):
+			this.update_playground();
+			$("#playground").show()
+			break;
+		
+		case("help"):
+			$("#help").show();
+			break;
 	}
-
-	if (w == "table") {
-		$("#table").show()
-		this.table_update();
-	}
-
-	if (w == "plot") {
-		/* Grab the metric definitions that we want to show as options in the plot view */
-		get_json_safe("/api/list_metrics?metrics_def=" + this.project, function(data) {
-			global_metrics_db = data.ChartData;
-			var mdata = google.visualization.arrayToDataTable(global_metrics_db);
-			global_metrics_table.draw(mdata, {})
-		})
-
-		this.chart_update();
-		$("#plot").show()
-
-	}
-
-	if (w == "playground") {
-		this.update_playground();
-		$("#playground").show()
-	}
-
-	if (w == "help") {
-		$("#help").show();
-	}
-
 
 	/* This is an obnoxious hack. We need to disable permalinks if the
 	 * project is in the playground because....... playgrounds aren't
