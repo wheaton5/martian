@@ -16,8 +16,8 @@ import (
 //
 // Semantic Checking Methods
 //
-func (global *Ast) err(locable Locatable, msg string, v ...interface{}) error {
-	return &AstError{global, locable, fmt.Sprintf(msg, v...)}
+func (global *Ast) err(nodable AstNodable, msg string, v ...interface{}) error {
+	return &AstError{global, nodable.getNode(), fmt.Sprintf(msg, v...)}
 }
 
 func (callables *Callables) check(global *Ast) error {
@@ -45,9 +45,8 @@ func (params *Params) check(global *Ast) error {
 		}
 
 		// Cache if param is file or path.
-		_, ok := global.FiletypeTable[param.getTname()]
+		_, ok := global.UserTypeTable[param.getTname()]
 		param.setIsFile(ok)
-
 	}
 	return nil
 }
@@ -61,9 +60,9 @@ func (exp *ValExp) resolveType(global *Ast, callable Callable) ([]string, int, e
 
 	// Handle strings (which could be files too).
 	case "string":
-		for filetype, _ := range global.FiletypeTable {
-			if strings.HasSuffix(exp.Value.(string), filetype) {
-				return []string{"string", filetype}, 0, nil
+		for userType, _ := range global.UserTypeTable {
+			if strings.HasSuffix(exp.Value.(string), userType) {
+				return []string{"string", userType}, 0, nil
 			}
 		}
 		return []string{"string"}, 0, nil
@@ -75,11 +74,11 @@ func (exp *ValExp) resolveType(global *Ast, callable Callable) ([]string, int, e
 			return arrayKind, arrayDim + 1, err
 		}
 		return []string{"null"}, 1, nil
-	// File: look for matching filetype in type table
+	// File: look for matching t in user/file type table
 	case "file":
-		for filetype, _ := range global.FiletypeTable {
-			if strings.HasSuffix(exp.Value.(string), filetype) {
-				return []string{filetype}, 0, nil
+		for userType, _ := range global.UserTypeTable {
+			if strings.HasSuffix(exp.Value.(string), userType) {
+				return []string{userType}, 0, nil
 			}
 		}
 	}
@@ -88,7 +87,7 @@ func (exp *ValExp) resolveType(global *Ast, callable Callable) ([]string, int, e
 
 func (exp *RefExp) resolveType(global *Ast, callable Callable) ([]string, int, error) {
 	if callable == nil {
-		global.err(exp, "ReferenceError: this binding cannot be resolved outside of a stage or pipeline.")
+		return []string{""}, 0, global.err(exp, "ReferenceError: this binding cannot be resolved outside of a stage or pipeline.")
 	}
 
 	switch exp.getKind() {
@@ -198,13 +197,21 @@ func (bindings *BindStms) check(global *Ast, callable Callable, params *Params) 
 
 func (global *Ast) check(stagecodePaths []string, checkSrcPath bool) error {
 	// Build type table, starting with builtins. Duplicates allowed.
-	types := []string{"string", "int", "float", "bool", "path", "file", "map"}
-	for _, filetype := range global.Filetypes {
-		types = append(types, filetype.Id)
-		global.FiletypeTable[filetype.Id] = true
+	builtinTypes := []*BuiltinType{
+		&BuiltinType{"string"},
+		&BuiltinType{"int"},
+		&BuiltinType{"float"},
+		&BuiltinType{"bool"},
+		&BuiltinType{"path"},
+		&BuiltinType{"file"},
+		&BuiltinType{"map"},
 	}
-	for _, t := range types {
-		global.TypeTable[t] = true
+	for _, builtinType := range builtinTypes {
+		global.TypeTable[builtinType.Id] = builtinType
+	}
+	for _, userType := range global.UserTypes {
+		global.TypeTable[userType.Id] = userType
+		global.UserTypeTable[userType.Id] = userType
 	}
 
 	// Check for duplicate names amongst callables.
@@ -218,10 +225,12 @@ func (global *Ast) check(stagecodePaths []string, checkSrcPath bool) error {
 		if err := stage.InParams.check(global); err != nil {
 			return err
 		}
+
 		// Check out parameters.
 		if err := stage.OutParams.check(global); err != nil {
 			return err
 		}
+
 		if checkSrcPath {
 			// Check existence of src path.
 			if _, found := SearchPaths(stage.Src.Path, stagecodePaths); !found {
@@ -243,6 +252,7 @@ func (global *Ast) check(stagecodePaths []string, checkSrcPath bool) error {
 		if err := pipeline.InParams.check(global); err != nil {
 			return err
 		}
+
 		// Check out parameters.
 		if err := pipeline.OutParams.check(global); err != nil {
 			return err
@@ -349,7 +359,6 @@ func (global *Ast) check(stagecodePaths []string, checkSrcPath bool) error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -372,8 +381,8 @@ func parseSource(src string, srcPath string, incPaths []string, checkSrc bool) (
 	//printSourceMap(postsrc, locmap)
 
 	// Parse the source into an AST and attach the locmap.
-	ast, perr := yaccParse(postsrc)
-	if perr != nil { // err is an mmLexInfo struct
+	ast, perr := yaccParse(postsrc, locmap)
+	if perr != nil { // perr is an mmLexInfo struct
 		// Guard against index out of range, which can happen if there is syntax error
 		// at the end of the file, e.g. forgetting to put a close paren at the end of
 		// and invocation call/file.
@@ -382,12 +391,12 @@ func parseSource(src string, srcPath string, incPaths []string, checkSrc bool) (
 		}
 		return "", nil, nil, &ParseError{perr.token, locmap[perr.loc].fname, locmap[perr.loc].loc}
 	}
-	ast.Locmap = locmap
 
 	// Run semantic checks.
 	if err := ast.check(stagecodePaths, checkSrc); err != nil {
 		return "", nil, nil, err
 	}
+
 	return postsrc, ifnames, ast, nil
 }
 

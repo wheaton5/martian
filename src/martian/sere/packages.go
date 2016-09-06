@@ -76,7 +76,6 @@ func (self *PackageManager) GetPackageEnvironment(pkg string) ([]string, string,
 	return p.MroPaths, p.MroVersion, p.ArgshimPath, p.Envs, nil
 }
 
-
 func (self *PackageManager) ManagePackages() []*manager.Package {
 	packages := []*manager.Package{}
 
@@ -167,7 +166,7 @@ func (self *PackageManager) addPackage(name string, target string, path string) 
 	p.State = "complete"
 
 	checkSrcPath := true
-	if _, err := self.rt.CompileAll(p.MroPaths, checkSrcPath); err != nil {
+	if _, _, err := self.rt.CompileAll(p.MroPaths, checkSrcPath); err != nil {
 		return err
 	}
 	self.rt.MroCache.CacheMros(p.MroPaths)

@@ -277,10 +277,14 @@ func (self *Callables) format() string {
 //
 // Filetype
 //
-func (self *Filetype) format() string {
+func (self *UserType) format() string {
 	fsrc := self.Node.Comments
 	fsrc += fmt.Sprintf("filetype %s;", self.Id)
 	return fsrc
+}
+
+func (self *BuiltinType) format() string {
+	return ""
 }
 
 //
@@ -290,10 +294,10 @@ func (self *Ast) format() string {
 	fsrc := ""
 
 	// filetype declarations.
-	for _, filetype := range self.Filetypes {
+	for _, filetype := range self.UserTypes {
 		fsrc += filetype.format()
 	}
-	if len(self.Filetypes) > 0 {
+	if len(self.UserTypes) > 0 {
 		fsrc += NEWLINE
 	}
 
@@ -324,7 +328,7 @@ func FormatFile(filename string) (string, error) {
 	src = re.ReplaceAllString(src, "#@include \"")
 
 	// Parse and generate the AST.
-	global, mmli := yaccParse(src)
+	global, mmli := yaccParse(src, []FileLoc{})
 	if mmli != nil { // mmli is an mmLexInfo struct
 		return "", &ParseError{mmli.token, filename, mmli.loc}
 	}
@@ -335,4 +339,35 @@ func FormatFile(filename string) (string, error) {
 	// Uncomment the @include lines.
 	fmtsrc = strings.Replace(fmtsrc, "#@include \"", "@include \"", -1)
 	return fmtsrc, nil
+}
+
+func JsonDumpAsts(asts []*Ast) string {
+	type JsonDump struct {
+		UserTypes map[string]*UserType
+		Stages    map[string]*Stage
+		Pipelines map[string]*Pipeline
+	}
+
+	jd := JsonDump{
+		UserTypes: map[string]*UserType{},
+		Stages:    map[string]*Stage{},
+		Pipelines: map[string]*Pipeline{},
+	}
+
+	for _, ast := range asts {
+		for _, t := range ast.UserTypes {
+			jd.UserTypes[t.Id] = t
+		}
+		for _, stage := range ast.Stages {
+			jd.Stages[stage.Id] = stage
+		}
+		for _, pipeline := range ast.Pipelines {
+			jd.Pipelines[pipeline.Id] = pipeline
+		}
+	}
+	if jsonBytes, err := json.MarshalIndent(jd, "", "    "); err == nil {
+		return string(jsonBytes)
+	} else {
+		return fmt.Sprintf("{ error: \"%s\" }", err.Error())
+	}
 }

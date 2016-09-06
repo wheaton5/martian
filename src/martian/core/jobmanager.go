@@ -64,7 +64,7 @@ func (self *Semaphore) len() int {
 // Job managers
 //
 type JobManager interface {
-	execJob(string, []string, map[string]string, *Metadata, int, int, string, string, string)
+	execJob(string, []string, map[string]string, *Metadata, int, int, string, string, string, bool)
 	GetSystemReqs(int, int) (int, int)
 	GetMaxCores() int
 	GetMaxMemGB() int
@@ -154,8 +154,9 @@ func (self *LocalJobManager) GetSystemReqs(threads int, memGB int) (int, int) {
 	return threads, memGB
 }
 
-func (self *LocalJobManager) Enqueue(shellCmd string, argv []string, envs map[string]string, metadata *Metadata,
-	threads int, memGB int, fqname string, retries int, waitTime int) {
+func (self *LocalJobManager) Enqueue(shellCmd string, argv []string,
+	envs map[string]string, metadata *Metadata, threads int, memGB int,
+	fqname string, retries int, waitTime int, localpreflight bool) {
 
 	time.Sleep(time.Second * time.Duration(waitTime))
 	go func() {
@@ -195,7 +196,12 @@ func (self *LocalJobManager) Enqueue(shellCmd string, argv []string, envs map[st
 		// Set up _stdout and _stderr for the job.
 		if stdoutFile, err := os.Create(stdoutPath); err == nil {
 			stdoutFile.WriteString("[stdout]\n")
-			cmd.Stdout = stdoutFile
+			// If local preflight stage, let stdout go to the console
+			if localpreflight {
+				cmd.Stdout = os.Stdout
+			} else {
+				cmd.Stdout = stdoutFile
+			}
 			defer stdoutFile.Close()
 		}
 		if stderrFile, err := os.Create(stderrPath); err == nil {
@@ -227,7 +233,8 @@ func (self *LocalJobManager) Enqueue(shellCmd string, argv []string, envs map[st
 				metadata.writeRaw("errors", err.Error())
 			} else {
 				LogInfo("jobmngr", "Job failed: %s. Retrying job %s in %d seconds", err.Error(), fqname, waitTime)
-				self.Enqueue(shellCmd, argv, envs, metadata, threads, memGB, fqname, retries, waitTime)
+				self.Enqueue(shellCmd, argv, envs, metadata, threads, memGB, fqname, retries,
+					waitTime, localpreflight)
 			}
 		}
 
@@ -254,9 +261,10 @@ func (self *LocalJobManager) GetMaxMemGB() int {
 	return self.maxMemGB
 }
 
-func (self *LocalJobManager) execJob(shellCmd string, argv []string, envs map[string]string,
-	metadata *Metadata, threads int, memGB int, special string, fqname string, shellName string) {
-	self.Enqueue(shellCmd, argv, envs, metadata, threads, memGB, fqname, 0, 0)
+func (self *LocalJobManager) execJob(shellCmd string, argv []string,
+	envs map[string]string, metadata *Metadata, threads int, memGB int,
+	special string, fqname string, shellName string, preflight bool) {
+	self.Enqueue(shellCmd, argv, envs, metadata, threads, memGB, fqname, 0, 0, preflight)
 }
 
 type RemoteJobManager struct {
@@ -346,8 +354,9 @@ func (self *RemoteJobManager) GetSystemReqs(threads int, memGB int) (int, int) {
 	return threads, memGB
 }
 
-func (self *RemoteJobManager) execJob(shellCmd string, argv []string, envs map[string]string,
-	metadata *Metadata, threads int, memGB int, special string, fqname string, shellName string) {
+func (self *RemoteJobManager) execJob(shellCmd string, argv []string,
+	envs map[string]string, metadata *Metadata, threads int, memGB int,
+	special string, fqname string, shellName string, localpreflight bool) {
 
 	// no limit, send the job
 	if self.maxJobs <= 0 {
@@ -425,8 +434,12 @@ func (self *RemoteJobManager) sendJob(shellCmd string, argv []string, envs map[s
 		"CMD":               strings.Join(argv, " "),
 		"MEM_GB":            fmt.Sprintf("%d", memGB),
 		"MEM_MB":            fmt.Sprintf("%d", memGB*1024),
+		"MEM_KB":            fmt.Sprintf("%d", memGB*1024*1024),
+		"MEM_B":             fmt.Sprintf("%d", memGB*1024*1024*1024),
 		"MEM_GB_PER_THREAD": fmt.Sprintf("%d", memGBPerThread),
 		"MEM_MB_PER_THREAD": fmt.Sprintf("%d", memGBPerThread*1024),
+		"MEM_KB_PER_THREAD": fmt.Sprintf("%d", memGBPerThread*1024*1024),
+		"MEM_B_PER_THREAD":  fmt.Sprintf("%d", memGBPerThread*1024*1024*1024),
 		"RESOURCES":         mappedJobResourcesOpt,
 	}
 
