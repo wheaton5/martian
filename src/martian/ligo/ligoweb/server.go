@@ -140,7 +140,15 @@ func (s *LigoServer) Viewer(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReadAndParse(webroot, viewfile string) string {
-	dat, err := ioutil.ReadFile(webroot + "/views/" + viewfile)
+	path := webroot + "/views/" + viewfile
+	dat, err := ioutil.ReadFile(path)
+
+	if bytes.IndexByte(dat, '\t') != -1 {
+		/* I've wasted WAAAAAY too many hours of my life debugging template issues
+		 * caused by disagreements on the tab-to-space ratio.  We solve this problem
+		 * by prohibiting tabs. */
+		panic(fmt.Sprintf("Refusing to parse jade file with tabs in it at: %v", path))
+	}
 	if err != nil {
 		log.Printf("\nReadFile error: %v", err)
 	}
@@ -427,14 +435,14 @@ func (s *LigoServer) UploadTempProject(w http.ResponseWriter, r *http.Request) {
 	//	}
 	log.Printf("STUFFSTUFF: %v", *r)
 	json_txt := r.PostFormValue("project_def")
-	csv_txt  := r.PostFormValue("targets_csv");
+	csv_txt := r.PostFormValue("targets_csv")
 	log.Printf("New project def: %v", json_txt)
 
-	var csv_ptr * string;
-	if (csv_txt != "") {
-		csv_ptr = &csv_txt;
+	var csv_ptr *string
+	if csv_txt != "" {
+		csv_ptr = &csv_txt
 	}
-	project_key, err := s.Projects.NewTempProject(json_txt, csv_ptr);
+	project_key, err := s.Projects.NewTempProject(json_txt, csv_ptr)
 
 	if err != nil {
 		FormatResponse(nil, err, w)
@@ -448,7 +456,7 @@ func (s *LigoServer) DownloadProject(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
 	project := s.Projects.Get(params.Get("metrics_def"))
 
-	target_info_as_csv := string(ligolib.CSVFromTargets(project));
+	target_info_as_csv := string(ligolib.CSVFromTargets(project))
 
 	FormatResponse(map[string]interface{}{"project_def": project, "targets_csv": target_info_as_csv}, nil, w)
 }

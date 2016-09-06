@@ -27,19 +27,19 @@
 	float: right;
 }
 
-#table1 {
+.flex-table {
     padding: 0;
-    height: calc(100vh - 220px);  /* emperically found px value to fit in viewport */
+    height: calc(100vh - 260px);  /* emperically found px value to fit in viewport */
     overflow: scroll;
 }
 
 /* force scroll bar to show on table */
 /* copied from http://simurai.com/blog/2011/07/26/webkit-scrollbar */
-#table1 ::-webkit-scrollbar {
+.flex-table ::-webkit-scrollbar {
     -webkit-appearance: none;
     width: 7px;
 }
-#table1 ::-webkit-scrollbar-thumb {
+.flex-table ::-webkit-scrollbar-thumb {
     border-radius: 4px;
     background-color: rgba(0,0,0,.5);
 }
