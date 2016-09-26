@@ -1,6 +1,8 @@
 martian
 =======
 
+[![Build Status](https://travis-ci.com/10XDev/martian.svg?token=TWBUTnxCC9pxRstyypDo&branch=master)](https://travis-ci.com/10XDev/martian)
+
 How to Clone Me
 ---------------
 This repo includes vendored third-party code as submodules, so it must be git cloned recursively:
