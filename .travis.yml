@@ -16,3 +16,5 @@ script:
     - test/martian_test.py test/fork_test/fork_test.json
     - test/martian_test.py test/fork_test/fail1_test.json
     - test/martian_test.py test/fork_test/retry_test.json
+    - test/martian_test.py test/fork_test/autoretry_pass.json
+    - test/martian_test.py test/fork_test/autoretry_fail.json
