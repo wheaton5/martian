@@ -75,6 +75,7 @@ sake-strip:
 	rm -rf pkg
 	rm -rf src
 	rm -rf scripts
+	rm -rf test
 	rm -f Makefile
 	rm -f README.md
 
