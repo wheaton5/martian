@@ -30,7 +30,6 @@ func runLoop(pipestance *core.Pipestance, stepSecs int, vdrMode string,
 	showedFailed := false
 	showedComplete := false
 	WAIT_SECS := 6
-
 	pipestance.LoadMetadata()
 
 	for {
@@ -177,6 +176,7 @@ Options:
     --debug             Enable debug logging for local job manager.
     --stest             Substitute real stages with stress-testing stage.
     --autoretry=NUM     Automatically retry failed runs up to NUM times.
+    --overrides=JSON	JSON file supplying custom run conditions per stage.
 
     -h --help           Show this message.
     --version           Show version.`
@@ -215,24 +215,6 @@ Options:
 		}
 	}
 
-	// Max parallel jobs.
-	maxJobs := -1
-	if value := opts["--maxjobs"]; value != nil {
-		if value, err := strconv.Atoi(value.(string)); err == nil {
-			maxJobs = value
-			core.LogInfo("options", "--maxjobs=%d", maxJobs)
-		}
-	}
-	// frequency (in milliseconds) that jobs will be sent to the queue
-	// (this is a minimum bound, as it may take longer to emit jobs)
-	jobFreqMillis := -1
-	if value := opts["--jobinterval"]; value != nil {
-		if value, err := strconv.Atoi(value.(string)); err == nil {
-			jobFreqMillis = value
-			core.LogInfo("options", "--jobinterval=%d", jobFreqMillis)
-		}
-	}
-
 	// Special to resources mappings
 	jobResources := ""
 	if value := os.Getenv("MRO_JOBRESOURCES"); len(value) > 0 {
@@ -264,6 +246,31 @@ Options:
 		jobMode = value.(string)
 	}
 	core.LogInfo("options", "--jobmode=%s", jobMode)
+
+	// Max parallel jobs.
+	maxJobs := -1
+	if jobMode != "local" {
+		maxJobs = 64
+	}
+	if value := opts["--maxjobs"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			maxJobs = value
+		}
+	}
+	core.LogInfo("options", "--maxjobs=%d", maxJobs)
+
+	// frequency (in milliseconds) that jobs will be sent to the queue
+	// (this is a minimum bound, as it may take longer to emit jobs)
+	jobFreqMillis := -1
+	if jobMode != "local" {
+		jobFreqMillis = 100
+	}
+	if value := opts["--jobinterval"]; value != nil {
+		if value, err := strconv.Atoi(value.(string)); err == nil {
+			jobFreqMillis = value
+		}
+	}
+	core.LogInfo("options", "--jobinterval=%d", jobFreqMillis)
 
 	// Compute vdrMode.
 	vdrMode := "post"
@@ -306,6 +313,18 @@ Options:
 	}
 	for _, tag := range tags {
 		core.LogInfo("options", "--tag='%s'", tag)
+	}
+
+	// Parse supplied overrides file.
+	var overrides *core.PipestanceOverrides
+	if v := opts["--overrides"]; v != nil {
+		var err error
+		overrides, err = core.ReadOverrides(v.(string))
+		if err != nil {
+			core.Println("Failed to parse overrides file: %v", err)
+			os.Exit(1)
+
+		}
 	}
 
 	// Compute stackVars flag.
@@ -364,9 +383,9 @@ Options:
 	// Configure Martian runtime.
 	//=========================================================================
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
-		fullStageReset, stackVars, zip, skipPreflight, enableMonitor,
-		debug, stest, onfinish)
+		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, "", fullStageReset,
+		stackVars, zip, skipPreflight, enableMonitor, debug, stest, onfinish,
+		overrides)
 	rt.MroCache.CacheMros(mroPaths)
 
 	// Print this here because the log makes more sense when this appears before
