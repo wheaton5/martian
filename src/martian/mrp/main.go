@@ -22,17 +22,32 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
+// We need to be able to recreate pipestances and share the new pipestance
+// object between the runloop and the UI.
+type pipestanceHolder struct {
+	pipestance *core.Pipestance
+}
+
+func (self *pipestanceHolder) getPipestance() *core.Pipestance {
+	return self.pipestance
+}
+
+func (self *pipestanceHolder) setPipestance(newPipe *core.Pipestance) {
+	self.pipestance = newPipe
+}
+
 //=============================================================================
 // Pipestance runner.
 //=============================================================================
-func runLoop(pipestance *core.Pipestance, stepSecs int, vdrMode string,
+func runLoop(pipestanceBox *pipestanceHolder, stepSecs int, vdrMode string,
 	noExit bool, enableUI bool, retries int, factory core.PipestanceFactory) {
 	showedFailed := false
 	showedComplete := false
 	WAIT_SECS := 6
-	pipestance.LoadMetadata()
+	pipestanceBox.getPipestance().LoadMetadata()
 
 	for {
+		pipestance := pipestanceBox.getPipestance()
 		pipestance.RefreshState()
 
 		// Check for completion states.
@@ -73,6 +88,7 @@ func runLoop(pipestance *core.Pipestance, stepSecs int, vdrMode string,
 					pipestance = ps
 					err = pipestance.Reset()
 					pipestance.LoadMetadata()
+					pipestanceBox.setPipestance(pipestance)
 				} else {
 					core.LogInfo("runtime", "Retry failed:\n%v\n", err)
 					// Let the next loop around actually handle the failure.
@@ -481,17 +497,19 @@ Options:
 		}
 	}
 
+	pipestanceBox := pipestanceHolder{pipestance}
+
 	//=========================================================================
 	// Start web server.
 	//=========================================================================
 	if enableUI && len(uiport) > 0 {
-		go runWebServer(uiport, rt, pipestance, info)
+		go runWebServer(uiport, rt, &pipestanceBox, info)
 	}
 
 	//=========================================================================
 	// Start run loop.
 	//=========================================================================
-	go runLoop(pipestance, stepSecs, vdrMode, noExit, enableUI, retries, factory)
+	go runLoop(&pipestanceBox, stepSecs, vdrMode, noExit, enableUI, retries, factory)
 
 	// Let daemons take over.
 	done := make(chan bool)
