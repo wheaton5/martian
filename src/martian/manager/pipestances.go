@@ -57,8 +57,8 @@ type PipestanceQueueRecord struct {
 }
 
 func AmendTagsWithPackage(tags []string, pkg string) []string {
-	if (pkg == "") {
-		return tags;
+	if pkg == "" {
+		return tags
 	} else {
 		return append(tags, fmt.Sprintf("_pkg:%v", pkg))
 	}
@@ -136,6 +136,8 @@ type PipestanceManager struct {
 	storageQueuePath  string
 	mailer            *Mailer
 	packages          PackageManager
+	defaultRetries    int
+	retriesRemaining  map[string]int
 }
 
 func makePipestanceKey(container string, pipeline string, psid string) string {
@@ -208,6 +210,8 @@ func NewPipestanceManager(rt *core.Runtime, pipestancesPaths []string, scratchPa
 	self.failed = map[string]bool{}
 	self.mutex = &sync.Mutex{}
 	self.running = map[string]*core.Pipestance{}
+	self.retriesRemaining = map[string]int{}
+	self.defaultRetries = core.DefaultRetries()
 	self.pending = map[string]bool{}
 	self.copying = map[string]bool{}
 	self.mailQueue = []*PipestanceNotification{}
@@ -391,6 +395,7 @@ func (self *PipestanceManager) loadPipestance(pkey string) {
 	core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto run list.", pkey)
 	self.mutex.Lock()
 	self.running[pkey] = pipestance
+	self.setRetries(pkey)
 	self.mutex.Unlock()
 	self.allocateLoadedPipestance(pkey)
 }
@@ -708,6 +713,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 
 				self.mutex.Lock()
 				delete(self.running, pkey)
+				self.unsetRetries(pkey)
 				self.completed[pkey] = true
 				self.copyPipestance(pkey)
 				self.mutex.Unlock()
@@ -737,55 +743,68 @@ func (self *PipestanceManager) processRunningPipestances() {
 				}
 				interval = logProcessProgress(pkey, "SuccessEmail", interval)
 			} else if state == "failed" {
-				// If pipestance is failed, remove from run list, mark it in the
-				// cache as failed, and flush the cache.
-				core.LogInfo("pipeman", "Failed and removing from run list: %s.", pkey)
-
-				// Unlock.
-				pipestance.Unlock()
-
 				self.mutex.Lock()
-				delete(self.running, pkey)
-				self.failed[pkey] = true
+				retries, ok := self.retriesRemaining[pkey]
 				self.mutex.Unlock()
-
-				// Email notification.
-				container, pname, psid := parsePipestanceKey(pkey)
-				invocation := pipestance.GetInvocation()
-				stage, preflight, summary, errlog, kind, errpaths := pipestance.GetFatalError()
-
-				// Write pipestance to fail coop.
-				self.writePipestanceToFailCoop(pkey, stage, preflight, summary, errlog, kind, errpaths, invocation)
-				// Run the notify hook
-				pipestance.OnFinishHook()
-
-				// Delete jobs for failed stage.
-				deleteJobs(stage)
-				interval = logProcessProgress(pkey, "FailureProcess", interval)
-
-				if pname == "BCL_PROCESSOR_PD" {
-					// For BCL_PROCESSOR_PD, just email the admins.
-					self.mailer.Sendmail(
-						[]string{},
-						fmt.Sprintf("%s of %s has failed!", pname, psid),
-						fmt.Sprintf("Hey Preppie,\n\n%s of %s failed.\n\n%s: %s\n\nDon't feel bad, but check out what you messed up at http://%s/pipestance/%s/%s/%s.", pname, psid, stage, summary, self.mailer.InstanceName, psid, pname, psid),
-					)
-				} else {
-					// For ANALYZER_PD, queue up notification for batch email of users.
+				if ok && retries > 0 && pipestance.IsErrorTransient() {
 					self.mutex.Lock()
-					self.mailQueue = append(self.mailQueue, &PipestanceNotification{
-						Name:      psid,
-						State:     "failed",
-						Container: container,
-						Pname:     pname,
-						Psid:      psid,
-						Vdrsize:   0,
-						Summary:   summary,
-						Stage:     stage,
-					})
+					self.retriesRemaining[pkey] = retries - 1
 					self.mutex.Unlock()
+					core.LogInfo("pipeman", "Failed and retrying: %s.", pkey)
+
+					self.UnfailPipestance(parsePipestanceKey(pkey))
+				} else {
+					// If pipestance is failed, remove from run list, mark it in the
+					// cache as failed, and flush the cache.
+					core.LogInfo("pipeman", "Failed and removing from run list: %s.", pkey)
+
+					// Unlock.
+					pipestance.Unlock()
+
+					self.mutex.Lock()
+					delete(self.running, pkey)
+					self.unsetRetries(pkey)
+					self.failed[pkey] = true
+					self.mutex.Unlock()
+
+					// Email notification.
+					container, pname, psid := parsePipestanceKey(pkey)
+					invocation := pipestance.GetInvocation()
+					stage, preflight, summary, errlog, kind, errpaths := pipestance.GetFatalError()
+
+					// Write pipestance to fail coop.
+					self.writePipestanceToFailCoop(pkey, stage, preflight, summary, errlog, kind, errpaths, invocation)
+					// Run the notify hook
+					pipestance.OnFinishHook()
+
+					// Delete jobs for failed stage.
+					deleteJobs(stage)
+					interval = logProcessProgress(pkey, "FailureProcess", interval)
+
+					if pname == "BCL_PROCESSOR_PD" {
+						// For BCL_PROCESSOR_PD, just email the admins.
+						self.mailer.Sendmail(
+							[]string{},
+							fmt.Sprintf("%s of %s has failed!", pname, psid),
+							fmt.Sprintf("Hey Preppie,\n\n%s of %s failed.\n\n%s: %s\n\nDon't feel bad, but check out what you messed up at http://%s/pipestance/%s/%s/%s.", pname, psid, stage, summary, self.mailer.InstanceName, psid, pname, psid),
+						)
+					} else {
+						// For ANALYZER_PD, queue up notification for batch email of users.
+						self.mutex.Lock()
+						self.mailQueue = append(self.mailQueue, &PipestanceNotification{
+							Name:      psid,
+							State:     "failed",
+							Container: container,
+							Pname:     pname,
+							Psid:      psid,
+							Vdrsize:   0,
+							Summary:   summary,
+							Stage:     stage,
+						})
+						self.mutex.Unlock()
+					}
+					interval = logProcessProgress(pkey, "FailureEmail", interval)
 				}
-				interval = logProcessProgress(pkey, "FailureEmail", interval)
 			} else {
 				// If it is not done, check job heartbeats and step the nodes.
 				pipestance.CheckHeartbeats()
@@ -1090,6 +1109,7 @@ func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
 	self.mutex.Lock()
 	delete(self.pending, pkey)
 	self.running[pkey] = pipestance
+	self.setRetries(pkey)
 	self.writeCache()
 	self.mutex.Unlock()
 
@@ -1115,6 +1135,7 @@ func (self *PipestanceManager) KillPipestance(container string, pipeline string,
 		return &core.PipestanceNotRunningError{psid}
 	}
 	delete(self.running, pkey)
+	self.unsetRetries(pkey)
 	self.pending[pkey] = true
 	self.mutex.Unlock()
 
@@ -1225,9 +1246,22 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	self.mutex.Lock()
 	delete(self.pending, pkey)
 	self.running[pkey] = pipestance
+	self.setRetries(pkey)
 	self.writeCache()
 	self.mutex.Unlock()
 	return nil
+}
+
+func (self *PipestanceManager) setRetries(pkey string) {
+	if _, ok := self.retriesRemaining[pkey]; !ok {
+		self.retriesRemaining[pkey] = self.defaultRetries
+	}
+}
+
+func (self *PipestanceManager) unsetRetries(pkey string) {
+	if _, ok := self.retriesRemaining[pkey]; ok {
+		delete(self.retriesRemaining, pkey)
+	}
 }
 
 func (self *PipestanceManager) getPipestanceState(container string, pipeline string, psid string) (string, bool) {

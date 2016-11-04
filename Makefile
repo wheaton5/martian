@@ -4,7 +4,7 @@
 # Build a Go package with git version embedding.
 #
 
-GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone rsincoming websoc ligo/ligo_server ligo/ligo_uploader
+GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone rsincoming websoc mrt_helper ligo/ligo_server ligo/ligo_uploader
 GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
@@ -35,6 +35,9 @@ web:
 	cd web/sere; npm install; gulp; cd $(GOPATH)
 	cd web/houston; npm install; gulp; cd $(GOPATH)
 
+mrt:
+	cp scripts/mrt bin/mrt
+
 $(GOTESTS): test-%:
 	go test -v martian/$*
 
@@ -51,7 +54,7 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-martian: mrc mre mrf mrg mrp mrs ligo/ligo_uploader redstone sake-strip sake-martian-strip
+sake-martian: mrc mre mrf mrg mrp mrs mrt mrt_helper ligo/ligo_uploader redstone sake-strip sake-martian-strip
 
 sake-test-martian: test
 
@@ -75,6 +78,7 @@ sake-strip:
 	rm -rf pkg
 	rm -rf src
 	rm -rf scripts
+	rm -rf test
 	rm -f Makefile
 	rm -f README.md
 

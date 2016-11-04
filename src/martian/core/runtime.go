@@ -27,6 +27,10 @@ import (
 
 const heartbeatTimeout = 60 // 60 minutes
 
+const STAGE_TYPE_SPLIT = "split"
+const STAGE_TYPE_CHUNK = "chunk"
+const STAGE_TYPE_JOIN = "join"
+
 //=============================================================================
 // Metadata
 //=============================================================================
@@ -605,7 +609,7 @@ func (self *Chunk) step() {
 		self.hasBeenRun = true
 	}
 
-	threads, memGB, special := self.node.setJobReqs(self.chunkDef)
+	threads, memGB, special := self.node.setChunkJobReqs(self.chunkDef)
 
 	// Resolve input argument bindings and merge in the chunk defs.
 	resolvedBindings := resolveBindings(self.node.argbindings, self.fork.argPermute)
@@ -631,7 +635,7 @@ func (self *Chunk) serializeState() *ChunkInfo {
 }
 
 func (self *Chunk) serializePerf() *ChunkPerfInfo {
-	numThreads, _, _ := self.node.getJobReqs(self.chunkDef)
+	numThreads, _, _ := self.node.getJobReqs(self.chunkDef, STAGE_TYPE_CHUNK)
 	stats := self.metadata.serializePerf(numThreads)
 	return &ChunkPerfInfo{
 		Index:      self.index,
@@ -892,7 +896,7 @@ func (self *Fork) step() {
 		if state == "ready" {
 			self.writeInvocation()
 			self.split_metadata.write("args", resolveBindings(self.node.argbindings, self.argPermute))
-			threads, memGB, special := self.node.setJobReqs(nil)
+			threads, memGB, special := self.node.setSplitJobReqs()
 			if self.node.split {
 				if !self.split_has_run {
 					self.split_has_run = true
@@ -929,7 +933,7 @@ func (self *Fork) step() {
 				}
 			}
 		} else if state == "chunks_complete" {
-			threads, memGB, special := self.node.setJobReqs(self.stageDefs.JoinDef)
+			threads, memGB, special := self.node.setJoinJobReqs(self.stageDefs.JoinDef)
 			resolvedBindings := resolveBindings(self.node.argbindings, self.argPermute)
 			for id, value := range self.stageDefs.JoinDef {
 				resolvedBindings[id] = value
@@ -1000,7 +1004,7 @@ func (self *Fork) vdrKill() *VDRKillReport {
 
 	killPaths := []string{}
 	// For volatile nodes, kill fork-level files.
-	if self.node.volatile {
+	if self.node.rt.overrides.GetOverride(self.node, "force_volatile", self.node.volatile).(bool) {
 		if paths, err := self.metadata.enumerateFiles(); err == nil {
 			killPaths = append(killPaths, paths...)
 		}
@@ -1015,7 +1019,7 @@ func (self *Fork) vdrKill() *VDRKillReport {
 	// Must check for split here, otherwise we'll end up deleting
 	// output files of non-volatile nodes because single-chunk nodes
 	// get their output redirected to the one chunk's files path.
-	if self.node.split {
+	if self.node.split && self.node.rt.overrides.GetOverride(self.node, "force_volatile", true).(bool) {
 		for _, chunk := range self.chunks {
 			if paths, err := chunk.metadata.enumerateFiles(); err == nil {
 				killPaths = append(killPaths, paths...)
@@ -1277,13 +1281,13 @@ func (self *Fork) serializePerf() (*ForkPerfInfo, *VDRKillReport) {
 		}
 	}
 
-	numThreads, _, _ := self.node.getJobReqs(nil)
+	numThreads, _, _ := self.node.getJobReqs(nil, STAGE_TYPE_SPLIT)
 	splitStats := self.split_metadata.serializePerf(numThreads)
 	if splitStats != nil {
 		stats = append(stats, splitStats)
 	}
 
-	numThreads, _, _ = self.node.getJobReqs(self.stageDefs.JoinDef)
+	numThreads, _, _ = self.node.getJobReqs(self.stageDefs.JoinDef, STAGE_TYPE_JOIN)
 	joinStats := self.join_metadata.serializePerf(numThreads)
 	if joinStats != nil {
 		stats = append(stats, joinStats)
@@ -1321,38 +1325,39 @@ type Nodable interface {
 }
 
 type Node struct {
-	parent         Nodable
-	rt             *Runtime
-	kind           string
-	name           string
-	fqname         string
-	path           string
-	metadata       *Metadata
-	outparams      *Params
-	argbindings    map[string]*Binding
-	argbindingList []*Binding // for stable ordering
-	retbindings    map[string]*Binding
-	retbindingList []*Binding // for stable ordering
-	sweepbindings  []*Binding
-	subnodes       map[string]Nodable
-	prenodes       map[string]Nodable
-	directPrenodes []Nodable
-	postnodes      map[string]Nodable
-	frontierNodes  map[string]Nodable
-	forks          []*Fork
-	split          bool
-	state          string
-	volatile       bool
-	local          bool
-	preflight      bool
-	stagecodeLang  string
-	stagecodeCmd   string
-	journalPath    string
-	tmpPath        string
-	mroPaths       []string
-	mroVersion     string
-	envs           map[string]string
-	invocation     map[string]interface{}
+	parent             Nodable
+	rt                 *Runtime
+	kind               string
+	name               string
+	fqname             string
+	path               string
+	metadata           *Metadata
+	outparams          *Params
+	argbindings        map[string]*Binding
+	argbindingList     []*Binding // for stable ordering
+	retbindings        map[string]*Binding
+	retbindingList     []*Binding // for stable ordering
+	sweepbindings      []*Binding
+	subnodes           map[string]Nodable
+	prenodes           map[string]Nodable
+	directPrenodes     []Nodable
+	postnodes          map[string]Nodable
+	frontierNodes      map[string]Nodable
+	forks              []*Fork
+	split              bool
+	state              string
+	volatile           bool
+	local              bool
+	preflight          bool
+	stagecodeLang      string
+	stagecodeCmd       string
+	journalPath        string
+	tmpPath            string
+	mroPaths           []string
+	mroVersion         string
+	envs               map[string]string
+	invocation         map[string]interface{}
+	blacklistedFromMRT bool // Don't used cached data when MRT'ing
 }
 
 type NodeInfo struct {
@@ -1668,6 +1673,7 @@ func (self *Node) getState() string {
 	}
 	// Otherwise we're running.
 	return "running"
+
 }
 
 func (self *Node) reset() error {
@@ -1782,6 +1788,68 @@ func (self *Node) getFatalError() (string, bool, string, string, string, []strin
 		}
 	}
 	return "", false, "", "", "", []string{}
+}
+
+// Reads config file for regexps which, when matched, indicate that
+// an error is likely transient.
+func getRetryRegexps() (retryOn []*regexp.Regexp, defaultRetries int) {
+	retryfile := RelPath(path.Join("..", "jobmanagers", "retry.json"))
+
+	if _, err := os.Stat(retryfile); os.IsNotExist(err) {
+		return []*regexp.Regexp{
+			regexp.MustCompile("^signal: "),
+		}, 0
+	}
+	type retryJson struct {
+		DefaultRetries int      `json:"default_retries"`
+		RetryOn        []string `json:"retry_on"`
+	}
+	bytes, err := ioutil.ReadFile(retryfile)
+	if err != nil {
+		PrintInfo("runtime", "Retry config file could not be loaded:\n%v\n", err)
+		os.Exit(1)
+	}
+	var retryInfo *retryJson
+	if err = json.Unmarshal(bytes, &retryInfo); err != nil {
+		PrintInfo("runtime", "Retry config file could not be parsed:\n%v\n", err)
+		os.Exit(1)
+	}
+	regexps := make([]*regexp.Regexp, len(retryInfo.RetryOn))
+	for i, exp := range retryInfo.RetryOn {
+		regexps[i] = regexp.MustCompile(exp)
+	}
+	return regexps, retryInfo.DefaultRetries
+}
+
+func DefaultRetries() int {
+	_, def := getRetryRegexps()
+	return def
+}
+
+// Returns true if there is no error or if the error is one we expect to not
+// recur if the pipeline is rerun.
+func (self *Node) isErrorTransient() bool {
+	passRegexp, _ := getRetryRegexps()
+	for _, metadata := range self.collectMetadatas() {
+		if state, _ := metadata.getState(""); state != "failed" {
+			continue
+		}
+		if metadata.exists("assert") {
+			return false
+		}
+		if metadata.exists("errors") {
+			errlog := metadata.readRaw("errors")
+			for _, line := range strings.Split(errlog, "\n") {
+				for _, re := range passRegexp {
+					if re.MatchString(line) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+	}
+	return true
 }
 
 func (self *Node) step() {
@@ -1901,7 +1969,36 @@ func mergeVDRKillReports(killReports []*VDRKillReport) *VDRKillReport {
 	return allKillReport
 }
 
+/* Is self or any of its ancestors symlinked? */
+func (self *Node) vdrCheckSymlink() bool {
+
+	/* Nope! Got all the way to the top.
+	 * (We don't care of the top-level directory is a symlink)
+	 */
+	if self.parent == nil {
+		return false
+	}
+	statinfo, err := os.Lstat(self.path)
+
+	/* Yep! Found a symlink */
+	if (statinfo.Mode()&os.ModeSymlink) != 0 || err != nil {
+		return true
+	}
+
+
+	return self.parent.getNode().vdrCheckSymlink()
+}
+
 func (self *Node) vdrKill() (*VDRKillReport, bool) {
+
+	/*
+	 * Refuse to VDR a node if it, or any of its ancestors are symlinked.
+	 */
+	if self.vdrCheckSymlink() == true {
+		LogInfo("runtime", "Refuse to VDR across a symlink: %v", self.fqname)
+		return &VDRKillReport{}, true
+	}
+
 	killReports := []*VDRKillReport{}
 	ok := true
 	for _, node := range self.postnodes {
@@ -1983,7 +2080,7 @@ func (self *Node) serializePerf() *NodePerfInfo {
 //=============================================================================
 // Job Runners
 //=============================================================================
-func (self *Node) getJobReqs(jobDef map[string]interface{}) (int, int, string) {
+func (self *Node) getJobReqs(jobDef map[string]interface{}, stageType string) (int, int, string) {
 	threads := -1
 	memGB := -1
 	special := ""
@@ -2002,6 +2099,20 @@ func (self *Node) getJobReqs(jobDef map[string]interface{}) (int, int, string) {
 	}
 
 	// Override with job manager caps specified from commandline
+	overrideThreads := self.rt.overrides.GetOverride(self, fmt.Sprintf("%s.threads", stageType), float64(threads))
+	if overrideThreadsNum, ok := overrideThreads.(float64); ok {
+		threads = int(overrideThreadsNum)
+	} else {
+		PrintInfo("runtime", "Invalid value for %s %s.threads: %v", self.fqname, stageType, overrideThreads)
+	}
+
+	overrideMem := self.rt.overrides.GetOverride(self, fmt.Sprintf("%s.mem_gb", stageType), float64(memGB))
+	if overrideMemFloat, ok := overrideMem.(float64); ok {
+		memGB = int(overrideMemFloat)
+	} else {
+		PrintInfo("runtime", "Invalid value for %s %s.mem_gb: %v", self.fqname, stageType, overrideMem)
+	}
+
 	if self.local {
 		threads, memGB = self.rt.LocalJobManager.GetSystemReqs(threads, memGB)
 	} else {
@@ -2012,9 +2123,9 @@ func (self *Node) getJobReqs(jobDef map[string]interface{}) (int, int, string) {
 	return threads, memGB, special
 }
 
-func (self *Node) setJobReqs(jobDef map[string]interface{}) (int, int, string) {
+func (self *Node) setJobReqs(jobDef map[string]interface{}, stageType string) (int, int, string) {
 	// Get values and possibly modify them
-	threads, memGB, special := self.getJobReqs(jobDef)
+	threads, memGB, special := self.getJobReqs(jobDef, stageType)
 
 	// Write modified values back
 	if jobDef != nil {
@@ -2023,6 +2134,18 @@ func (self *Node) setJobReqs(jobDef map[string]interface{}) (int, int, string) {
 	}
 
 	return threads, memGB, special
+}
+
+func (self *Node) setSplitJobReqs() (int, int, string) {
+	return self.setJobReqs(nil, STAGE_TYPE_SPLIT)
+}
+
+func (self *Node) setChunkJobReqs(jobDef map[string]interface{}) (int, int, string) {
+	return self.setJobReqs(jobDef, STAGE_TYPE_CHUNK)
+}
+
+func (self *Node) setJoinJobReqs(jobDef map[string]interface{}) (int, int, string) {
+	return self.setJobReqs(jobDef, STAGE_TYPE_JOIN)
 }
 
 func (self *Node) runSplit(fqname string, metadata *Metadata, threads int, memGB int, special string) {
@@ -2365,6 +2488,18 @@ func (self *Pipestance) GetFatalError() (string, bool, string, string, string, [
 	return "", false, "", "", "", []string{}
 }
 
+// Returns true if there is no error or if the error is one we expect to not
+// recur if the pipeline is rerun.
+func (self *Pipestance) IsErrorTransient() bool {
+	nodes := self.node.getFrontierNodes()
+	for _, node := range nodes {
+		if !node.isErrorTransient() {
+			return false
+		}
+	}
+	return true
+}
+
 func (self *Pipestance) StepNodes() {
 	for _, node := range self.node.getFrontierNodes() {
 		node.step()
@@ -2401,6 +2536,52 @@ func (self *Pipestance) Serialize(name string) interface{} {
 		}
 	}
 	return ser
+}
+
+type PipestanceFactory interface {
+	ReattachToPipestance() (*Pipestance, error)
+	InvokePipeline() (*Pipestance, error)
+}
+
+type runtimePipeFactory struct {
+	rt             *Runtime
+	invocationSrc  string
+	invocationPath string
+	psid           string
+	mroPaths       []string
+	pipestancePath string
+	mroVersion     string
+	envs           map[string]string
+	checkSrc       bool
+	readOnly       bool
+	tags           []string
+}
+
+func NewRuntimePipestanceFactory(rt *Runtime,
+	invocationSrc string,
+	invocationPath string,
+	psid string,
+	mroPaths []string,
+	pipestancePath string,
+	mroVersion string,
+	envs map[string]string,
+	checkSrc bool,
+	readOnly bool,
+	tags []string) PipestanceFactory {
+	return runtimePipeFactory{rt,
+		invocationSrc, invocationPath, psid, mroPaths, pipestancePath, mroVersion,
+		envs, checkSrc, readOnly, tags}
+}
+
+func (self runtimePipeFactory) ReattachToPipestance() (*Pipestance, error) {
+	return self.rt.ReattachToPipestance(self.psid, self.pipestancePath,
+		self.invocationSrc, self.mroPaths, self.mroVersion, self.envs,
+		self.checkSrc, self.readOnly)
+}
+
+func (self runtimePipeFactory) InvokePipeline() (*Pipestance, error) {
+	return self.rt.InvokePipeline(self.invocationSrc, self.invocationPath, self.psid,
+		self.pipestancePath, self.mroPaths, self.mroVersion, self.envs, self.tags)
 }
 
 type StorageEvent struct {
@@ -2713,17 +2894,18 @@ type Runtime struct {
 	enableMonitor   bool
 	stest           bool
 	onFinishExec    string
+	overrides       *PipestanceOverrides
 }
 
 func NewRuntime(jobMode string, vdrMode string, profileMode string, martianVersion string) *Runtime {
 	return NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
-		-1, -1, -1, -1, -1, "", false, false, false, false, false, false, false, "")
+		-1, -1, -1, -1, -1, "", false, false, false, false, false, false, false, "", nil)
 }
 
 func NewRuntimeWithCores(jobMode string, vdrMode string, profileMode string, martianVersion string,
 	reqCores int, reqMem int, reqMemPerCore int, maxJobs int, jobFreqMillis int, jobQueues string,
 	fullStageReset bool, enableStackVars bool, enableZip bool, skipPreflight bool, enableMonitor bool,
-	debug bool, stest bool, onFinishExec string) *Runtime {
+	debug bool, stest bool, onFinishExec string, overrides *PipestanceOverrides) *Runtime {
 
 	self := &Runtime{}
 	self.adaptersPath = RelPath(path.Join("..", "adapters"))
@@ -2749,6 +2931,12 @@ func NewRuntimeWithCores(jobMode string, vdrMode string, profileMode string, mar
 	}
 	VerifyVDRMode(self.vdrMode)
 	VerifyProfileMode(self.profileMode)
+
+	if overrides == nil {
+		self.overrides, _ = ReadOverrides("")
+	} else {
+		self.overrides = overrides
+	}
 
 	return self
 }
