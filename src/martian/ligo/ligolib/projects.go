@@ -707,7 +707,7 @@ func ResolveAndCheckOK(p *Project, metric_name string, sampleid string, value in
 /*
  * Decide if two numbers are different given a metric definition.
  */
-func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
+func CheckDiff(m *MetricDef, oldguy float64, newguy float64, percdiff float64) bool {
 
 	var AbsDiffAllow *float64
 	var RelDiffAllow *float64
@@ -755,7 +755,7 @@ func CheckDiff(m *MetricDef, oldguy float64, newguy float64) bool {
 		return true
 	}
 
-	if Abs((newguy-oldguy)/oldguy) > max_percent/100.0 {
+	if percdiff > max_percent/100.0 {
 		return true
 	}
 
@@ -923,12 +923,8 @@ func AssignMetricResultInfo(project *Project, mr *MetricResult, base_sid string,
 		bfloat, bok1 := i2f(mr.BaseVal)
 		nfloat, nok1 := i2f(mr.NewVal)
 		if nok1 && bok1 {
-			diff = CheckDiff(project.Metrics[mr.JSONPath], bfloat, nfloat)
-			if nfloat == bfloat {
-				diffperc = 0.0
-			} else {
-				diffperc = Abs((nfloat - bfloat) / (nfloat + bfloat) / 2)
-			}
+			diffperc = PercentDifference(nfloat, bfloat)
+			diff = CheckDiff(project.Metrics[mr.JSONPath], bfloat, nfloat, diffperc)
 		} else {
 			diff = true
 			diffperc = 1000000000.0
@@ -1004,7 +1000,8 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 
 		if ok1 && ok2 {
 			/* If we got the data, then compare them */
-			mr.Diff = !CheckDiff((m.Metrics[one_metric]), newfloat, basefloat)
+			mr.DiffPerc = PercentDifference(newfloat, basefloat)
+			mr.Diff = !CheckDiff((m.Metrics[one_metric]), newfloat, basefloat, mr.DiffPerc)
 			mr.OK = true
 		} else {
 			mr.Diff = reflect.DeepEqual(newval, baseval)
