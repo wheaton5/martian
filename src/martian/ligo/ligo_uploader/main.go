@@ -20,6 +20,11 @@ var flag_pipestance_path = flag.String("path", "", "path to pipestance")
 var flag_extras = flag.String("extras", "", "extra data to upload NAME:path,NAME:path...")
 var flag_test_group = flag.String("testgroup", "", "Set the testgroup column in the database")
 
+/* Look up some basic info about a pipestance. This returns a triple of
+ * |sample id|, |sample description|, |pipeline name|.
+ * If we can't get the sample id or pipeline name, we give up and
+ * terminate the program.
+ */
 func LookupCallInfo(basepath string) (string, string, string) {
 
 	_, _, ast, err := core.Compile(basepath+"/_mrosource", []string{}, false)
@@ -77,6 +82,10 @@ func GrabFromLena(host string, lena_id int) string {
 	return string(data)
 }
 
+/*
+ * Get the testgroup for a pipestance.  This looks in the tags file
+ * for an item matching "testgroup:XXXXXX" and returns the XXXXXX part.
+ */
 func GuessTestGroup(pipestance_path string) (string, error) {
 	tags := []string{}
 
