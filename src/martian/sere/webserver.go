@@ -225,6 +225,7 @@ func enqueuePipestance(container string, pipeline string, psid string, rt *core.
 	// Build call source
 	src := p.Argshim.BuildCallSourceForTest(rt, test.Category, test.Id, sampleBag, fastqPaths, p.MroPaths)
 	tags := []string{}
+	tags = append(tags, fmt.Sprintf("testgroup:%v.%v.%v", programName, cycleId, roundId))
 
 	return pman.Enqueue(container, pipeline, psid, src, tags, container)
 }

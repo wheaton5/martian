@@ -24,8 +24,8 @@ func LookupCallInfo(basepath string) (string, string, string) {
 
 	_, _, ast, err := core.Compile(basepath+"/_mrosource", []string{}, false)
 	if err != nil {
-		log.Printf("Could not compile your _mrosource file: %v", err);
-		os.Exit(1);
+		log.Printf("Could not compile your _mrosource file: %v", err)
+		os.Exit(1)
 	}
 
 	call := ast.Call.Id
@@ -33,7 +33,7 @@ func LookupCallInfo(basepath string) (string, string, string) {
 	sampleid := core.SearchPipestanceParams(ast, "sample_id")
 	if sampleid == nil {
 		log.Printf("Could not find a sample_id parameter. Giving up.")
-		os.Exit(1);
+		os.Exit(1)
 	}
 
 	desc := core.SearchPipestanceParams(ast, "sample_desc")
@@ -77,6 +77,32 @@ func GrabFromLena(host string, lena_id int) string {
 	return string(data)
 }
 
+func GuessTestGroup(pipestance_path string) (string, error) {
+	tags := []string{}
+
+	data, err := ioutil.ReadFile(pipestance_path + "/_tags")
+
+	if err != nil {
+		log.Printf("Cannot open: %v: %v", pipestance_path, err)
+		return "", err
+	}
+
+	err = json.Unmarshal(data, &tags)
+	if err != nil {
+		log.Printf("Tags file does not look like valid JSON: %v", err)
+		return "", err
+	}
+
+	prefix := "testgroup:"
+	for _, tag := range tags {
+		if len(tag) > len(prefix) && tag[0:len(prefix)] == prefix {
+			return tag[len(prefix):len(tag)], nil
+		}
+	}
+
+	return "", nil
+}
+
 func main() {
 	/* Connect to the ligo database */
 	c := ligolib.Setup(os.Getenv("LIGO_DB"))
@@ -103,6 +129,21 @@ func main() {
 	rr.FinishDate = ligolib.GetPipestanceDate(*flag_pipestance_path)
 	rr.Success = ligolib.GetPipestanceSuccess(*flag_pipestance_path)
 	rr.TestGroup = *flag_test_group
+
+	/* If we didn't specify a test group on the command line,
+	 * we try to guess one by looking at the pipestance tags.
+	 * Recent versions of SERE will automatically populate
+	 * the pipestance with a tag that looks like
+	 * testgroup:%prgoram.%cycle.%round
+	 */
+	if *flag_test_group == "" {
+		tg, err := GuessTestGroup(*flag_pipestance_path)
+		if err != nil {
+			return
+		}
+		rr.TestGroup = tg
+	}
+
 	log.Printf("SAMPLE DEFINITION: %v", rr)
 
 	/* Start a database transaction */
