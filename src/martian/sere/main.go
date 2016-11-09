@@ -84,6 +84,7 @@ Options:
                             Only applies in cluster jobmodes.
     --jobinterval=NUM   Set delay between submitting jobs to cluster, in ms.
                             Only applies in cluster jobmodes.
+    --onfinish=EXEC	Run this script when a pipeline finishes.
     
     --debug             Enable debug printing for package argshims.
     
@@ -144,6 +145,12 @@ Options:
 		}
 	}
 
+	onfinish := ""
+
+	if value := opts["--onfinish"]; value != nil {
+		onfinish = value.(string)
+	}
+
 	// Special to resources mappings
 	jobResources := env["SERE_JOBRESOURCES"]
 
@@ -186,7 +193,7 @@ Options:
 	// Runtime
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		-1, -1, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
-		true, stackVars, zip, skipPreflight, enableMonitor, debug, false, "", nil)
+		true, stackVars, zip, skipPreflight, enableMonitor, debug, false, onfinish, nil)
 
 	// Mailer
 	mailer := manager.NewMailer(instanceName, emailHost, emailSender,
