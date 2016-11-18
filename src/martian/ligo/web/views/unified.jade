@@ -44,18 +44,22 @@ html
                 div.panel.panel-primary
                     div.panel-heading
                         h2.panel-title Super Duper Compare
-                    div.panel-body.flex-table#table2
+                    div.panel-body.table-container
+                        div.flex-table#table2
             div#details
                 div.panel.panel-primary
                     div.panel-heading
-                        h2.panel-title 
-                            |Details for test id&nbsp;
-                            span#detailid
-                    div.panel-body
-                        div(class="btn-group" role="group")
-                            button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('project')") Project
-                            button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('everything')") Everything
-                        div#details1(style="width:100%")
+                        .row
+                            .col-xs-3
+                                h2.panel-title(style="line-height:30px")
+                                    |Details for test id&nbsp;
+                                    span#detailid
+                            .col-sx-9
+                                div(class="btn-group" role="group")
+                                    button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('project')") Project
+                                    button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('everything')") Everything
+                    div.panel-body.table-container
+                            div.flex-table#details1
             #playground
                 .panel.panel-primary
                     .panel-heading
@@ -115,7 +119,8 @@ html
                                             span#page
                                         button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
                                             span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
-                    div.panel-body.flex-table#table1
+                    div.panel-body.table-container
+                        div.flex-table#table1
             div#compare
                 div.panel.panel-primary
                     div.panel-heading
@@ -131,7 +136,8 @@ html
                                     .form-group.btn-group(role="group")
                                         button(type="button" class="btn btn-default btn-sm" onclick="changecomparemode('project')") Project
                                         button(type="button" class="btn btn-default btn-sm" onclick="changecomparemode('all')") All
-                    div.panel-body.flex-table#compare1
+                    div.panel-body.table-container
+                        div.flex-table#compare1
             div#plot
                 div.panel.panel-primary
                     div.panel-heading

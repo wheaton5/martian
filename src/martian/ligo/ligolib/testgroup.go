@@ -7,12 +7,43 @@ import (
 	"log"
 	"reflect"
 	"sort"
+	"time"
 )
 
 type MultiResultSet struct {
 	Metrics []string
 	Data    [][]MetricResult
 }
+
+
+func FormatHalf(data interface{}) string {
+
+	t, ok := data.(time.Time);
+	if (ok) {
+		fmt.Sprintf("%v", t.Unix());
+	}
+
+	f, ok := data.(float64);
+
+	if (ok) {
+		return fmt.Sprintf("%.4g", f);
+	}
+
+	return fmt.Sprintf("%v", data);
+
+}
+
+/*
+ * Render the text inside a comparison cell.  Cells are always rendered as
+ * OLD/NEW but if old or new looks like a float, we try to render it nicely
+ */
+func FormatCell(oldv interface{}, newv interface{}) string {
+
+	so := FormatHalf(oldv);
+	sn := FormatHalf(newv);
+	return fmt.Sprintf("%v / %v", so, sn);
+}
+
 
 func FormatMRSAsPlot(project *Project, mrs *MultiResultSet) *Plot {
 
@@ -38,7 +69,8 @@ func FormatMRSAsPlot(project *Project, mrs *MultiResultSet) *Plot {
 			mdata := mrs.Data[sample_i][metric_i]
 
 			/* Render the cell contents */
-			p.ChartData[sample_i+1][metric_i] = fmt.Sprintf("%v/%v", mdata.BaseVal, mdata.NewVal)
+
+			p.ChartData[sample_i+1][metric_i] = FormatCell(mdata.BaseVal, mdata.NewVal);
 
 			/* Compute the cell styling */
 			if !mdata.Diff {
@@ -159,7 +191,6 @@ func CompareValues(p *Project, key string, sample_id string, oldval interface{},
 		return mr
 	}
 
-	log.Printf("Comparing: %v to %v (at %v)", oldval, newval, key)
 	mr.HumanName = metric.HumanName
 	mr.JSONPath = metric.JSONPath
 	mr.BaseVal = oldval
