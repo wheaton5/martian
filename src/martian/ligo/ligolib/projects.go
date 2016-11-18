@@ -11,7 +11,6 @@ import (
 	"log"
 	"math"
 	"os"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -979,7 +978,7 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 
 	/* XXX This can blow up! kaboom! */
 	new_sampleid := basedata[0]["sampleid"].(string)
-	old_sampleid := newdata[0]["sampleid"].(string)
+	//old_sampleid := newdata[0]["sampleid"].(string)
 	results := make([]MetricResult, 0, 0)
 
 	/* Iterate over all metric definitions and compare the respective metrics */
@@ -988,31 +987,8 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 		baseval := newdata[0][one_metric]
 
 		var mr MetricResult
-		//mr.Def = (m.Metrics[one_metric])
-		mr.HumanName = m.Metrics[one_metric].HumanName
-		mr.JSONPath = m.Metrics[one_metric].JSONPath
 
-		/* We expect all values that we compare to be floats */
-		newfloat, ok1 := newval.(float64)
-		basefloat, ok2 := baseval.(float64)
-		mr.BaseVal = baseval
-		mr.NewVal = newval
-
-		if ok1 && ok2 {
-			/* If we got the data, then compare them */
-			mr.DiffPerc = PercentDifference(newfloat, basefloat)
-			mr.Diff = !CheckDiff((m.Metrics[one_metric]), newfloat, basefloat, mr.DiffPerc)
-			mr.OK = true
-		} else {
-			mr.Diff = reflect.DeepEqual(newval, baseval)
-			/* Something went wrong (missing metric? Not a float64?) */
-			log.Printf("Trouble at %v %v (%v %v)", newval, baseval, ok1, ok2)
-			mr.OK = false
-		}
-
-		mr.NewOK = ResolveAndCheckOK(m, one_metric, new_sampleid, newval)
-		mr.OldOK = ResolveAndCheckOK(m, one_metric, old_sampleid, baseval)
-
+		mr = CompareValues(m, one_metric, new_sampleid, newval, baseval)
 		results = append(results, mr)
 	}
 	sort.Sort((MetricResultSorter)(results))

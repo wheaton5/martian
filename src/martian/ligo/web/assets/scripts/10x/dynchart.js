@@ -9,6 +9,7 @@ var global_table_data;
 var global_compare;
 var global_metrics_db;
 var global_metrics_table;
+var global_vandv;
 
 var global_view_state;
 
@@ -21,6 +22,7 @@ function main() {
 
 		global_chart = new google.visualization.LineChart(document.getElementById('plot1'));
 		global_table = new google.visualization.Table(document.getElementById('table1'));
+		global_vandv = new google.visualization.Table(document.getElementById('table2'));
 		global_details = new google.visualization.Table(document.getElementById('details1'));
 		global_compare = new google.visualization.Table(document.getElementById('compare1'));
 		global_metrics_table = new google.visualization.Table(document.getElementById('list1'));
@@ -302,6 +304,15 @@ function ViewState() {
 	/* Only show the latest pipestance for each LENA ID */
 	this.latestonly = false;
 
+	/* What are the contents of the sampleid and userid fields*/
+	this.where_sampleid = "";
+	this.where_user = "";
+
+	/* What are the contents of the testgroup fields */
+	this.new_testgroup = "";
+	this.old_testgroup = "";
+
+
 	return this;
 }
 
@@ -352,6 +363,8 @@ var model_view_bindings = [
 	{model:"latestonly", element:"#latestonly", prop:"checked"},
 	{model:"where_sampleid", element:"#where_sampleid", method:"val"},
 	{model:"where_user", element:"#where_user", method:"val"},
+	{model:"old_testgroup", element:"#oldtestgroup", method:"val"},
+	{model:"new_testgroup", element:"#newtestgroup", method:"val"},
 ]
 
 /*
@@ -387,7 +400,8 @@ ViewState.prototype.render = function() {
 	$("#compare").hide();
 	$("#plot").hide();
 	$("#help").hide();
-	$("#playground").hide()
+	$("#playground").hide();
+	$("#vandv").hide();
 	set_csv_download_url("");
 
 
@@ -396,7 +410,10 @@ ViewState.prototype.render = function() {
 	var w = this.mode;
 
 	switch(w) {
-		
+		case("vandv"):
+			this.vandv_update();
+			$("#vandv").show();	
+			break;
 		case("compare"): 
 			this.compare_update();
 			$("#compare").show();
@@ -558,6 +575,34 @@ ViewState.prototype.details_update = function() {
 
 
 /* Render the various table views.*/
+ViewState.prototype.vandv_update= function() { 
+	var where = this.compute_where_param();
+
+	if (!this.old_testgroup || !this.new_testgroup) {
+		set_error_box("Please fill in both test groups")
+		return;
+	}
+
+	var url = "/api/testgroup?metrics_def=" + this.project;
+	url += "&base=" + encodeURIComponent(this.old_testgroup);
+	url += "&new=" + encodeURIComponent(this.new_testgroup);
+	url += "&where="  + where;
+	
+	get_json_safe(url, function(data) {
+		global_table_data = data;
+		console.log(data);
+		var gdata = google.visualization.arrayToDataTable(data.ChartData);
+		//var options = {width: 1200, allowHtml:true};
+		var options = {allowHtml:true, cssClassNames: {tableCell:"chart-cell"}};
+		colorize_by_annotations(data.ChartData, gdata, data.Annotations, STYLEMAP);
+		global_vandv.draw(gdata, options)
+		set_csv_download_url(url);
+
+	})
+}
+
+
+/* Render the various table views.*/
 ViewState.prototype.table_update = function() { 
 	var where = this.compute_where_param();
 
@@ -639,7 +684,7 @@ ViewState.prototype.compute_where_param = function() {
 			}
 		}
 	}
-	return res;
+	return encodeURIComponent(res);
 }
 
 
@@ -658,6 +703,8 @@ function update_model_from_ui() {
 	v.where_sampleid=document.getElementById("where_sampleid").value;
 	v.where_user=document.getElementById("where_user").value;
 	v.latestonly = document.getElementById("latestonly").checked
+	v.new_testgroup = document.getElementById("newtestgroup").value;
+	v.old_testgroup = document.getElementById("oldtestgroup").value;
 	var selected = global_table.getSelection();
 
 	/* This is a nasty kludge.  We only update compareid{old,new} if welre actually in

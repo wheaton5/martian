@@ -238,23 +238,33 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit
 			}
 		}
 
-		/* Adjust the metric name */
-		m := mets.Metrics[metric_name]
-		if m != nil && m.HumanName != "" {
-			metric_name = m.HumanName
-		} else {
-			ma := strings.Split(metric_name, "/")
-			metric_name = ma[len(ma)-1]
-		}
-
-		if len(metric_name) > 16 {
-			metric_name = metric_name[0:16]
-		}
-
-		gendata[0][which_metric_idx] = metric_name
+		gendata[0][which_metric_idx] = HumanizeMetricName(mets, metric_name)
 	}
 
 	return &plot, nil
+}
+
+/*
+ * Compute a nice readable human name for a metric.
+ */
+func HumanizeMetricName(p *Project, metric_name string) string {
+
+	m := p.Metrics[metric_name]
+	if m != nil && m.HumanName != "" {
+		/* Someone was nice enough to define a human name. Use it */
+		return m.HumanName
+	} else {
+		/* Grab the JSON path for the metric and just use the tail. */
+
+		ma := strings.Split(metric_name, "/")
+		metric_name = ma[len(ma)-1]
+
+		if len(metric_name) > 24 {
+			metric_name = metric_name[0:24]
+		}
+		return metric_name
+
+	}
 }
 
 /*

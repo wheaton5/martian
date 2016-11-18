@@ -24,6 +24,12 @@ html
                             .form-group
                                 label(for="where_user") User
                                 input#where_user.form-control(name="where_user" placeholder="user")
+                            .form-group
+                                label(for="oldtestgroup") Old testgroup
+                                input#oldtestgroup.form-control(name="oldtestgroup" placeholder="123")
+                            .form-group
+                                label(for="newtestgroup") New testgroup
+                                input#newtestgroup.form-control(name="newtestgroup" placeholder="456")
                             button.btn.btn-default(type="submit" style="display:none") Go
                         br    
 
@@ -34,6 +40,11 @@ html
                 div.panel-body
                     p#errortext
 
+            div#vandv
+                div.panel.panel-primary
+                    div.panel-heading
+                        h2.panel-title Super Duper Compare
+                    div.panel-body.flex-table#table2
             div#details
                 div.panel.panel-primary
                     div.panel-heading

@@ -81,6 +81,8 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string, projectba
 
 	m.Get("/api/plotall", ls.MakeWrapper(ls.PlotAll))
 
+	m.Get("/api/testgroup", ls.MakeWrapper(ls.SuperDuperCompare))
+
 	//m.Get("/api/list_metrics", ls.ListProjects)
 	m.Get("/api/list_metrics", ls.MakeWrapper(ls.ListMetrics))
 
@@ -385,6 +387,25 @@ func (s *LigoServer) SuperCompare(p *ligolib.Project, params url.Values) (interf
 
 	res, err := s.DB.SuperCompare(id1, id2, p, ligolib.NewStringWhere(params.Get("where")))
 	return res, err
+}
+
+func (s *LigoServer) SuperDuperCompare(p *ligolib.Project, params url.Values) (interface{}, error) {
+
+	tg1 := params.Get("base")
+	tg2 := params.Get("new")
+
+	if tg1 == "" || tg2 == "" {
+		return nil, errors.New("Nope!")
+	}
+
+	resultset, err := ligolib.CompareTestGroups(s.DB, p, tg1, tg2)
+
+	if err != nil {
+		return nil, err
+	}
+
+	plot := ligolib.FormatMRSAsPlot(p, resultset)
+	return plot, nil
 }
 
 /*
