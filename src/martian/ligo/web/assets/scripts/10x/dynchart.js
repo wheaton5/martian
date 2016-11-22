@@ -348,24 +348,49 @@ ViewState.prototype.ReconstituteFromURL = function(p) {
  * |model| is the n ame of the field of the ViewState object
  * |element| is the jquery selector for the HTML element that relfects that value
  * |method| is the (jquery selector) method to call on the element to change it.
+ * |writeonly| is set if the value should be copied viewstate to the UI but never from the UI to viewstate.
  */
 var model_view_bindings = [
 	{model:"sortby", element:"#sortby", method:"val"},
 	{model:"chartx", element:"#chartx", method:"val"},
 	{model:"charty", element:"#charty", method:"val"},
 	{model:"where", element:"#where", method:"val"},
-	{model:"project", element:"#project_cur", method:"text"},
+	{model:"project", element:"#project_cur", method:"text", writeonly:true},
 	{model:"chart_mode", element:"#chart_mode", method:"text"},
 	{model:"compareidold", element:"#compareid1", method:"text"},
 	{model:"compareidold", element:"#detailid", method:"text"},
 	{model:"compareidnew", element:"#compareid2", method:"text"},
-	{model:"page", element:"#page", method:"text"},
+	{model:"page", element:"#page", method:"text", writeonly:true},
 	{model:"latestonly", element:"#latestonly", prop:"checked"},
 	{model:"where_sampleid", element:"#where_sampleid", method:"val"},
 	{model:"where_user", element:"#where_user", method:"val"},
 	{model:"old_testgroup", element:"#oldtestgroup", method:"val"},
-	{model:"new_testgroup", element:"#newtestgroup", method:"val"},
+	{model:"new_testgroup", element:"#newtestgroup", method:"val"}
 ]
+
+/* Copy the view binding from the DOM into ViewState. 
+ * This is the complement to apply_view_bindings.
+ */
+ViewState.prototype.reverse_apply_view_bindings = function() {
+	for (var i = 0; i < model_view_bindings.length; i++) {
+		var b = model_view_bindings[i];
+		if (!b.writeonly) {
+
+			if (b.method) {
+				this[b.model] = $(b.element)[b.method]();
+			}
+			
+			/* Because javascript and html and jquery are all horrible!
+			 * there's no consistent mechanism that can handle text and
+			 * element properties......
+			 */
+			if (b.prop) {
+				this[b.model] = $(b.element).prop(b.prop);
+			}
+		}
+	}
+}
+
 
 /*
  * This function copies fields of the ViewState object back to the DOM, 
@@ -586,7 +611,7 @@ ViewState.prototype.vandv_update= function() {
 	var url = "/api/testgroup?metrics_def=" + this.project;
 	url += "&base=" + encodeURIComponent(this.old_testgroup);
 	url += "&new=" + encodeURIComponent(this.new_testgroup);
-	url += "&where="  + where;
+	url += "&where="  + encodeURIComponent(where);
 	
 	get_json_safe(url, function(data) {
 		global_table_data = data;
@@ -611,7 +636,7 @@ ViewState.prototype.table_update = function() {
 
 	/* Which table view are we actually rendering?*/
 	if (mode=="metrics") {
-		var url = "/api/plotall?where=" + where
+		var url = "/api/plotall?where=" + encodeURIComponent(where)
 	} else {
 		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,testgroup,comments"
 	}
@@ -684,7 +709,7 @@ ViewState.prototype.compute_where_param = function() {
 			}
 		}
 	}
-	return encodeURIComponent(res);
+	return res;
 }
 
 
@@ -696,15 +721,8 @@ ViewState.prototype.compute_where_param = function() {
  */
 function update_model_from_ui() {
 	var v = global_view_state;
-	v.chartx = document.getElementById("chartx").value;
-	v.charty = document.getElementById("charty").value;
-	v.where = document.getElementById("where").value;
-	v.sortby= document.getElementById("sortby").value;
-	v.where_sampleid=document.getElementById("where_sampleid").value;
-	v.where_user=document.getElementById("where_user").value;
-	v.latestonly = document.getElementById("latestonly").checked
-	v.new_testgroup = document.getElementById("newtestgroup").value;
-	v.old_testgroup = document.getElementById("oldtestgroup").value;
+	v.reverse_apply_view_bindings();
+
 	var selected = global_table.getSelection();
 
 	/* This is a nasty kludge.  We only update compareid{old,new} if welre actually in
