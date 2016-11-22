@@ -613,7 +613,7 @@ ViewState.prototype.table_update = function() {
 	if (mode=="metrics") {
 		var url = "/api/plotall?where=" + where
 	} else {
-		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,comments"
+		var url = "/api/plot?where=" + where + "&columns=test_reports.id,SHA,userid,finishdate,sampleid,testgroup,comments"
 	}
 
 	url+="&page=" + this.page;
