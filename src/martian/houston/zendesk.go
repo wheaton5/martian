@@ -94,14 +94,14 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 		ticket_id := strconv.FormatUint(t.Id, 10)
 
 		// Get user info for this ticket's requester ID
-        user, err := auth.ShowUser(fmt.Sprint(t.RequesterId))
-        if err != nil {
+		user, err := auth.ShowUser(fmt.Sprint(t.RequesterId))
+		if err != nil {
 			core.LogError(err, "zendesk", "Failed to find user %d", t.RequesterId)
 			continue
-        }
+		}
 
-        // Extract email; skip tickets initiated by us
-        email := user.User.Email
+		// Extract email; skip tickets initiated by us
+		email := user.User.Email
 		if strings.HasSuffix(email, "10xgenomics.com") {
 			continue
 		}

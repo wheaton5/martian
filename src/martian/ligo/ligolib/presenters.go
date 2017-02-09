@@ -260,9 +260,9 @@ func HumanizeMetricName(p *Project, metric_name string) string {
 		metric_name = ma[len(ma)-1]
 
 		/*
-		if len(metric_name) > 24 {
-			metric_name = metric_name[0:24]
-		}
+			if len(metric_name) > 24 {
+				metric_name = metric_name[0:24]
+			}
 		*/
 		return metric_name
 

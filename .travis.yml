@@ -15,6 +15,7 @@ install:
     - make mrp
 
 script:
+    - ./.travis.gofmt.sh
     - make test
     - test/martian_test.py test/fork_test/fork_test.json
     - test/martian_test.py test/fork_test/fail1_test.json
