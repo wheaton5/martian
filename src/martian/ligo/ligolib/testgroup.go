@@ -15,21 +15,20 @@ type MultiResultSet struct {
 	Data    [][]MetricResult
 }
 
-
 func FormatHalf(data interface{}) string {
 
-	t, ok := data.(time.Time);
-	if (ok) {
-		fmt.Sprintf("%v", t.Unix());
+	t, ok := data.(time.Time)
+	if ok {
+		fmt.Sprintf("%v", t.Unix())
 	}
 
-	f, ok := data.(float64);
+	f, ok := data.(float64)
 
-	if (ok) {
-		return fmt.Sprintf("%.4g", f);
+	if ok {
+		return fmt.Sprintf("%.4g", f)
 	}
 
-	return fmt.Sprintf("%v", data);
+	return fmt.Sprintf("%v", data)
 
 }
 
@@ -39,11 +38,10 @@ func FormatHalf(data interface{}) string {
  */
 func FormatCell(oldv interface{}, newv interface{}) string {
 
-	so := FormatHalf(oldv);
-	sn := FormatHalf(newv);
-	return fmt.Sprintf("%v / %v", so, sn);
+	so := FormatHalf(oldv)
+	sn := FormatHalf(newv)
+	return fmt.Sprintf("%v / %v", so, sn)
 }
-
 
 func FormatMRSAsPlot(project *Project, mrs *MultiResultSet) *Plot {
 
@@ -70,7 +68,7 @@ func FormatMRSAsPlot(project *Project, mrs *MultiResultSet) *Plot {
 
 			/* Render the cell contents */
 
-			p.ChartData[sample_i+1][metric_i] = FormatCell(mdata.BaseVal, mdata.NewVal);
+			p.ChartData[sample_i+1][metric_i] = FormatCell(mdata.BaseVal, mdata.NewVal)
 
 			/* Compute the cell styling */
 			if !mdata.Diff {
