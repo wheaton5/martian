@@ -99,3 +99,9 @@ sake-martian-cs-strip:
 
 	# Remove ligo_uploader
 	rm -f bin/ligo_uploader
+
+	# Remove mrt
+	rm -f bin/mrt*
+
+	# Remove mrg
+	rm -f bin/mrg
