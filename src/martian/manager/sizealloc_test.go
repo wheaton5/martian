@@ -192,3 +192,19 @@ func TestMultiSampleDef(t *testing.T) {
 	assert.Equal(t, 6, alloc.inputSize)
 	assert.Equal(t, 79, alloc.weightedSize)
 }
+
+func TestSingleCellPipelines(t *testing.T) {
+	var invocation Invocation
+	mroPaths := []string{}
+	mro := getTestFilePath("mro/test_sc_vdj_pd.mro")
+
+	if source, err := ioutil.ReadFile(mro); err != nil {
+		assert.Fail(t, fmt.Sprintf("Could not read file: %s", mro))
+	} else {
+		invocation = InvocationFromMRO(string(source), mro, mroPaths)
+	}
+	alloc, err := GetAllocation("test_sc_vdj_pd", invocation)
+	assert.Nil(t, err)
+	assert.Equal(t, 6758711560, alloc.inputSize)
+	assert.Equal(t, 405522693600, alloc.weightedSize)
+}

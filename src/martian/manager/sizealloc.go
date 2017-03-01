@@ -131,9 +131,11 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 		}
 		inputSize = InputSizeTotal(filePaths)
 
-		if strings.Contains(psname, "CELLRANGER") || strings.Contains(psname, "SC_RNA") || strings.Contains(psname, "SC_VDJ") {
+		if strings.Contains(psname, "CELLRANGER") || strings.Contains(psname, "SC_RNA") {
 			// SC_RNA_COUNTER_PD: 12.1x FASTQs, stdev 1.1x
 			weightedSize = 13.2 * float64(inputSize)
+		} else if strings.Contains(psname, "SC_VDJ") {
+			weightedSize = 60.0 * float64(inputSize)
 		} else if strings.Contains(psname, "ANALYZER") {
 			// JM 3-29-2016: increase ratios by 33% to match observed
 			// ANALYZER_PD: 9.2x + 0.6 = 9.8

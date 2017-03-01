@@ -1,0 +1,14 @@
+@include "mock_sc_vdj_pd.mro"
+
+call MOCK_SC_VDJ_PD(
+    sample_def = [
+        {
+            "gem_group": null,
+            "lanes": null,
+            "read_path": "/mnt/analysis/marsoc/pipestances/HF52GBCXY/BCL_PROCESSOR_PD/HF52GBCXY/1015.11.3-0/BCL_PROCESSOR_PD/BCL_PROCESSOR/DEMULTIPLEX/fork0/files/demultiplexed_fastq_path",
+            "sample_indices": [
+                "SI-P2-E2"
+            ]
+        }
+    ],
+)

@@ -1,8 +1,11 @@
 package manager
 
 import (
+	"errors"
+	"fmt"
 	"martian/core"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -174,8 +177,11 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 			sampleOligos = append(sampleOligos, oligos...)
 		} else if sampleIndex == "any" {
 			sampleOligos = append(sampleOligos, "*")
-		} else {
+		} else if ok, _ := regexp.MatchString("[ACGNT]{8}", sampleIndex); ok {
 			sampleOligos = append(sampleOligos, sampleIndex)
+		} else {
+			core.LogError(errors.New("Unknown sample index"), "storage", "Unknown sample index: %s", sampleIndex)
+			return nil, &core.PipestanceSizeError{fmt.Sprintf("Unknown sample index: %s", sampleIndex)}
 		}
 	}
 	for _, sampleIndex := range sampleOligos {
