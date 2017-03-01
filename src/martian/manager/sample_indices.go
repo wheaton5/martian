@@ -399,6 +399,103 @@ var SI_P02_F12 = SI_P2_F12
 var SI_P02_G12 = SI_P2_G12
 var SI_P02_H12 = SI_P2_H12
 
+var SI_GA_A1 = SI_P2_A1
+var SI_GA_B1 = SI_P2_B1
+var SI_GA_C1 = SI_P2_C1
+var SI_GA_D1 = SI_P2_D1
+var SI_GA_E1 = SI_P2_E1
+var SI_GA_F1 = SI_P2_F1
+var SI_GA_G1 = SI_P2_G1
+var SI_GA_H1 = SI_P2_H1
+var SI_GA_A2 = SI_P2_A2
+var SI_GA_B2 = SI_P2_B2
+var SI_GA_C2 = SI_P2_C2
+var SI_GA_D2 = SI_P2_D2
+var SI_GA_E2 = SI_P2_E2
+var SI_GA_F2 = SI_P2_F2
+var SI_GA_G2 = SI_P2_G2
+var SI_GA_H2 = SI_P2_H2
+var SI_GA_A3 = SI_P2_A3
+var SI_GA_B3 = SI_P2_B3
+var SI_GA_C3 = SI_P2_C3
+var SI_GA_D3 = SI_P2_D3
+var SI_GA_E3 = SI_P2_E3
+var SI_GA_F3 = SI_P2_F3
+var SI_GA_G3 = SI_P2_G3
+var SI_GA_H3 = SI_P2_H3
+var SI_GA_A4 = SI_P2_A4
+var SI_GA_B4 = SI_P2_B4
+var SI_GA_C4 = SI_P2_C4
+var SI_GA_D4 = SI_P2_D4
+var SI_GA_E4 = SI_P2_E4
+var SI_GA_F4 = SI_P2_F4
+var SI_GA_G4 = SI_P2_G4
+var SI_GA_H4 = SI_P2_H4
+var SI_GA_A5 = SI_P2_A5
+var SI_GA_B5 = SI_P2_B5
+var SI_GA_C5 = SI_P2_C5
+var SI_GA_D5 = SI_P2_D5
+var SI_GA_E5 = SI_P2_E5
+var SI_GA_F5 = SI_P2_F5
+var SI_GA_G5 = SI_P2_G5
+var SI_GA_H5 = SI_P2_H5
+var SI_GA_A6 = SI_P2_A6
+var SI_GA_B6 = SI_P2_B6
+var SI_GA_C6 = SI_P2_C6
+var SI_GA_D6 = SI_P2_D6
+var SI_GA_E6 = SI_P2_E6
+var SI_GA_F6 = SI_P2_F6
+var SI_GA_G6 = SI_P2_G6
+var SI_GA_H6 = SI_P2_H6
+var SI_GA_A7 = SI_P2_A7
+var SI_GA_B7 = SI_P2_B7
+var SI_GA_C7 = SI_P2_C7
+var SI_GA_D7 = SI_P2_D7
+var SI_GA_E7 = SI_P2_E7
+var SI_GA_F7 = SI_P2_F7
+var SI_GA_G7 = SI_P2_G7
+var SI_GA_H7 = SI_P2_H7
+var SI_GA_A8 = SI_P2_A8
+var SI_GA_B8 = SI_P2_B8
+var SI_GA_C8 = SI_P2_C8
+var SI_GA_D8 = SI_P2_D8
+var SI_GA_E8 = SI_P2_E8
+var SI_GA_F8 = SI_P2_F8
+var SI_GA_G8 = SI_P2_G8
+var SI_GA_H8 = SI_P2_H8
+var SI_GA_A9 = SI_P2_A9
+var SI_GA_B9 = SI_P2_B9
+var SI_GA_C9 = SI_P2_C9
+var SI_GA_D9 = SI_P2_D9
+var SI_GA_E9 = SI_P2_E9
+var SI_GA_F9 = SI_P2_F9
+var SI_GA_G9 = SI_P2_G9
+var SI_GA_H9 = SI_P2_H9
+var SI_GA_A10 = SI_P2_A10
+var SI_GA_B10 = SI_P2_B10
+var SI_GA_C10 = SI_P2_C10
+var SI_GA_D10 = SI_P2_D10
+var SI_GA_E10 = SI_P2_E10
+var SI_GA_F10 = SI_P2_F10
+var SI_GA_G10 = SI_P2_G10
+var SI_GA_H10 = SI_P2_H10
+var SI_GA_A11 = SI_P2_A11
+var SI_GA_B11 = SI_P2_B11
+var SI_GA_C11 = SI_P2_C11
+var SI_GA_D11 = SI_P2_D11
+var SI_GA_E11 = SI_P2_E11
+var SI_GA_F11 = SI_P2_F11
+var SI_GA_G11 = SI_P2_G11
+var SI_GA_H11 = SI_P2_H11
+var SI_GA_A12 = SI_P2_A12
+var SI_GA_B12 = SI_P2_B12
+var SI_GA_C12 = SI_P2_C12
+var SI_GA_D12 = SI_P2_D12
+var SI_GA_E12 = SI_P2_E12
+var SI_GA_F12 = SI_P2_F12
+var SI_GA_G12 = SI_P2_G12
+var SI_GA_H12 = SI_P2_H12
+
 // no easy multiple assignment
 var SI_P03_A1 = SI_3A_A1
 var SI_P03_B1 = SI_3A_B1
@@ -993,6 +1090,103 @@ var SAMPLE_INDEX_MAP = map[string][]string{
 	"SI-P02-F12": SI_P02_F12,
 	"SI-P02-G12": SI_P02_G12,
 	"SI-P02-H12": SI_P02_H12,
+
+	"SI-GA-A1":  SI_GA_A1,
+	"SI-GA-B1":  SI_GA_B1,
+	"SI-GA-C1":  SI_GA_C1,
+	"SI-GA-D1":  SI_GA_D1,
+	"SI-GA-E1":  SI_GA_E1,
+	"SI-GA-F1":  SI_GA_F1,
+	"SI-GA-G1":  SI_GA_G1,
+	"SI-GA-H1":  SI_GA_H1,
+	"SI-GA-A2":  SI_GA_A2,
+	"SI-GA-B2":  SI_GA_B2,
+	"SI-GA-C2":  SI_GA_C2,
+	"SI-GA-D2":  SI_GA_D2,
+	"SI-GA-E2":  SI_GA_E2,
+	"SI-GA-F2":  SI_GA_F2,
+	"SI-GA-G2":  SI_GA_G2,
+	"SI-GA-H2":  SI_GA_H2,
+	"SI-GA-A3":  SI_GA_A3,
+	"SI-GA-B3":  SI_GA_B3,
+	"SI-GA-C3":  SI_GA_C3,
+	"SI-GA-D3":  SI_GA_D3,
+	"SI-GA-E3":  SI_GA_E3,
+	"SI-GA-F3":  SI_GA_F3,
+	"SI-GA-G3":  SI_GA_G3,
+	"SI-GA-H3":  SI_GA_H3,
+	"SI-GA-A4":  SI_GA_A4,
+	"SI-GA-B4":  SI_GA_B4,
+	"SI-GA-C4":  SI_GA_C4,
+	"SI-GA-D4":  SI_GA_D4,
+	"SI-GA-E4":  SI_GA_E4,
+	"SI-GA-F4":  SI_GA_F4,
+	"SI-GA-G4":  SI_GA_G4,
+	"SI-GA-H4":  SI_GA_H4,
+	"SI-GA-A5":  SI_GA_A5,
+	"SI-GA-B5":  SI_GA_B5,
+	"SI-GA-C5":  SI_GA_C5,
+	"SI-GA-D5":  SI_GA_D5,
+	"SI-GA-E5":  SI_GA_E5,
+	"SI-GA-F5":  SI_GA_F5,
+	"SI-GA-G5":  SI_GA_G5,
+	"SI-GA-H5":  SI_GA_H5,
+	"SI-GA-A6":  SI_GA_A6,
+	"SI-GA-B6":  SI_GA_B6,
+	"SI-GA-C6":  SI_GA_C6,
+	"SI-GA-D6":  SI_GA_D6,
+	"SI-GA-E6":  SI_GA_E6,
+	"SI-GA-F6":  SI_GA_F6,
+	"SI-GA-G6":  SI_GA_G6,
+	"SI-GA-H6":  SI_GA_H6,
+	"SI-GA-A7":  SI_GA_A7,
+	"SI-GA-B7":  SI_GA_B7,
+	"SI-GA-C7":  SI_GA_C7,
+	"SI-GA-D7":  SI_GA_D7,
+	"SI-GA-E7":  SI_GA_E7,
+	"SI-GA-F7":  SI_GA_F7,
+	"SI-GA-G7":  SI_GA_G7,
+	"SI-GA-H7":  SI_GA_H7,
+	"SI-GA-A8":  SI_GA_A8,
+	"SI-GA-B8":  SI_GA_B8,
+	"SI-GA-C8":  SI_GA_C8,
+	"SI-GA-D8":  SI_GA_D8,
+	"SI-GA-E8":  SI_GA_E8,
+	"SI-GA-F8":  SI_GA_F8,
+	"SI-GA-G8":  SI_GA_G8,
+	"SI-GA-H8":  SI_GA_H8,
+	"SI-GA-A9":  SI_GA_A9,
+	"SI-GA-B9":  SI_GA_B9,
+	"SI-GA-C9":  SI_GA_C9,
+	"SI-GA-D9":  SI_GA_D9,
+	"SI-GA-E9":  SI_GA_E9,
+	"SI-GA-F9":  SI_GA_F9,
+	"SI-GA-G9":  SI_GA_G9,
+	"SI-GA-H9":  SI_GA_H9,
+	"SI-GA-A10": SI_GA_A10,
+	"SI-GA-B10": SI_GA_B10,
+	"SI-GA-C10": SI_GA_C10,
+	"SI-GA-D10": SI_GA_D10,
+	"SI-GA-E10": SI_GA_E10,
+	"SI-GA-F10": SI_GA_F10,
+	"SI-GA-G10": SI_GA_G10,
+	"SI-GA-H10": SI_GA_H10,
+	"SI-GA-A11": SI_GA_A11,
+	"SI-GA-B11": SI_GA_B11,
+	"SI-GA-C11": SI_GA_C11,
+	"SI-GA-D11": SI_GA_D11,
+	"SI-GA-E11": SI_GA_E11,
+	"SI-GA-F11": SI_GA_F11,
+	"SI-GA-G11": SI_GA_G11,
+	"SI-GA-H11": SI_GA_H11,
+	"SI-GA-A12": SI_GA_A12,
+	"SI-GA-B12": SI_GA_B12,
+	"SI-GA-C12": SI_GA_C12,
+	"SI-GA-D12": SI_GA_D12,
+	"SI-GA-E12": SI_GA_E12,
+	"SI-GA-F12": SI_GA_F12,
+	"SI-GA-G12": SI_GA_G12,
+	"SI-GA-H12": SI_GA_H12,
 
 	// Part numbers
 	"220027": SI_001,
