@@ -80,14 +80,10 @@ class _JobidSet(set):
 def find_not_pending(ids):
     """Returns the subset of ids which are not still pending."""
     if not ids:
-        sys.stderr.write('no ids\n')
         return []
     remaining = _JobidSet(ids)
-    if not remaining:
-        sys.stderr.write('no ids before pending\n')
     remaining.query_pending()
     if not remaining:
-        sys.stderr.write('no ids after pending\n')
         return []
     remaining.query_claimed()
     if not remaining:
