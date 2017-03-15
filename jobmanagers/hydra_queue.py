@@ -77,8 +77,8 @@ class _JobidSet(set):
                 return
 
 
-def query_hydra(ids):
-    """Returns the subset of ids which are still pending."""
+def find_not_pending(ids):
+    """Returns the subset of ids which are not still pending."""
     if not ids:
         sys.stderr.write('no ids\n')
         return []
@@ -96,6 +96,13 @@ def query_hydra(ids):
     if not remaining:
         return []
     return remaining
+
+
+def query_hydra(ids):
+    """Returns the subset of ids which are still pending."""
+    id_set = set(ids)
+    not_pending = find_not_pending(id_set)
+    return id_set - not_pending
 
 
 def main():
