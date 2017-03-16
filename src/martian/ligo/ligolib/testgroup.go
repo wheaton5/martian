@@ -7,6 +7,7 @@ import (
 	"log"
 	"reflect"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -92,6 +93,22 @@ func FormatMRSAsPlot(project *Project, mrs *MultiResultSet) *Plot {
 	return &p
 }
 
+/* This manages the "testgroup" fields in a really crazy way.
+ * If the string looks like an ordinary word, we treat it as a filter on the testgroup field
+ * the DB.  Otherwise, we assume that the string is secretely SQL and treat it as an ordinary
+ * SQL expression.
+ */
+func InterpretTestGroup(test string) WhereAble {
+	sql_test_chars := "'\" ="
+
+	if strings.ContainsAny(test, sql_test_chars) {
+		return NewStringWhere(test)
+	} else {
+		return NewStringWhere(fmt.Sprintf("test_reports.testgroup = '%v'", test))
+	}
+}
+
+/* Compare two groups */
 func CompareTestGroups(db *CoreConnection, m *Project, oldgroup string, newgroup string) (*MultiResultSet, error) {
 
 	/* Step 1: Grab all of the data that we need */
@@ -109,7 +126,7 @@ func CompareTestGroups(db *CoreConnection, m *Project, oldgroup string, newgroup
 	/* Step 2: Grab data from the database. Get every defined metric from every
 	 * sample in the new and old test groups.
 	 */
-	basedata, err := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.testgroup = '%v'", oldgroup)),
+	basedata, err := db.JSONExtract2(InterpretTestGroup(oldgroup),
 		list_of_metrics,
 		"",
 		nil,
@@ -119,7 +136,7 @@ func CompareTestGroups(db *CoreConnection, m *Project, oldgroup string, newgroup
 		return nil, err
 	}
 
-	newdata, err := db.JSONExtract2(NewStringWhere(fmt.Sprintf("test_reports.testgroup = '%v'", newgroup)),
+	newdata, err := db.JSONExtract2(InterpretTestGroup(newgroup),
 		list_of_metrics,
 		"",
 		nil,
