@@ -97,6 +97,9 @@ sake-martian-cs-strip:
 	# Remove pd job templates.
 	rm -f jobmanagers/*.template
 
+	# Remove hydra-specific stuff.
+	rm -f jobmanagers/hydra_queue.py
+
 	# Remove ligo_uploader
 	rm -f bin/ligo_uploader
 
