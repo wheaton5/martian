@@ -19,7 +19,7 @@ app.controller('ManageCtrl', ($scope, $http, $interval, $modal) ->
     $scope.admin = admin
     $scope.data = null
 
-    $scope.categories = ['lena', 'standard', 'fuzzer', 'custom', 'aggregator', 'reanalyzer']
+    $scope.categories = ['lena', 'standard', 'fuzzer', 'custom', 'aggregator', 'reanalyzer', 'vdj']
     $scope.cols = {
         programs: ['name', 'battery'],
         batteries: ['name', 'tests'],
