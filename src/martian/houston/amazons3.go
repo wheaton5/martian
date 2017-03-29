@@ -65,24 +65,24 @@ func NewAmazonS3DownloadSource(bucket string) *AmazonS3DownloadSource {
 
 func (self *AmazonS3DownloadSource) Enumerate() []Downloadable {
 	// ListObjects in our bucket that start with "2" - XXX FIXME: Y3K bug
-	response, err := s3.New(self.sess).ListObjects(&s3.ListObjectsInput{
+	downloadables := []Downloadable{}
+	err := s3.New(self.sess).ListObjectsPages(&s3.ListObjectsInput{
 		Bucket: aws.String(self.bucket),
 		Prefix: aws.String("2"),
+	}, func(response *s3.ListObjectsOutput, lastPage bool) bool {
+		for _, object := range response.Contents {
+			downloadables = append(downloadables, &AmazonS3Downloadable{
+				bucket: self.bucket,
+				object: object,
+				sess:   self.sess,
+			})
+		}
+		return true
 	})
 	if err != nil {
 		core.LogError(err, "amzons3", "ListObjects failed")
-		return []Downloadable{}
+		return downloadables
 	}
-	core.LogInfo("amzons3", "ListObjects returned %d objects", len(response.Contents))
-
-	// Iterate over all returned objects
-	downloadables := []Downloadable{}
-	for _, object := range response.Contents {
-		downloadables = append(downloadables, &AmazonS3Downloadable{
-			bucket: self.bucket,
-			object: object,
-			sess:   self.sess,
-		})
-	}
+	core.LogInfo("amzons3", "ListObjects returned %d objects", len(downloadables))
 	return downloadables
 }
