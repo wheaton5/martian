@@ -39,6 +39,7 @@ type Metadata struct {
 	fqname        string
 	path          string
 	contents      map[string]bool
+	readCache     map[string]interface{}
 	filesPath     string
 	journalPath   string
 	lastHeartbeat time.Time
@@ -55,6 +56,7 @@ func NewMetadata(fqname string, p string) *Metadata {
 	self.fqname = fqname
 	self.path = p
 	self.contents = map[string]bool{}
+	self.readCache = make(map[string]interface{})
 	self.filesPath = path.Join(p, "files")
 	self.journalPath = ""
 	self.mutex = &sync.Mutex{}
@@ -114,19 +116,27 @@ func (self *Metadata) getState(name string) (string, bool) {
 func (self *Metadata) cache(name string) {
 	self.mutex.Lock()
 	self.contents[name] = true
+	// cache is called by writeRaw
+	delete(self.readCache, name)
 	self.mutex.Unlock()
 }
 
 func (self *Metadata) uncache(name string) {
 	self.mutex.Lock()
 	delete(self.contents, name)
+	delete(self.readCache, name)
 	self.mutex.Unlock()
 }
 
 func (self *Metadata) loadCache() {
 	paths := self.glob()
 	self.mutex.Lock()
-	self.contents = map[string]bool{}
+	if len(self.contents) > 0 {
+		self.contents = map[string]bool{}
+	}
+	if len(self.readCache) > 0 {
+		self.readCache = make(map[string]interface{})
+	}
 	for _, p := range paths {
 		self.contents[path.Base(p)[1:]] = true
 	}
@@ -142,13 +152,40 @@ func (self *Metadata) exists(name string) bool {
 	self.mutex.Unlock()
 	return ok
 }
-func (self *Metadata) readRaw(name string) string {
-	bytes, _ := ioutil.ReadFile(self.makePath(name))
-	return string(bytes)
+
+func (self *Metadata) readRawSafe(name string) (string, error) {
+	bytes, err := ioutil.ReadFile(self.makePath(name))
+	return string(bytes), err
 }
+
+func (self *Metadata) readRaw(name string) string {
+	s, _ := self.readRawSafe(name)
+	return s
+}
+
+func (self *Metadata) readFromCache(name string) (interface{}, bool) {
+	self.mutex.Lock()
+	i, ok := self.readCache[name]
+	self.mutex.Unlock()
+	return i, ok
+}
+
+func (self *Metadata) saveToCache(name string, value interface{}) {
+	self.mutex.Lock()
+	self.readCache[name] = value
+	self.mutex.Unlock()
+}
+
 func (self *Metadata) read(name string) interface{} {
-	var v interface{}
-	json.Unmarshal([]byte(self.readRaw(name)), &v)
+	v, ok := self.readFromCache(name)
+	if ok {
+		return v
+	}
+	str, err := self.readRawSafe(name)
+	json.Unmarshal([]byte(str), &v)
+	if err != nil {
+		self.saveToCache(name, v)
+	}
 	return v
 }
 func (self *Metadata) writeRaw(name string, text string) {
