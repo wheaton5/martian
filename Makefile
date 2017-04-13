@@ -8,6 +8,12 @@ GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone rsincomin
 GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
+GO_VERSION=$(strip $(shell go version | sed 's/.*go\([0-9]*\.[0-9]*\).*/\1/'))
+
+# Older versions of Go use the "-X foo bar" syntax.  Newer versions either warn
+# or error on that syntax, and use "-X foo=bar" instead.
+LINK_SEPERATOR=$(if $(filter 1.5, $(word 1, $(sort 1.5 $(GO_VERSION)))),=, )
+GO_FLAGS=-ldflags "-X martian/core.__VERSION__$(LINK_SEPERATOR)'$(VERSION)' -X martian/core.__RELEASE__$(LINK_SEPERATOR)'$(RELEASE)'"
 
 export GOPATH=$(shell pwd)
 
@@ -26,7 +32,7 @@ grammar:
 	go tool yacc -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
 
 $(GOBINS):
-	go install -ldflags "-X martian/core.__VERSION__ '$(VERSION)' -X martian/core.__RELEASE__ '$(RELEASE)'" martian/$@
+	go install $(GO_FLAGS) martian/$@
 
 web:
 	cd web/martian; npm install; gulp; cd $(GOPATH)
