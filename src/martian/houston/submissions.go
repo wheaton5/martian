@@ -16,20 +16,28 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"time"
 )
 
 const SMALLFILE_THRESHOLD = 10 * 1000 * 1000 // 10MB
 
 type Submission struct {
-	Source  string      `json:"source"`
-	Date    string      `json:"date"`
-	Name    string      `json:"name"`
-	Kind    string      `json:"kind"`
-	State   string      `json:"state"`
-	Fname   string      `json:"fname"`
-	Path    string      `json:"path"`
-	Pname   string      `json:"pname"`
-	Summary interface{} `json:"summary"`
+	Source   string              `json:"source"`
+	Date     string              `json:"date"`
+	Name     string              `json:"name"`
+	Kind     string              `json:"kind"`
+	State    string              `json:"state"`
+	Fname    string              `json:"fname"`
+	Path     string              `json:"path"`
+	Pname    string              `json:"pname"`
+	Summary  interface{}         `json:"summary"`
+	Metadata *SubmissionMetadata `json:"metadata"`
+}
+
+const SubmissionMetadataFilename = "10x_csi_metadata.json"
+
+type SubmissionMetadata struct {
+	Time time.Time `json:"time"`
 }
 
 // Sorting support for Submission
@@ -38,6 +46,15 @@ type ByDate []*Submission
 func (a ByDate) Len() int      { return len(a) }
 func (a ByDate) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByDate) Less(i, j int) bool {
+	if a[i].Metadata != nil && !a[i].Metadata.Time.IsZero() {
+		if a[j].Metadata != nil && !a[j].Metadata.Time.IsZero() {
+			if a[i].Metadata.Time != a[j].Metadata.Time {
+				return a[i].Metadata.Time.After(a[j].Metadata.Time)
+			}
+		} else {
+			return a[i].Metadata.Time.Format("2006-01-02") > a[j].Date
+		}
+	}
 	if a[i].Date == a[j].Date {
 		return a[i].Source > a[j].Source
 	}
@@ -98,6 +115,87 @@ func (self *SubmissionManager) makeSubmissionKey(container string, pname string,
 	return container + "/" + pname + "/" + psid
 }
 
+func (self *SubmissionManager) loadSubmission(source, date, name string) *Submission {
+	key := self.makeSubmissionKey(source, date, name)
+	p := path.Join(self.filesPath, source, date, name)
+	fname := "none"
+	kind := "unknown"
+	state := "unknown"
+	pname := ""
+	var summary interface{}
+
+	// Check if this is a pipestance by presence of HEAD symlink
+	if fi, err := os.Lstat(path.Join(p, "HEAD")); err == nil && (fi.Mode()&os.ModeSymlink == os.ModeSymlink) {
+		// Cache serializations and state
+		kind = "pipestance"
+		state = self.GetPipestanceState(source, date, name)
+		core.LogInfo("submngr", "Discovered %s %s at %s", state, kind, key)
+
+		core.LogInfo("submngr", "    Immortalizing")
+		serial, ok := self.GetPipestanceSerialization(source, date, name, "finalstate")
+		if ok {
+			// get pipeline name out of serialized pipestance
+			serialJson := serial.([]interface{})
+			topLevel := serialJson[0].(map[string]interface{})
+			pname = topLevel["name"].(string)
+		}
+		core.LogInfo("submngr", "    Finished immortalizing")
+
+		if state == "complete" {
+			// Check at specified paths for summary file
+			for _, psp := range self.pipestanceSummaryPaths {
+				summaryPath := path.Join(p, "HEAD", psp)
+				if _, err := os.Stat(summaryPath); err == nil {
+					bytes, err := ioutil.ReadFile(summaryPath)
+					if err != nil {
+						core.LogInfo("submngr", "    Could not read summary file %s.", summaryPath)
+						return nil
+					}
+					if err := json.Unmarshal(bytes, &summary); err != nil {
+						core.LogError(err, "submngr", "    Could not parse JSON in file %s.", summaryPath)
+						return nil
+					}
+					core.LogInfo("submngr", "    Summary exists at %s", psp)
+					break
+				}
+			}
+		}
+	} else {
+		kind = "file"
+
+		fileInfos, _ := ioutil.ReadDir(p)
+		if len(fileInfos) > 0 {
+			fname = fileInfos[0].Name()
+			if fname != SubmissionMetadataFilename {
+				if fileInfos[0].Size() < SMALLFILE_THRESHOLD {
+					kind = "smallfile"
+				}
+			}
+		}
+		core.LogInfo("submngr", "Discovered %s %s at %s", kind, fname, key)
+	}
+	var meta *SubmissionMetadata
+	if bytes, err := ioutil.ReadFile(path.Join(p, SubmissionMetadataFilename)); err == nil {
+		m := &SubmissionMetadata{}
+		if err := json.Unmarshal(bytes, m); err == nil {
+			meta = m
+		}
+	}
+
+	return &Submission{
+		Source:   source,
+		Date:     date,
+		Name:     name,
+		Kind:     kind,
+		State:    state,
+		Fname:    fname,
+		Path:     p,
+		Pname:    pname,
+		Summary:  summary,
+		Metadata: meta,
+	}
+}
+
 func (self *SubmissionManager) InventorySubmissions() {
 	// List of new submissions
 	newSubmissions := []*Submission{}
@@ -116,79 +214,12 @@ func (self *SubmissionManager) InventorySubmissions() {
 				key := self.makeSubmissionKey(source, date, name)
 
 				// If this submission is already cached, skip it
-				if _, ok := self.cache[key]; ok {
-					continue
-				}
-
-				p := path.Join(self.filesPath, source, date, name)
-				fname := "none"
-				kind := "unknown"
-				state := "unknown"
-				pname := ""
-				var summary interface{}
-
-				// Check if this is a pipestance by presence of HEAD symlink
-				if fi, err := os.Lstat(path.Join(p, "HEAD")); err == nil && (fi.Mode()&os.ModeSymlink == os.ModeSymlink) {
-					// Cache serializations and state
-					kind = "pipestance"
-					state = self.GetPipestanceState(source, date, name)
-					core.LogInfo("submngr", "Discovered %s %s at %s", state, kind, key)
-
-					core.LogInfo("submngr", "    Immortalizing")
-					serial, ok := self.GetPipestanceSerialization(source, date, name, "finalstate")
-					if ok {
-						// get pipeline name out of serialized pipestance
-						serialJson := serial.([]interface{})
-						topLevel := serialJson[0].(map[string]interface{})
-						pname = topLevel["name"].(string)
+				if _, ok := self.cache[key]; !ok {
+					if sub := self.loadSubmission(source, date, name); sub != nil {
+						self.cache[key] = sub
+						newSubmissions = append(newSubmissions, sub)
 					}
-					core.LogInfo("submngr", "    Finished immortalizing")
-
-					if state == "complete" {
-						// Check at specified paths for summary file
-						for _, psp := range self.pipestanceSummaryPaths {
-							summaryPath := path.Join(p, "HEAD", psp)
-							if _, err := os.Stat(summaryPath); err == nil {
-								bytes, err := ioutil.ReadFile(summaryPath)
-								if err != nil {
-									core.LogInfo("submngr", "    Could not read summary file %s.", summaryPath)
-									continue
-								}
-								if err := json.Unmarshal(bytes, &summary); err != nil {
-									core.LogError(err, "submngr", "    Could not parse JSON in file %s.", summaryPath)
-									continue
-								}
-								core.LogInfo("submngr", "    Summary exists at %s", psp)
-								break
-							}
-						}
-					}
-				} else {
-					kind = "file"
-
-					fileInfos, _ := ioutil.ReadDir(p)
-					if len(fileInfos) > 0 {
-						fname = fileInfos[0].Name()
-						if fileInfos[0].Size() < SMALLFILE_THRESHOLD {
-							kind = "smallfile"
-						}
-					}
-					core.LogInfo("submngr", "Discovered %s %s at %s", kind, fname, key)
 				}
-
-				sub := Submission{
-					Source:  source,
-					Date:    date,
-					Name:    name,
-					Kind:    kind,
-					State:   state,
-					Fname:   fname,
-					Path:    p,
-					Pname:   pname,
-					Summary: summary,
-				}
-				self.cache[key] = &sub
-				newSubmissions = append(newSubmissions, &sub)
 			}
 		}
 	}
