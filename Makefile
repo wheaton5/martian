@@ -8,7 +8,7 @@ GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone rsincomin
 GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
-GO_VERSION=$(strip $(shell go version | sed 's/.*go\([0-9]*\.[0-9]*\).*/\1/'))
+GO_VERSION=$(strip $(shell go version | sed 's/.*go\([0-9]*\.[0-9]*\).*/\1/' | tr -d " "))
 
 # Older versions of Go use the "-X foo bar" syntax.  Newer versions either warn
 # or error on that syntax, and use "-X foo=bar" instead.
