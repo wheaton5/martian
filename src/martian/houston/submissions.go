@@ -53,11 +53,12 @@ type SubmissionManager struct {
 	cache                  map[string]*Submission
 	rt                     *core.Runtime
 	mailer                 *manager.Mailer
+	readonly               bool
 }
 
 func NewSubmissionManager(hostname string, instanceName string, filesPath string,
 	cachePath string, pipestanceSummaryPaths []string, rt *core.Runtime,
-	mailer *manager.Mailer) *SubmissionManager {
+	mailer *manager.Mailer, readonly bool) *SubmissionManager {
 	self := &SubmissionManager{}
 	self.instanceName = instanceName
 	self.filesPath = filesPath
@@ -68,6 +69,7 @@ func NewSubmissionManager(hostname string, instanceName string, filesPath string
 	self.mailer = mailer
 	self.loadCache()
 	self.hostname = hostname
+	self.readonly = readonly
 	return self
 }
 
@@ -226,8 +228,10 @@ func (self *SubmissionManager) InventorySubmissions() {
 		self.mailer.Sendmail(users, subj, body)
 	}
 
-	// Write submissions to persistent cache
-	writeJson(self.cachePath, self.cache)
+	if !self.readonly {
+		// Write submissions to persistent cache
+		writeJson(self.cachePath, self.cache)
+	}
 }
 
 func (self *SubmissionManager) EnumerateSubmissions() []*Submission {

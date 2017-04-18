@@ -17,14 +17,16 @@ func main() {
 	doc := `Houston.
 
 Usage:
-    houston
+    houston [--readonly]
     houston -h | --help | --version
 
 Options:
     -h --help       Show this message.
-    --version       Show version.`
+    --version       Show version.
+    --readonly      Read-only mode.  No downloading.`
 	martianVersion := core.GetVersion()
-	docopt.Parse(doc, nil, true, martianVersion, false)
+	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
+	readonly := opts["--readonly"].(bool)
 
 	env := core.EnvRequire([][]string{
 		{"HOUSTON_PORT", ">2000"},
@@ -46,8 +48,12 @@ Options:
 		{"HOUSTON_EMAIL_RECIPIENT", "email@address.com"},
 	}, true)
 
-	core.LogTee(path.Join(env["HOUSTON_LOGS_PATH"],
-		time.Now().Format("20060102150405")+".log"))
+	if !readonly {
+		core.LogTee(path.Join(env["HOUSTON_LOGS_PATH"],
+			time.Now().Format("20060102150405")+".log"))
+	} else {
+		core.Log("Starting up in readonly mode")
+	}
 
 	uiport := env["HOUSTON_PORT"]
 	hostname := env["HOUSTON_HOSTNAME"]
@@ -85,14 +91,16 @@ Options:
 
 	// SubmissionManager
 	sman := NewSubmissionManager(hostname, instanceName, filesPath, cachePath,
-		pipestanceSummaryPaths, rt, mailer)
+		pipestanceSummaryPaths, rt, mailer, readonly)
 
-	// Downloader
-	dman := NewDownloadManager(downloadPath, downloadIntervalMin,
-		downloadMaxMB, filesPath, sman)
-	//dman.AddDownloadSource(NewZendeskDownloadSource(zendeskDomain, zendeskUser, zendeskApiToken))
-	dman.AddDownloadSource(NewAmazonS3DownloadSource(amazonS3Bucket))
-	dman.StartDownloadLoop()
+	if !readonly {
+		// Downloader
+		dman := NewDownloadManager(downloadPath, downloadIntervalMin,
+			downloadMaxMB, filesPath, sman)
+		//dman.AddDownloadSource(NewZendeskDownloadSource(zendeskDomain, zendeskUser, zendeskApiToken))
+		dman.AddDownloadSource(NewAmazonS3DownloadSource(amazonS3Bucket))
+		dman.StartDownloadLoop()
+	}
 
 	// Run web server.
 	go runWebServer(uiport, martianVersion, sman)
