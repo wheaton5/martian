@@ -28,18 +28,29 @@ marsoc-deploy: marsoc ligo/ligo_uploader
 #
 all: grammar $(GOBINS) web test
 
-grammar:
-	go tool yacc -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
+# Go 1.8 removed yacc from the base distribution and moved it to the tools repo.
+YACC_SRC=src/github.com/golang/tools/cmd/goyacc/yacc.go
+$(YACC_SRC):
+	go get github.com/golang/tools/cmd/goyacc
+bin/goyacc: $(YACC_SRC)
+	go install github.com/golang/tools/cmd/goyacc
+YACCDEP=$(if $(filter 1.8, $(word 1, $(sort 1.8 $(GO_VERSION)))),bin/goyacc,)
+YACC_TOOL=$(if $(filter 1.8, $(word 1, $(sort 1.8 $(GO_VERSION)))),bin/goyacc,go tool yacc)
+
+src/martian/core/grammar.go: $(YACCDEP) src/martian/core/grammar.y
+	$(YACC_TOOL) -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
+
+grammar: src/martian/core/grammar.go
 
 $(GOBINS):
 	go install $(GO_FLAGS) martian/$@
 
 web:
-	cd web/martian; npm install; gulp; cd $(GOPATH)
-	cd web/marsoc; npm install; gulp; cd $(GOPATH)
-	cd web/kepler; npm install; gulp; cd $(GOPATH)
-	cd web/sere; npm install; gulp; cd $(GOPATH)
-	cd web/houston; npm install; gulp; cd $(GOPATH)
+	(cd web/martian && npm install && gulp)
+	(cd web/marsoc && npm install && gulp)
+	(cd web/kepler && npm install && gulp)
+	(cd web/sere && npm install && gulp)
+	(cd web/houston && npm install && gulp)
 
 mrt:
 	cp scripts/mrt bin/mrt
@@ -87,6 +98,8 @@ sake-strip:
 	rm -rf test
 	rm -f Makefile
 	rm -f README.md
+	rm -f bin/goyacc
+	rm -rf $(YACC_SRC)
 
 sake-martian-strip:
 	# Strip marsoc.
