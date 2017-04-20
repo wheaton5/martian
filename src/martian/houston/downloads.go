@@ -7,6 +7,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"martian/core"
@@ -28,6 +29,7 @@ type DownloadSource interface {
 type Downloadable interface {
 	Size() uint64
 	Key() string
+	Modified() time.Time
 	Download(dstPath string)
 }
 
@@ -196,6 +198,12 @@ func (self *DownloadManager) download() {
 					os.RemoveAll(d.path)
 					continue
 				}
+			}
+			meta := SubmissionMetadata{
+				Time: downloadable.Modified(),
+			}
+			if bytes, err := json.Marshal(&meta); err != nil {
+				ioutil.WriteFile(path.Join(d.path, SubmissionMetadataFilename), bytes, 0555)
 			}
 
 			// Success! Remove the temporary downloaded file
