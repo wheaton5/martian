@@ -9,6 +9,7 @@ package main
 import (
 	"martian/core"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -29,6 +30,10 @@ func (self *AmazonS3Downloadable) Size() uint64 {
 
 func (self *AmazonS3Downloadable) Key() string {
 	return *self.object.Key
+}
+
+func (self *AmazonS3Downloadable) Modified() time.Time {
+	return *self.object.LastModified
 }
 
 func (self *AmazonS3Downloadable) Download(dstPath string) {
