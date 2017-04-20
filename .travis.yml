@@ -10,6 +10,7 @@ go:
 
 sudo: false
 install:
+    - pip install --user IPython==5.3.0
     - pip install --user line_profiler
 
 before_script:
