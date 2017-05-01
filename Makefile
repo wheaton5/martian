@@ -50,7 +50,7 @@ web:
 	(cd web/marsoc && npm install && gulp)
 	(cd web/kepler && npm install && gulp)
 	(cd web/sere && npm install && gulp)
-	(cd web/houston && npm install && gulp)
+	make -C web/houston
 
 mrt:
 	cp scripts/mrt bin/mrt
@@ -63,6 +63,7 @@ test: $(GOTESTS)
 clean:
 	rm -rf $(GOPATH)/bin
 	rm -rf $(GOPATH)/pkg
+	make -C web/houston clean
 
 #
 # Targets for Sake builds.

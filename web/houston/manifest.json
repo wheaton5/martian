@@ -1,0 +1,7 @@
+{
+  "name": "houston",
+  "short_name": "houston",
+  "description": "Displays uploaded 10x customer data.",
+  "start_url": "/",
+  "display": "standalone"
+}

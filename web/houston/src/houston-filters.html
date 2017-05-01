@@ -1,0 +1,88 @@
+<!--
+Copyright (c) 2017 10x Genomics. All rights reserved.
+-->
+
+<link rel="import" href="../bower_components/iron-input/iron-input.html">
+<link rel="import" href="../bower_components/iron-location/iron-location.html">
+<link rel="import" href="../bower_components/iron-location/iron-query-params.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="houston-filters">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: inline-block;
+      }
+      paper-toggle-button {
+        display: inline-block;
+        vertical-align: middle;
+      }
+    </style>
+    <iron-location query="{{queryString}}"
+                   url-space-regex="^/(index.html)?\?">
+    </iron-location>
+    <iron-query-params params-string="{{queryString}}"
+                       params-object="{{submissionFilters}}">
+    </iron-query-params>
+    <paper-button on-tap="openDialog">Filters</paper-button>
+    <paper-dialog id="dialog">
+      <h1>Submission Filters</h1>
+      <div>
+        <paper-dropdown-menu label="Kind">
+          <paper-listbox class="dropdown-content"
+                         selected="{{submissionFilters.kind}}"
+                         attr-for-selected="kind-filter">
+            <paper-item kind-filter="any">Any</paper-item>
+            <paper-item kind-filter="pipestances">Pipestances</paper-item>
+            <paper-item kind-filter="sitechecks">Site-checks</paper-item>
+          </paper-listbox>
+        </paper-dropdown-menu>
+      </div>
+      <div>
+        Items to display: &nbsp;
+        <input is="iron-input"
+               prevent-invalid-input allowed-pattern="[0-9]"
+               bind-value="{{submissionFilters.n}}">
+        </input>
+      </div>
+      <div>
+        Domain: &nbsp;
+        <input is="iron-input"
+               prevent-invalid-input allowed-pattern="[a-zA-Z0-9._+-]"
+               bind-value="{{submissionFilters.domain}}">
+        </input>
+      </div>
+    </paper-dialog>
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'houston-filters',
+
+      properties: {
+        submissionFilters: {
+          type: Object,
+          notify: true,
+          value: {
+            "kind": "any",
+            "n": 100
+          }
+        },
+        queryString: {
+          type: String,
+          notify: true
+        }
+      },
+      openDialog: function() {
+        this.$.dialog.open();
+      }
+    });
+  </script>
+</dom-module>

@@ -1,0 +1,24 @@
+{
+  "entrypoint": "index.html",
+  "shell": "src/houston-app.html",
+  "sources": [
+    "css/*",
+    "src/**/*",
+    "bower.json"
+  ],
+  "extraDependencies": [
+    "manifest.json",
+    "bower_components/webcomponentsjs/webcomponents-lite.min.js"
+  ],
+  "lint": {
+    "rules": ["polymer-2-hybrid"]
+  },
+  "builds": [{
+    "name": "bundled",
+    "bundle": true,
+    "addServiceWorker": true,
+    "js": {"minify": true},
+    "css": {"minify": true},
+    "html": {"minify": true}
+  }]
+}

@@ -1,0 +1,199 @@
+<!--
+Copyright (c) 2017 10x Genomics. All rights reserved.
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/iron-list/iron-list.html">
+<link rel="import" href="../bower_components/iron-location/iron-location.html">
+<link rel="import" href="../bower_components/iron-location/iron-query-params.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="houston-runs">
+  <template>
+    <style include="shared-styles">
+      :host {
+      }
+    </style>
+    <iron-ajax id="getUploads"
+               url="../api/get-submissions"
+               params="[[submissionFilters]]"
+               auto
+               handle-as="json"
+               last-response="{{uploads}}">
+    </iron-ajax>
+    <iron-location query="{{queryString}}"
+                   url-space-regex="^/(index.html)?\?">
+    </iron-location>
+    <iron-query-params params-string="[[queryString]]"
+                       params-object="{{submissionFilters}}">
+    </iron-query-params>
+    <div id="runs" class="detail">
+      <table id="run-table" class="table table-striped">
+        <thead>
+          <tr style="cursor: auto">
+            <th>Date</th>
+            <th>Site</th>
+            <th>User</th>
+            <th>Content</th>
+            <th>Pipeline</th>
+            <th>Path</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template is="dom-repeat" items="{{filteredUploads}}" initialCount="15">
+            <tr style="cursor: auto">
+              <td style="white-space: nowrap">
+                [[displayDate(item)]]
+              </td>
+              <td class="col-fixed">
+                [[displayDomain(item)]]
+              </td>
+              <td class="col-fixed">
+                [[displayUser(item)]]
+              </td>
+              <td>
+                <template is="dom-if" if="{{isPipestance(item)}}">
+                  <span class$="{{stateClass(item.state)}}">
+                    <a href="[[pipePath(item)]]">
+                      <span style="{{stateColor(item.state)}}">[[item.name]]</span>
+                    </a>
+                  </span>
+                </template>
+                <template is="dom-if" if="{{isFile(item)}}">
+                  [[item.fname]]
+                </template>
+                <template is="dom-if" if="{{isSmallfile(item)}}">
+                  <a href="[[filePath(item)]]" style="color: #007dc3">[[item.fname]]</a>
+                </template>
+              </td>
+              <td>[[item.pname]]</td>
+              <td class="col-fixed" style="white-space: nowrap">
+                [[item.path]]
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </template>
+
+  <script>
+    Polymer({
+      is: 'houston-runs',
+      properties: {
+        uploads: {
+          type: Array,
+          notify: true,
+          value: []
+        },
+        queryString: {
+          type: String,
+          value: "",
+          notify: true
+        },
+        submissionFilters: {
+          type: Object,
+          notify: true,
+          value: {}
+        },
+        filteredUploads: {
+          type: Array,
+          computed: 'filterItems(uploads, submissionFilters)'
+        }
+      },
+      ready: function() {
+        this.$.getUploads.generateRequest();
+      },
+      displayDate: function(item) {
+        return item.date.substring(0,10);
+      },
+      displayDomain: function(item) {
+        return item.source.split("@")[0];
+      },
+      displayUser: function(item) {
+        return item.source.split("@")[1];
+      },
+      isPipestance: function(item) {
+        return item.kind == "pipestance";
+      },
+      isFile: function(item) {
+        return item.kind == "file";
+      },
+      isSmallfile: function(item) {
+        return item.kind == "smallfile";
+      },
+      stateClass: function(state) {
+        return "minibox " + state;
+      },
+      stateColor: function(state) {
+        return (state == "complete" ? "color: #333" : "color: #eee");
+      },
+      pipePath: function(sub) {
+        return "/pipestance/" + sub.source + "/" + sub.date + "/" + sub.name;
+      },
+      filePath: function(sub) {
+        return "/file/" + sub.source + "/" + sub.date + "/" + sub.name + "/" + sub.fname;
+      },
+      filterItems: function(items, filters) {
+        if (items == null) {
+          return [];
+        }
+        if (items.length == 0) {
+          return items;
+        }
+        if (filters == null) {
+          if (items.length <= 100) {
+            return items;
+          } else {
+            return items.slice(0,100);
+          }
+        } else {
+          try {
+            if ((filters.kind != null &&
+                 filters.kind != "any" &&
+                 filters.kind != "") ||
+                (filters.domain != null && filters.domain != "")) {
+              items = items.filter(function(item) {
+                if (filters.kind != null) {
+                  if (filters.kind == "pipestances" && 
+                      item.kind != "pipestance") {
+                    return false;
+                  }
+                  if (filters.kind == "sitechecks" &&
+                      (item.kind != "smallfile" ||
+                       item.name != "sitecheck")) {
+                    return false;
+                  }
+                }
+                if (filters.domain != null && filters.domain != "") {
+                  try {
+                    if (!item.source.split("@")[0].startsWith(filters.domain)) {
+                      return false;
+                    }
+                  } catch (_) {}
+                }
+                return true;
+              });
+            }
+          } catch (_) {}
+          var n = 100;
+          try {
+            if (filters.n != null && !isNaN(filters.n)) {
+              var fn = parseInt(filters.n);
+              if (!isNaN(fn) && fn > 0) {
+                n = fn;
+              }
+            }
+          } catch (_) {}
+          if (items.length <= n) {
+            return items;
+          } else {
+            return items.slice(0, n);
+          }
+        }
+      }
+    });
+  </script>
+</dom-module>
+
