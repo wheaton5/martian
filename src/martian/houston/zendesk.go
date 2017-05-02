@@ -79,6 +79,12 @@ func NewZendeskDownloadSource(domain string, user string, apitoken string) *Zend
 	return self
 }
 
+func zenIsPipestance(a *zego.Attachment) bool {
+	return a.ContentType == "application/x-gzip" &&
+		(strings.HasSuffix(a.FileName, "debug.tgz") ||
+			strings.HasSuffix(a.FileName, "mri.tgz"))
+}
+
 func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 	auth := zego.Auth{self.user + "/token", self.apitoken, self.domain}
 
@@ -133,12 +139,14 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 				continue
 			}
 			for _, a := range comment.Attachments {
-				id := strconv.Itoa(a.Id)
-				id = id[len(id)-6:]
-				key := fmt.Sprintf("%04d-%02d-%02d-%s-%s-%s", y, m, d, email, id, a.FileName)
-				url := a.ContentURL
-				size := uint64(a.Size)
-				downloadables = append(downloadables, &ZendeskDownloadable{key: key, url: url, size: size, time: godate})
+				if zenIsPipestance(&a) {
+					id := strconv.Itoa(a.Id)
+					id = id[len(id)-6:]
+					key := fmt.Sprintf("%04d-%02d-%02d-%s-%s-%s", y, m, d, email, id, a.FileName)
+					url := a.ContentURL
+					size := uint64(a.Size)
+					downloadables = append(downloadables, &ZendeskDownloadable{key: key, url: url, size: size, time: godate})
+				}
 			}
 		}
 	}
