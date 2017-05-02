@@ -38,14 +38,14 @@ Copyright (c) 2017 10x Genomics. All rights reserved.
           <paper-listbox class="dropdown-content"
                          selected="{{submissionFilters.kind}}"
                          attr-for-selected="kind-filter">
-            <paper-item kind-filter="any">Any</paper-item>
+            <paper-item kind-filter="">Any</paper-item>
             <paper-item kind-filter="pipestances">Pipestances</paper-item>
             <paper-item kind-filter="sitechecks">Site-checks</paper-item>
           </paper-listbox>
         </paper-dropdown-menu>
       </div>
       <div>
-        Items to display: &nbsp;
+        # of items: &nbsp;
         <input is="iron-input"
                prevent-invalid-input allowed-pattern="[0-9]"
                bind-value="{{submissionFilters.n}}">
@@ -57,6 +57,33 @@ Copyright (c) 2017 10x Genomics. All rights reserved.
                prevent-invalid-input allowed-pattern="[a-zA-Z0-9._+-]"
                bind-value="{{submissionFilters.domain}}">
         </input>
+      </div>
+      <div>
+        User: &nbsp;
+        <input is="iron-input"
+               prevent-invalid-input allowed-pattern="[a-zA-Z0-9._+-]"
+               bind-value="{{submissionFilters.user}}">
+        </input>
+      </div>
+      <div>
+        Pipeline: &nbsp;
+        <input is="iron-input"
+               prevent-invalid-input allowed-pattern="[a-zA-Z0-9._]"
+               bind-value="{{submissionFilters.pipeline}}">
+        </input>
+      </div>
+      <div>
+        <paper-dropdown-menu label="State">
+          <paper-listbox class="dropdown-content"
+                         selected="{{submissionFilters.state}}"
+                         attr-for-selected="state-filter">
+            <paper-item state-filter="">Any</paper-item>
+            <paper-item state-filter="complete">Complete</paper-item>
+            <paper-item state-filter="running">Running</paper-item>
+            <paper-item state-filter="failed">Failed</paper-item>
+            <paper-item state-filter="waiting">Waiting</paper-item>
+          </paper-listbox>
+        </paper-dropdown-menu>
       </div>
     </paper-dialog>
   </template>

@@ -150,10 +150,22 @@ Copyright (c) 2017 10x Genomics. All rights reserved.
           }
         } else {
           try {
-            if ((filters.kind != null &&
-                 filters.kind != "any" &&
-                 filters.kind != "") ||
-                (filters.domain != null && filters.domain != "")) {
+            if ((filters.kind != null && filters.kind != "") ||
+                (filters.domain != null && filters.domain != "") ||
+                (filters.user != null && filters.user != "") ||
+                (filters.pipeline != null && filters.pipeline != "") ||
+                (filters.state != null && filters.state != "")) {
+              var re = null;
+              if (filters.domain != null && filters.domain != "" ||
+                  filters.user != null && filters.user != "") {
+                re = new RegExp(
+                    ((filters.domain != null && filters.domain != "") ?
+                      "[^@]*\\.?" + filters.domain.replace("\\.", "\\.") +
+                      "[^@]*@" : "@") +
+                    ((filters.user != null && filters.user != "") ?
+                      filters.user : ""),
+                    "i");
+              }
               items = items.filter(function(item) {
                 if (filters.kind != null) {
                   if (filters.kind == "pipestances" && 
@@ -166,12 +178,21 @@ Copyright (c) 2017 10x Genomics. All rights reserved.
                     return false;
                   }
                 }
-                if (filters.domain != null && filters.domain != "") {
+                if (re != null && !re.test(item.source)) {
+                  return false;
+                }
+                if (filters.pipeline != null && filters.pipeline != "") {
                   try {
-                    if (!item.source.split("@")[0].startsWith(filters.domain)) {
+                    if (!item.pname.toUpperCase().startsWith(
+                        filters.pipeline.toUpperCase())) {
                       return false;
                     }
                   } catch (_) {}
+                }
+                if (filters.state != null && filters.state != "") {
+                  if (item.state != filters.state) {
+                    return false;
+                  }
                 }
                 return true;
               });
