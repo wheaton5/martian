@@ -153,11 +153,19 @@ Copyright (c) 2017 10x Genomics. All rights reserved.
             if ((filters.kind != null && filters.kind != "") ||
                 (filters.domain != null && filters.domain != "") ||
                 (filters.user != null && filters.user != "") ||
+                (filters.email != null && filters.email != "") ||
                 (filters.pipeline != null && filters.pipeline != "") ||
                 (filters.state != null && filters.state != "")) {
               var re = null;
-              if (filters.domain != null && filters.domain != "" ||
-                  filters.user != null && filters.user != "") {
+              if (filters.email != null && filters.email != "") {
+                parts = filters.email.split("@");
+                if (parts.length == 2) {
+                  re = new RegExp(parts[1] + "@" + parts[0])
+                }
+              }
+              if (re == null &&
+                  (filters.domain != null && filters.domain != "" ||
+                   filters.user != null && filters.user != "")) {
                 re = new RegExp(
                     ((filters.domain != null && filters.domain != "") ?
                       "[^@]*\\.?" + filters.domain.replace("\\.", "\\.") +
