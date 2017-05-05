@@ -95,7 +95,11 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 		return []Downloadable{}
 	}
 	results := &zego.Search_Results_Tickets{}
-	json.Unmarshal([]byte(resource.Raw), results)
+	err = json.Unmarshal([]byte(resource.Raw), results)
+	if err != nil {
+		core.LogError(err, "zendesk", "Failed to deserialize search results.")
+		return []Downloadable{}
+	}
 	core.LogInfo("zendesk", "Search returned %d tickets", results.Count)
 
 	// Iterate over all returned objects
@@ -106,7 +110,7 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 
 		// Get user info for this ticket's requester ID
 		user, err := auth.ShowUser(fmt.Sprint(t.RequesterId))
-		if err != nil {
+		if err != nil || user == nil || user.User == nil {
 			core.LogError(err, "zendesk", "Failed to find user %d", t.RequesterId)
 			continue
 		}
@@ -150,5 +154,6 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 			}
 		}
 	}
+	core.LogInfo("zendesk", "Search returned %d attachments", len(downloadables))
 	return downloadables
 }
