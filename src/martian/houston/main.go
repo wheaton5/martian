@@ -59,9 +59,9 @@ Options:
 	hostname := env["HOUSTON_HOSTNAME"]
 	instanceName := env["HOUSTON_INSTANCE_NAME"]
 	amazonS3Bucket := env["HOUSTON_AMAZONS3_BUCKET"]
-	//zendeskDomain := env["HOUSTON_ZENDESK_DOMAIN"]
-	//zendeskUser := env["HOUSTON_ZENDESK_USER"]
-	//zendeskApiToken := env["HOUSTON_ZENDESK_APITOKEN"]
+	zendeskDomain := env["HOUSTON_ZENDESK_DOMAIN"]
+	zendeskUser := env["HOUSTON_ZENDESK_USER"]
+	zendeskApiToken := env["HOUSTON_ZENDESK_APITOKEN"]
 	cachePath := env["HOUSTON_CACHE_PATH"]
 	downloadPath := env["HOUSTON_DOWNLOAD_PATH"]
 	downloadIntervalMin, err := strconv.Atoi(env["HOUSTON_DOWNLOAD_INTERVALMIN"])
@@ -97,7 +97,7 @@ Options:
 		// Downloader
 		dman := NewDownloadManager(downloadPath, downloadIntervalMin,
 			downloadMaxMB, filesPath, sman)
-		//dman.AddDownloadSource(NewZendeskDownloadSource(zendeskDomain, zendeskUser, zendeskApiToken))
+		dman.AddDownloadSource(NewZendeskDownloadSource(zendeskDomain, zendeskUser, zendeskApiToken))
 		dman.AddDownloadSource(NewAmazonS3DownloadSource(amazonS3Bucket))
 		dman.StartDownloadLoop()
 	}

@@ -44,6 +44,7 @@ func runWebServer(uiport string, martianVersion string, sman *SubmissionManager)
 	r := martini.NewRouter()
 	instanceName := "HOUSTON"
 	m.Use(martini.Recovery())
+	m.Use(martini.Static(core.RelPath("../web/houston/serve"), martini.StaticOptions{"/", true, "index.html", nil}))
 	m.Use(martini.Static(core.RelPath("../web/houston/client"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.Use(martini.Static(core.RelPath("../web/marsoc/res"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.Use(martini.Static(core.RelPath("../web/marsoc/client"), martini.StaticOptions{"", true, "index.html", nil}))
@@ -53,14 +54,6 @@ func runWebServer(uiport string, martianVersion string, sman *SubmissionManager)
 	m.Action(r.Handle)
 	app := &martini.ClassicMartini{m, r}
 	app.Use(gzip.All())
-
-	app.Get("/", func() string {
-		return core.Render("web/houston/templates", "main.html",
-			&MainPage{
-				InstanceName:   instanceName,
-				MartianVersion: martianVersion,
-			})
-	})
 
 	app.Get("/metrics", func() string {
 		return core.Render("web/houston/templates", "metrics.html",

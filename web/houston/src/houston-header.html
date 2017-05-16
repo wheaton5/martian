@@ -1,0 +1,61 @@
+<!--
+Copyright (c) 2017 10x Genomics. All rights reserved.
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="houston-filters.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="houston-header">
+  <template>
+    <style include="shared-styles">
+      :host {
+      }
+    </style>
+    <header class="navbar navbar-fixed-top">
+      <div class="navbar-header">
+        <div class="navbar-brand">
+          <div class="logo_container">
+            <img src="/images/10X_Logo_Reversed.png" class="logo">
+          </div>
+          <div class="navbar-upper">
+             [[instance]] &nbsp; &middot; &nbsp;
+             <houston-filters></houston-filters>
+          </div>
+          <div class="navbar-lower">
+            <a href="/">HOME</a>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <a href="/metrics">METRICS</a>
+            &nbsp;&nbsp;&middot;&nbsp;&nbsp;&nbsp;
+            <a href="http://marsoc.fuzzplex.com/razor">RAZOR</a>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <a href="http://marsoc.fuzzplex.com">MARSOC</a>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <a href="http://sere.fuzzplex.com">SERE</a>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <a href="http://compute2.fuzzplex.com:9090">MRV</a>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <a href="http://lena.fuzzplex.com">LENA</a>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <a href="https://10xtech.atlassian.net/issues/?filter=11200">CUSTOMER BUGS</a>
+          </div>
+        </div>
+      </div>
+    </header>
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'houston-header',
+
+      properties: {
+        instance: {
+          type: String,
+          value: 'HOUSTON',
+        }
+      }
+    });
+  </script>
+</dom-module>
+

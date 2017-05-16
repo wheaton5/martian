@@ -1,0 +1,31 @@
+<!--
+Copyright (c) 2017 10x Genomics. All rights reserved.
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="houston-header.html">
+<link rel="import" href="houston-runs.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="houston-app">
+  <template>
+    <style include="shared-styles">
+      :host {
+      }
+    </style>
+    <houston-header instance="[[instance]]"></houston-header>
+    <houston-runs></houston-runs>
+  </template>
+  <script>
+    Polymer({
+      is: 'houston-app',
+      extends: 'body',
+      properties: {
+        instance: {
+          type: String,
+          value: "HOUSTON"
+        }
+      }
+    });
+  </script>
+</dom-module>

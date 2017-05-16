@@ -1,16 +1,11 @@
 {
-  "name": "martian-marsoc-web",
-  "version": "0.0.1",
-  "description": "MARSOC UI",
-  "main": "",
-  "private": true,
-  "dependencies": {},
-  "scripts": {},
-  "author": "",
-  "license": "",
+  "name": "houston",
   "devDependencies": {
-    "gulp": "^3.8.7",
-    "gulp-coffee": "^2.1.1",
-    "gulp-jade": "^0.7.0"
+    "eslint": "^3.12.0",
+    "eslint-config-google": "^0.7.1",
+    "eslint-plugin-html": "^1.7.0"
+  },
+  "scripts": {
+    "lint": "eslint . --ext js,html --ignore-path .gitignore"
   }
 }

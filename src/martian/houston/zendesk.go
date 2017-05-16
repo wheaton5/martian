@@ -79,6 +79,12 @@ func NewZendeskDownloadSource(domain string, user string, apitoken string) *Zend
 	return self
 }
 
+func zenIsPipestance(a *zego.Attachment) bool {
+	return a.ContentType == "application/x-gzip" &&
+		(strings.HasSuffix(a.FileName, "debug.tgz") ||
+			strings.HasSuffix(a.FileName, "mri.tgz"))
+}
+
 func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 	auth := zego.Auth{self.user + "/token", self.apitoken, self.domain}
 
@@ -89,7 +95,11 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 		return []Downloadable{}
 	}
 	results := &zego.Search_Results_Tickets{}
-	json.Unmarshal([]byte(resource.Raw), results)
+	err = json.Unmarshal([]byte(resource.Raw), results)
+	if err != nil {
+		core.LogError(err, "zendesk", "Failed to deserialize search results.")
+		return []Downloadable{}
+	}
 	core.LogInfo("zendesk", "Search returned %d tickets", results.Count)
 
 	// Iterate over all returned objects
@@ -100,7 +110,7 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 
 		// Get user info for this ticket's requester ID
 		user, err := auth.ShowUser(fmt.Sprint(t.RequesterId))
-		if err != nil {
+		if err != nil || user == nil || user.User == nil {
 			core.LogError(err, "zendesk", "Failed to find user %d", t.RequesterId)
 			continue
 		}
@@ -133,14 +143,17 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 				continue
 			}
 			for _, a := range comment.Attachments {
-				id := strconv.Itoa(a.Id)
-				id = id[len(id)-6:]
-				key := fmt.Sprintf("%04d-%02d-%02d-%s-%s-%s", y, m, d, email, id, a.FileName)
-				url := a.ContentURL
-				size := uint64(a.Size)
-				downloadables = append(downloadables, &ZendeskDownloadable{key: key, url: url, size: size, time: godate})
+				if zenIsPipestance(&a) {
+					id := strconv.Itoa(a.Id)
+					id = id[len(id)-6:]
+					key := fmt.Sprintf("%04d-%02d-%02d-%s-%s-%s", y, m, d, email, id, a.FileName)
+					url := a.ContentURL
+					size := uint64(a.Size)
+					downloadables = append(downloadables, &ZendeskDownloadable{key: key, url: url, size: size, time: godate})
+				}
 			}
 		}
 	}
+	core.LogInfo("zendesk", "Search returned %d attachments", len(downloadables))
 	return downloadables
 }
