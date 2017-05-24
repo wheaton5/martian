@@ -746,14 +746,24 @@ func (self *PipestanceManager) processRunningPipestances() {
 				self.mutex.Lock()
 				retries, ok := self.retriesRemaining[pkey]
 				self.mutex.Unlock()
-				if ok && retries > 0 && pipestance.IsErrorTransient() {
-					self.mutex.Lock()
-					self.retriesRemaining[pkey] = retries - 1
-					self.mutex.Unlock()
-					core.LogInfo("pipeman", "Failed and retrying: %s.", pkey)
+				canRetry := false
+				if ok && retries > 0 {
+					canRetry, log := pipestance.IsErrorTransient()
+					if canRetry {
+						self.mutex.Lock()
+						self.retriesRemaining[pkey] = retries - 1
+						self.mutex.Unlock()
+						if log == "" {
+							core.LogInfo("pipeman", "Failed and retrying: %s.", pkey)
+						} else {
+							core.LogInfo("pipeman", "Failed and retrying: %s.\n\nError log:\n%s",
+								pkey, log)
+						}
 
-					self.UnfailPipestance(parsePipestanceKey(pkey))
-				} else {
+						self.UnfailPipestance(parsePipestanceKey(pkey))
+					}
+				}
+				if !canRetry {
 					// If pipestance is failed, remove from run list, mark it in the
 					// cache as failed, and flush the cache.
 					core.LogInfo("pipeman", "Failed and removing from run list: %s.", pkey)
