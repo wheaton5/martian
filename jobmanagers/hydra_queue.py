@@ -4,11 +4,10 @@
 #
 
 """Queries the hydra spool about a list of jobs and parses the output,
-returning on stdout the subset of the jobs given on standard in which are in
-the queued state."""
+returning on stdout the subset of the jobs given on standard in which are
+queued, claimed, or running."""
 
 
-import errno
 import os
 import os.path
 import sys
@@ -30,75 +29,41 @@ class _JobidSet(set):
         self._hydra_root = root
         super(_JobidSet, self).__init__(ids)
 
-    def query_pending(self):
-        """Removes pending items from the set."""
-        pending = os.listdir(os.path.join(self._hydra_root, 'pending'))
-        for item in pending:
-            try:
-                self.remove(item)
-            except KeyError:
-                pass
+    def query_backing(self):
+        """Removes jobs which are unknown to hydra from the set."""
+        jobs = os.listdir(os.path.join(self._hydra_root, '.job_backing'))
+        self.intersection_update(jobs)
 
-    def query_claimed(self):
-        """Removes items which are claimed by hosts."""
-        for host in os.listdir(os.path.join(self._hydra_root, 'hosts')):
-            try:
-                claimed = os.listdir(os.path.join(host, 'claimed'))
-            except OSError as err:
-                if err.errno != errno.ENOENT:
-                    raise
-                else:
-                    continue
-            for item in claimed:
-                try:
-                    self.remove(item)
-                except KeyError:
-                    pass
-            if len(self) == 0:
-                return
+    def query_success(self):
+        """Removes jobs which have finished successfully."""
+        jobs = os.listdir(os.path.join(self._hydra_root, 'archive', 'succeeded'))
+        self.difference_update(jobs)
 
-    def query_archive(self):
-        """Removes items which are claimed by archived hosts."""
-        for host in os.listdir(os.path.join(self._hydra_root,
-                                            'archive', 'hosts')):
-            try:
-                claimed = os.listdir(os.path.join(host, 'claimed'))
-            except OSError as err:
-                if err.errno != errno.ENOENT:
-                    raise
-                else:
-                    continue
-            for item in claimed:
-                try:
-                    self.remove(item)
-                except KeyError:
-                    pass
-            if len(self) == 0:
-                return
-
-
-def find_not_pending(ids):
-    """Returns the subset of ids which are not still pending."""
-    if not ids:
-        return []
-    remaining = _JobidSet(ids)
-    remaining.query_pending()
-    if not remaining:
-        return []
-    remaining.query_claimed()
-    if not remaining:
-        return []
-    remaining.query_archive()
-    if not remaining:
-        return []
-    return remaining
+    def query_fail(self):
+        """Removes jobs which have failed."""
+        jobs = os.listdir(os.path.join(self._hydra_root, 'archive', 'failed'))
+        self.difference_update(jobs)
 
 
 def query_hydra(ids):
-    """Returns the subset of ids which are still pending."""
-    id_set = set(ids)
-    not_pending = find_not_pending(id_set)
-    return id_set - not_pending
+    """Returns the subset of ids which are pending or running."""
+    if not ids:
+        return []
+    remaining = _JobidSet(ids)
+    # The most likely cases of jobs which are not running where the runtime
+    # thinks they are is jobs which have failed.  Remove those first and see
+    # whether any are left.
+    remaining.query_fail()
+    if not remaining:
+        return []
+    # Jobs which have not been cleaned out the succeeded or failed archive by
+    # the janitor will be found in the backing store.  If they aren't there,
+    # they're certainly not queued or running.
+    remaining.query_backing()
+    if not remaining:
+        return []
+    remaining.query_success()
+    return remaining
 
 
 def main():
