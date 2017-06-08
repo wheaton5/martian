@@ -12,9 +12,7 @@ cache:
   pip: true
   directories:
   - "$HOME/.nvm"
-  - "$HOME/.cache/pip/http"
   - "$HOME/.cache/bower/registry"
-  - "$HOME/.local"
 before_cache:
 - rm -f $HOME/.npm/anonymous-cli-metrics.json
 - rm -f $HOME/.cache/pip/log/debug.log
@@ -23,8 +21,6 @@ sudo: false
 before_script:
 - nvm install node
 - npm install -g gulp polymer-cli bower
-- pip install --user IPython==5.3.0
-- pip install --user line_profiler
 
 script:
     - make all
