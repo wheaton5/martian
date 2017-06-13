@@ -10,6 +10,7 @@ import (
 	"martian/core"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -45,9 +46,10 @@ type PackageJson struct {
 }
 
 type PackageJsonEnv struct {
-	Value string `json:"value"`
-	Type  string `json:"type"`
-	Key   string `json:"key"`
+	Value    string `json:"value"`
+	Type     string `json:"type"`
+	Key      string `json:"key"`
+	Wildcard bool   `json:"wildcard,omitempty"`
 }
 
 func NewPackage(packagePath string, debug bool) *Package {
@@ -119,14 +121,29 @@ func VerifyPackage(packagePath string) (string, string, string, string, []string
 		key, value := envJson.Key, envJson.Value
 		switch envJson.Type {
 		case "path":
-			if !strings.HasPrefix(value, "/") {
+			if !path.IsAbs(value) {
 				value = path.Join(packagePath, value)
 			}
 		case "path_prepend":
-			if !strings.HasPrefix(value, "/") {
+			if !path.IsAbs(value) {
 				value = path.Join(packagePath, value)
 			}
-
+			if envJson.Wildcard {
+				matches, err := filepath.Glob(value)
+				if err != nil {
+					core.PrintInfo("package", "Could not expand path prepend wildcard %s.", value)
+					return "", "", "", "", nil, nil, err
+				}
+				if len(matches) == 0 {
+					core.PrintInfo("package", "%s did not find any files.", value)
+				} else {
+					if len(matches) > 1 {
+						core.PrintInfo("package", "%s found %d matches.  Using %s.",
+							value, len(matches), matches[len(matches)-1])
+					}
+					value = matches[len(matches)-1]
+				}
+			}
 			// Prepend value to current environment variable
 			if prefix, ok := envs[key]; ok {
 				value = value + ":" + prefix
