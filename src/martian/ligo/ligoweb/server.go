@@ -200,6 +200,24 @@ func (s *LigoServer) APIWrapper(method func(p *ligolib.Project, v url.Values) (i
 	}
 }
 
+/* Escape strings that become cells in CSV files as per RFC4180 */
+func RFC4180Escape(in string) string {
+	ba := make([]byte, 0, 2*len(in))
+
+	ba = append(ba, '"')
+	for i := 0; i < len(in); i++ {
+		c := in[i]
+		if c == '"' {
+			ba = append(ba, '"')
+		}
+
+		ba = append(ba, c)
+	}
+	ba = append(ba, '"')
+
+	return string(ba)
+}
+
 /*
  * Format a response to the client in CSV format. We assume that result
  * is secretely of type ligolib.Plot (unless err is set, in which case we don't care).
@@ -225,10 +243,20 @@ func FormatResponseCSV(result interface{}, err error, w http.ResponseWriter) {
 				if j != 0 {
 					csv = append(csv, ',')
 				}
-				/*
-				 XXX Need to protect against commas in row[j]
-				*/
-				csv = append(csv, ([]byte(fmt.Sprintf("%v", row[j])))...)
+
+				var str string
+				val := row[j]
+
+				switch val.(type) {
+				case string:
+					/* Escape things that look like strings */
+					str = RFC4180Escape(val.(string))
+				default:
+					/* Format everything else as per default rules */
+					str = fmt.Sprintf("%v", row[j])
+				}
+
+				csv = append(csv, ([]byte(str))...)
 			}
 			csv = append(csv, ([]byte("\n"))...)
 		}
