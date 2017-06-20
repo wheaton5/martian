@@ -193,7 +193,8 @@ Options:
 	// Runtime
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		-1, -1, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
-		false, stackVars, zip, skipPreflight, enableMonitor, debug, false, onfinish, nil)
+		false, stackVars, zip, skipPreflight, enableMonitor, debug, false, onfinish,
+		nil, false)
 
 	// Mailer
 	mailer := manager.NewMailer(instanceName, emailHost, emailSender,

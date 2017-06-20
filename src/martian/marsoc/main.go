@@ -360,7 +360,7 @@ Options:
 	rt := core.NewRuntimeWithCores(jobMode, vdrMode, profileMode, martianVersion,
 		reqCores, reqMem, reqMemPerCore, maxJobs, jobFreqMillis, jobResources,
 		true, stackVars, zip, skipPreflight, enableMonitor, debug, false, onfinish,
-		nil)
+		nil, false)
 
 	//=========================================================================
 	// Setup Mailer.
