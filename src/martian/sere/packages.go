@@ -83,7 +83,7 @@ func (self *PackageManager) ManagePackages() []*manager.Package {
 	for _, p := range self.packages {
 		packages = append(packages, p...)
 	}
-	for pid, _ := range self.building {
+	for pid := range self.building {
 		p := &manager.Package{
 			Name:   pid.name,
 			Target: pid.target,

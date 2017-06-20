@@ -43,7 +43,7 @@ func NewPackageManager(packagesPath string, defaultPackage string, debug bool, l
 
 func (self *PackageManager) ListPackages() []string {
 	packages := make([]string, 0, 0)
-	for k, _ := range self.packages {
+	for k := range self.packages {
 		packages = append(packages, k)
 	}
 

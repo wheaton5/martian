@@ -135,7 +135,7 @@ func (self *Lena) ingestDatabase(data []byte) error {
 		// Sort the uniquified fcids, and build the pscontainer
 		// name from it(them).
 		fcids := []string{}
-		for fcid, _ := range uniqueFcids {
+		for fcid := range uniqueFcids {
 			fcids = append(fcids, fcid)
 		}
 		sort.Strings(fcids)

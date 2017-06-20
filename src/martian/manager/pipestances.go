@@ -300,7 +300,7 @@ func (self *PipestanceManager) loadCache() error {
 	}
 	if failed, ok := cache["failed"]; ok {
 		self.failed = failed
-		for pkey, _ := range self.failed {
+		for pkey := range self.failed {
 			container, pipeline, psid := parsePipestanceKey(pkey)
 			// check to see if pipeline has been invoked
 			if _, err := self.GetPipestanceInvokeSrc(container, pipeline, psid); err == nil {
@@ -309,7 +309,7 @@ func (self *PipestanceManager) loadCache() error {
 		}
 	}
 	if copying, ok := cache["copying"]; ok {
-		for pkey, _ := range copying {
+		for pkey := range copying {
 			// count copying pipestances against storage initially
 			// hopefully the _invocation file is still there...
 			self.allocateLoadedPipestance(pkey)
@@ -321,7 +321,7 @@ func (self *PipestanceManager) loadCache() error {
 
 		// Load running pipestance in parallel.
 		wg.Add(len(running))
-		for pkey, _ := range running {
+		for pkey := range running {
 			go func(pkey string) {
 				defer wg.Done()
 				self.loadPipestance(pkey)
@@ -403,7 +403,7 @@ func (self *PipestanceManager) loadPipestance(pkey string) {
 func (self *PipestanceManager) writeCache() {
 	running := map[string]bool{}
 
-	for pkey, _ := range self.running {
+	for pkey := range self.running {
 		running[pkey] = true
 	}
 

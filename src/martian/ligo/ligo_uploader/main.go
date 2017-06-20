@@ -105,7 +105,7 @@ func GuessTestGroup(pipestance_path string) (string, error) {
 	prefix := "testgroup:"
 	for _, tag := range tags {
 		if len(tag) > len(prefix) && tag[0:len(prefix)] == prefix {
-			return tag[len(prefix):len(tag)], nil
+			return tag[len(prefix):], nil
 		}
 	}
 

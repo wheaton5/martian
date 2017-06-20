@@ -114,7 +114,7 @@ func CompareTestGroups(db *CoreConnection, m *Project, oldgroup string, newgroup
 	/* Step 1: Grab all of the data that we need */
 	list_of_metrics := make([]string, 0, len(m.Metrics))
 
-	for metric_name, _ := range m.Metrics {
+	for metric_name := range m.Metrics {
 		list_of_metrics = append(list_of_metrics, metric_name)
 	}
 

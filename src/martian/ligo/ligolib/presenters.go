@@ -187,7 +187,7 @@ func (c *CoreConnection) PresentAllMetrics(where WhereAble, mets *Project, limit
 		fields = append(fields, k)
 	}
 
-	sort.Strings(fields[1:len(fields)])
+	sort.Strings(fields[1:])
 
 	fields = AugmentMetrics(fields, "sampleid")
 	fields = AugmentMetrics(fields, "SHA")
@@ -349,7 +349,7 @@ func (c *CoreConnection) DetailsPresenter(id int, mets *Project) (*Plot, error) 
 
 	/* Flatten the list of metrics */
 	list_of_metrics := make([]string, 0, len(mets.Metrics))
-	for metric_name, _ := range mets.Metrics {
+	for metric_name := range mets.Metrics {
 		list_of_metrics = append(list_of_metrics, metric_name)
 	}
 

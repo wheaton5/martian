@@ -86,7 +86,7 @@ func (self *Directory) getSortedPipestances() []map[string]string {
 	defer self.mutex.Unlock()
 
 	sortedPorts := []string{}
-	for port, _ := range self.pstances {
+	for port := range self.pstances {
 		sortedPorts = append(sortedPorts, port)
 	}
 	sort.Strings(sortedPorts)

@@ -156,7 +156,7 @@ func (self *DatabaseManager) Query(statement string) (map[string]interface{}, er
 	cols, _ := rows.Columns()
 	vals := make([][]byte, len(cols))
 	dest := make([]interface{}, len(cols))
-	for i, _ := range cols {
+	for i := range cols {
 		dest[i] = &vals[i]
 	}
 	rowLists := [][]string{}

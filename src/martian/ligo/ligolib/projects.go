@@ -270,7 +270,7 @@ func TargetsFromCSV(csv []byte) ([]TargetSet, error) {
 	/* metric_names[0] is nonsense. metrics_names[1] is the name of the first metric....
 	 * l[0] is the sample_id. l[1] is the target for the first metric l[2] is the larget for the second metric...
 	 */
-	for line, l := range lines[start:len(lines)] {
+	for line, l := range lines[start:] {
 
 		/* Skip blank and comment lines */
 		if len(l) == 0 || l[0] == '#' {
@@ -432,7 +432,7 @@ func (pc *ProjectsCache) NewTempProject(txt string, csv *string) (string, error)
 	/*
 	 * Fix up a bunch of stuff (see LoadProject)
 	 */
-	for k, _ := range project.Metrics {
+	for k := range project.Metrics {
 		project.Metrics[k].JSONPath = k
 	}
 	project.WhereAble = MergeWhereClauses(NewStringWhere(project.Where), NewListWhere("sampleid", project.SampleIDs))
@@ -483,7 +483,7 @@ func LoadProject(path string) (*Project, error) {
 	 * Munge the result so that metricdef also knows the path to the metric
 	 * (which is the key in the map that it is in
 	 */
-	for k, _ := range project.Metrics {
+	for k := range project.Metrics {
 		project.Metrics[k].JSONPath = k
 	}
 
@@ -532,7 +532,7 @@ func (pc *ProjectsCache) Reload() error {
 		name := p.Name()
 
 		/* only consider files that end in .json */
-		if len(name) > 5 && (name[len(name)-5:len(name)]) == ".json" {
+		if len(name) > 5 && (name[len(name)-5:]) == ".json" {
 			mdt, err := LoadProject(pc.BasePath + "/" + p.Name())
 			if mdt != nil {
 				projects[p.Name()] = mdt
@@ -578,7 +578,7 @@ func (pc *ProjectsCache) List() []string {
 
 	plist := []string{}
 
-	for k, _ := range pc.Projects {
+	for k := range pc.Projects {
 		plist = append(plist, k)
 	}
 	return plist
@@ -943,7 +943,7 @@ func Compare2(db *CoreConnection, m *Project, base int, newguy int) ([]MetricRes
 
 	/* Flatten the list of metrics */
 	list_of_metrics := make([]string, 0, len(m.Metrics))
-	for metric_name, _ := range m.Metrics {
+	for metric_name := range m.Metrics {
 		list_of_metrics = append(list_of_metrics, metric_name)
 	}
 
