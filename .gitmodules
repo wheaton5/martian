@@ -36,7 +36,7 @@
 	url = https://github.com/vaughan0/go-ini
 [submodule "src/github.com/10XDev/docopt.go"]
 	path = src/github.com/10XDev/docopt.go
-	url = git@github.com:10XDev/docopt.go.git
+	url = https://github.com/martian-lang/docopt.go.git
 [submodule "src/github.com/lib/pq"]
 	path = src/github.com/lib/pq
 	url = https://github.com/lib/pq
