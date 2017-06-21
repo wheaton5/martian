@@ -1,8 +1,8 @@
 @include "_mock_stages.mro"
 
 pipeline MOCK_PHASER_SVCALLER(
-    in  map[]      sample_def,
-    in  map        downsample,
+    in map[] sample_def,
+    in map   downsample,
 )
 {
     call PROCESS_FASTQS(

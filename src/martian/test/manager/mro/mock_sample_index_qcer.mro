@@ -1,7 +1,7 @@
 @include "_mock_stages.mro"
 
 pipeline MOCK_SAMPLE_INDEX_QCER(
-    in  map[]      pool_defs,
+    in map[] pool_defs,
 )
 {
     call PROCESS_POOLS(

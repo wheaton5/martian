@@ -1,7 +1,7 @@
 @include "_mock_stages.mro"
 
 pipeline MOCK_CELLRANGER(
-    in  map[]      sample_def,
+    in map[] sample_def,
 )
 {
     call PROCESS_FASTQS(

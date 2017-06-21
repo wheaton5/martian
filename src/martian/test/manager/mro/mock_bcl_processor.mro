@@ -1,7 +1,7 @@
 @include "_mock_stages.mro"
 
 pipeline MOCK_BCL_PROCESSOR(
-    in  string  run_path,
+    in string run_path,
 )
 {
     call PROCESS_BCLS(

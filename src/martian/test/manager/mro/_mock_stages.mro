@@ -1,15 +1,15 @@
 stage PROCESS_FASTQS(
-    in map[]  sample_def,
-    in map    downsample,
-    src py "process_fastqs",
+    in  map[] sample_def,
+    in  map   downsample,
+    src py    "process_fastqs",
 )
 
 stage PROCESS_POOLS(
-    in map[]  pool_defs,
-    src py "process_pools",
+    in  map[] pool_defs,
+    src py    "process_pools",
 )
 
 stage PROCESS_BCLS(
-    in string run_path,
-    src py "process_bcls",
+    in  string run_path,
+    src py     "process_bcls",
 )

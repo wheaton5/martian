@@ -1,4 +1,4 @@
 stage SAMPLE_DEF(
-    in map[]  sample_def,
-    src py "sample_def_stage",
+    in  map[] sample_def,
+    src py    "sample_def_stage",
 )
