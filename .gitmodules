@@ -34,8 +34,8 @@
 [submodule "src/github.com/vaughan0/go-ini"]
 	path = src/github.com/vaughan0/go-ini
 	url = https://github.com/vaughan0/go-ini
-[submodule "src/github.com/10XDev/docopt.go"]
-	path = src/github.com/10XDev/docopt.go
+[submodule "src/github.com/martian-lang/docopt.go"]
+	path = src/github.com/martian-lang/docopt.go
 	url = https://github.com/martian-lang/docopt.go.git
 [submodule "src/github.com/lib/pq"]
 	path = src/github.com/lib/pq
