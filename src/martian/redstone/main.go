@@ -24,12 +24,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/10XDev/docopt.go"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/dustin/go-humanize"
+	"github.com/martian-lang/docopt.go"
 )
 
 //

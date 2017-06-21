@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/10XDev/docopt.go"
+	"github.com/martian-lang/docopt.go"
 )
 
 func sendNotificationMail(programName string, mailer *manager.Mailer, notices []*manager.PipestanceNotification) {

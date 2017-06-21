@@ -10,9 +10,6 @@
 [submodule "src/github.com/martini-contrib/binding"]
 	path = src/github.com/martini-contrib/binding
 	url = https://github.com/martini-contrib/binding
-[submodule "src/github.com/10XDev/osext"]
-	path = src/github.com/10XDev/osext
-	url = git@github.com:10XDev/osext.git
 [submodule "src/github.com/cloudfoundry/gosigar"]
 	path = src/github.com/cloudfoundry/gosigar
 	url = https://github.com/cloudfoundry/gosigar
