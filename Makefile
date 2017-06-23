@@ -8,12 +8,7 @@ GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone rsincomin
 GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
-GO_VERSION=$(strip $(shell go version | sed 's/.*go\([0-9]*\.[0-9]*\).*/\1/' | tr -d " "))
-
-# Older versions of Go use the "-X foo bar" syntax.  Newer versions either warn
-# or error on that syntax, and use "-X foo=bar" instead.
-LINK_SEPERATOR=$(if $(filter 1.5, $(word 1, $(sort 1.5 $(GO_VERSION)))),=, )
-GO_FLAGS=-ldflags "-X martian/core.__VERSION__$(LINK_SEPERATOR)'$(VERSION)' -X martian/core.__RELEASE__$(LINK_SEPERATOR)'$(RELEASE)'"
+GO_FLAGS=-ldflags "-X martian/core.__VERSION__='$(VERSION)' -X martian/core.__RELEASE__='$(RELEASE)'"
 
 export GOPATH=$(shell pwd)
 
@@ -29,16 +24,11 @@ marsoc-deploy: marsoc ligo/ligo_uploader
 all: grammar $(GOBINS) web test
 
 # Go 1.8 removed yacc from the base distribution and moved it to the tools repo.
-YACC_SRC=src/github.com/golang/tools/cmd/goyacc/yacc.go
-$(YACC_SRC):
-	go get github.com/golang/tools/cmd/goyacc
-bin/goyacc: $(YACC_SRC)
+bin/goyacc: src/github.com/golang/tools/cmd/goyacc/yacc.go
 	go install github.com/golang/tools/cmd/goyacc
-YACCDEP=$(if $(filter 1.8, $(word 1, $(sort 1.8 $(GO_VERSION)))),bin/goyacc,)
-YACC_TOOL=$(if $(filter 1.8, $(word 1, $(sort 1.8 $(GO_VERSION)))),bin/goyacc,go tool yacc)
 
-src/martian/core/grammar.go: $(YACCDEP) src/martian/core/grammar.y
-	$(YACC_TOOL) -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
+src/martian/core/grammar.go: bin/goyacc src/martian/core/grammar.y
+	bin/goyacc -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
 
 grammar: src/martian/core/grammar.go
 

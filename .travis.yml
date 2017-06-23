@@ -8,13 +8,11 @@ go:
     - 1.x
 
 cache:
-  pip: true
   directories:
   - "$HOME/.nvm"
   - "$HOME/.cache/bower/registry"
 before_cache:
 - rm -f $HOME/.npm/anonymous-cli-metrics.json
-- rm -f $HOME/.cache/pip/log/debug.log
 
 sudo: false
 before_script:

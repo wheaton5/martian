@@ -43,3 +43,6 @@
 [submodule "src/github.com/satori/go.uuid"]
 	path = src/github.com/satori/go.uuid
 	url = git@github.com:satori/go.uuid.git
+[submodule "src/github.com/golang/tools"]
+	path = src/github.com/golang/tools
+	url = https://github.com/golang/tools.git
