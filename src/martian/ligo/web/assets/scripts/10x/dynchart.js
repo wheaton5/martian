@@ -28,15 +28,22 @@ function main() {
 		global_metrics_table = new google.visualization.Table(document.getElementById('list1'));
 		google.visualization.events.addListener(global_metrics_table, 'select', global_view_state.metrics_list_click);
 
-		//pickwindow("table")
 		var p = getParameterByName("params");
 		if (p != null && p != "") {
 			global_view_state.ReconstituteFromURL(p);
 
 		}
 		global_view_state.render();
+
+    // this way the default view has a serialized url and the back button works properly
+    window.history.replaceState({}, '', global_view_state.GetURL());
 	});
 	setup_project_dropdown();
+
+  window.onpopstate = () => {
+    global_view_state.ReconstituteFromURL(getParameterByName("params"))
+		global_view_state.render();
+  }
 }
 
 
@@ -484,7 +491,6 @@ ViewState.prototype.render = function() {
 		set_permalink_url(this.GetURL());
 	} else {
 		set_permalink_url(null);
-
 	}
 }
 
@@ -722,6 +728,7 @@ ViewState.prototype.compute_where_param = function() {
 function update_model_from_ui() {
 	var v = global_view_state;
 	v.reverse_apply_view_bindings();
+  window.history.pushState({}, '', v.GetURL());
 
 	var selected = global_table.getSelection();
 
