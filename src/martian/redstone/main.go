@@ -255,11 +255,12 @@ Options:
 
 	// Call Miramar Redstone API.
 	response, err := http.Get("http://software.10xgenomics.com/redstone.json?" + parameters.Encode())
-	defer response.Body.Close()
 	if err != nil {
 		fmt.Printf(GET_UPLOAD_INFO_FAIL_MSG, err)
 		return
 	}
+
+	defer response.Body.Close()
 	if response.StatusCode != 200 {
 		fmt.Printf(GET_UPLOAD_INFO_FAIL_MSG, response.Status)
 		return
