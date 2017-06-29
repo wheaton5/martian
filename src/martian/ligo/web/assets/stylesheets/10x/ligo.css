@@ -18,6 +18,11 @@ a {
 	overflow-y: hidden;
 }
 
+.google-visualization-table-tr-over .different {
+	background: #FFAAAA !important;
+	background-color: #FFAAAA !important;
+}
+
 .chart-cell {
 	text-align: left !important;
 	height: 10px;
