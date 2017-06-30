@@ -90,6 +90,7 @@ sake-strip:
 	rm -f Makefile
 	rm -f README.md
 	rm -f bin/goyacc
+	rm -f .travis.*
 	rm -rf $(YACC_SRC)
 
 sake-martian-strip:
