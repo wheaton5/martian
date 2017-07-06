@@ -4,15 +4,19 @@
 # Build a Go package with git version embedding.
 #
 
-GOBINS=marsoc mrc mre mrf mrg mrp mrs mrv kepler sere houston redstone rsincoming websoc mrt_helper ligo/ligo_server ligo/ligo_uploader
+PUBLIC_GOBINS=mrc mrf mrg mrp mrs mrt_helper
+PRIVATE_GOBINS=marsoc mre mrv kepler sere houston redstone rsincoming websoc ligo/ligo_server ligo/ligo_uploader
+GOBINS=$(PUBLIC_GOBINS) $(PRIVATE_GOBINS)
 GOTESTS=$(addprefix test-, $(GOBINS) core)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
 GO_FLAGS=-ldflags "-X martian/core.__VERSION__='$(VERSION)' -X martian/core.__RELEASE__='$(RELEASE)'"
 
-export GOPATH=$(shell pwd)
+MARTIAN_PUBLIC=src/github.com/10XDev/martian-public
 
-.PHONY: $(GOBINS) grammar web $(GOTESTS)
+export GOPATH=$(shell pwd):$(abspath $(MARTIAN_PUBLIC))
+
+.PHONY: $(GOBINS) grammar houston_web marsoc_web sere_web kepler_web $(GOTESTS) jobmanagers adapters
 
 # Default rule to make it easier to git pull deploy for now.
 # Remove this when we switch to package deployment.
@@ -23,27 +27,60 @@ marsoc-deploy: marsoc ligo/ligo_uploader
 #
 all: grammar $(GOBINS) web test
 
-# Go 1.8 removed yacc from the base distribution and moved it to the tools repo.
-bin/goyacc: src/github.com/golang/tools/cmd/goyacc/yacc.go
-	go install github.com/golang/tools/cmd/goyacc
+grammar:
+	make -C $(MARTIAN_PUBLIC) grammar
 
-src/martian/core/grammar.go: bin/goyacc src/martian/core/grammar.y
-	bin/goyacc -p "mm" -o src/martian/core/grammar.go src/martian/core/grammar.y && rm y.output
-
-grammar: src/martian/core/grammar.go
-
-$(GOBINS):
+$(GOBINS): jobmanagers adapters
 	go install $(GO_FLAGS) martian/$@
 
-web:
-	(cd web/martian && npm install && gulp)
-	(cd web/marsoc && npm install && gulp)
-	(cd web/kepler && npm install && gulp)
-	(cd web/sere && npm install && gulp)
+# Target to pull latest martian public branch.
+latest-public:
+	cd $(MARTIAN_PUBLIC) && git pull origin master
+
+JOBMANAGER_PUBLIC=$(shell cd $(MARTIAN_PUBLIC)/jobmanagers && ls)
+
+jobmanagers/%: $(MARTIAN_PUBLIC)/jobmanagers/%
+	install $< $@
+
+jobmanagers: $(addprefix jobmanagers/, $(JOBMANAGER_PUBLIC))
+
+adapters/%: $(MARTIAN_PUBLIC)/adapters/%
+	mkdir -p $(@D) && install $< $@
+
+ADAPTER_SRCS=$(shell cd $(MARTIAN_PUBLIC) && find adapters -type f)
+
+adapters: $(ADAPTER_SRCS)
+
+MARTIAN_WEB_PUBLIC=$(shell cd $(MARTIAN_PUBLIC) && find web/martian -type f)
+
+web/martian/%: $(MARTIAN_PUBLIC)/web/martian/%
+	mkdir -p $(@D) && install $< $@
+
+MARTIAN_WEB_PRIVATE=web/martian/client/editor.coffee web/martian/client/editor.js \
+					web/martian/client/mrv.coffee web/martian/client/mrv.js \
+					web/martian/res/css/editor.css \
+					web/martian/templates/editor.html web/martian/templates/editor.jade \
+					web/martian/templates/mrv.html web/martian/templates/mrv.jade
+
+martian_web: $(MARTIAN_WEB_PUBLIC) $(MARTIAN_WEB_PRIVATE)
+	(cd web/martian && npm install --no-save && gulp)
+
+marsoc_web: martian_web
+	(cd web/marsoc && npm install --no-save && gulp)
+
+houston_web: martian_web marsoc_web
 	make -C web/houston
 
-mrt:
-	cp scripts/mrt bin/mrt
+kepler_web: martian_web
+	(cd web/kepler && npm install --no-save && gulp)
+
+sere_web: martian_web
+	(cd web/sere && npm install --no-save && gulp)
+
+web: martian_web marsoc_web houston_web kepler_web sere_web
+
+mrt: mrt_helper
+	install scripts/mrt bin/mrt
 
 $(GOTESTS): test-%:
 	go test -v martian/$*
@@ -54,6 +91,10 @@ clean:
 	rm -rf $(GOPATH)/bin
 	rm -rf $(GOPATH)/pkg
 	make -C web/houston clean
+	make -C $(MARTIAN_PUBLIC) clean
+
+tools: $(MARTIAN_PUBLIC)/tools
+	install -d $< $@
 
 #
 # Targets for Sake builds.
@@ -62,7 +103,7 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-martian: mrc mre mrf mrg mrp mrs mrt mrt_helper ligo/ligo_uploader redstone sake-strip sake-martian-strip
+sake-martian: mrc mre mrf mrg mrp mrs mrt mrt_helper ligo/ligo_uploader redstone web tools sake-strip sake-martian-strip
 
 sake-test-martian: test
 
@@ -71,7 +112,7 @@ sake-martian-cs: sake-martian sake-martian-cs-strip
 
 sake-test-martian-cs: test
 
-sake-marsoc: marsoc mrc mrp sake-strip
+sake-marsoc: marsoc mrc mrp martian_web marsoc_web sake-strip
 
 sake-test-marsoc: test
 

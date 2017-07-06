@@ -1,8 +1,0 @@
-
-
-call ADD_KEY1(
-    key = "1",
-    value = "one",
-    start = null,
-    failfile = "fail1",
-)
