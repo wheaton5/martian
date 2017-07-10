@@ -31,7 +31,7 @@ grammar:
 	make -C $(MARTIAN_PUBLIC) grammar
 
 $(PUBLIC_GOBINS): jobmanagers adapters
-	go install $(GO_FLAGS) martian/$@ && install $(MARTIAN_PUBLIC)/bin/$@ bin/$@
+	go install $(GO_FLAGS) martian/$@ && install -D $(MARTIAN_PUBLIC)/bin/$@ bin/$@
 
 $(PRIVATE_GOBINS): jobmanagers adapters
 	go install $(GO_FLAGS) martian/$@
@@ -48,7 +48,7 @@ jobmanagers/%: $(MARTIAN_PUBLIC)/jobmanagers/%
 jobmanagers: $(addprefix jobmanagers/, $(JOBMANAGER_PUBLIC))
 
 adapters/%: $(MARTIAN_PUBLIC)/adapters/%
-	mkdir -p $(@D) && install $< $@
+	install -D $< $@
 
 ADAPTER_SRCS=$(shell cd $(MARTIAN_PUBLIC) && find adapters -type f)
 
@@ -57,7 +57,7 @@ adapters: $(ADAPTER_SRCS)
 MARTIAN_WEB_PUBLIC=$(shell cd $(MARTIAN_PUBLIC) && find web/martian -type f)
 
 web/martian/%: $(MARTIAN_PUBLIC)/web/martian/%
-	mkdir -p $(@D) && install $< $@
+	install -D $< $@
 
 MARTIAN_WEB_PRIVATE=web/martian/client/editor.coffee web/martian/client/editor.js \
 					web/martian/client/mrv.coffee web/martian/client/mrv.js \
