@@ -30,7 +30,10 @@ all: grammar $(GOBINS) web test
 grammar:
 	make -C $(MARTIAN_PUBLIC) grammar
 
-$(GOBINS): jobmanagers adapters
+$(PUBLIC_GOBINS): jobmanagers adapters
+	go install $(GO_FLAGS) martian/$@ && install $(MARTIAN_PUBLIC)/bin/$@ bin/$@
+
+$(PRIVATE_GOBINS): jobmanagers adapters
 	go install $(GO_FLAGS) martian/$@
 
 # Target to pull latest martian public branch.
