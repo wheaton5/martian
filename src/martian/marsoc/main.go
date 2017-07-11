@@ -351,7 +351,7 @@ Options:
 	//=========================================================================
 	// Setup Martian Runtime with pipelines path.
 	//=========================================================================
-	profileMode := "cpu"
+	profileMode := core.CpuProfile
 	stackVars := true
 	zip := true
 	checkSrcPath := true
@@ -443,7 +443,7 @@ Options:
 		"maxmemgb":   strconv.Itoa(rt.JobManager.GetMaxMemGB()),
 		"invokepath": "",
 		"invokesrc":  "",
-		"mroprofile": profileMode,
+		"mroprofile": string(profileMode),
 		"mroport":    uiport,
 	}
 

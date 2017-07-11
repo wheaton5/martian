@@ -338,8 +338,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				}
 
 				// Gather the states of ANALYZER_PD for each sample.
-				states := []string{}
-				run.Analysis = "running"
+				states := make([]core.MetadataState, 0, len(samples))
+				run.Analysis = core.Running
 				for _, sample := range samples {
 					state, ok := pman.GetPipestanceState(run.Fcid, packages.GetPipelineForSample(sample), strconv.Itoa(sample.Id))
 					if ok {
@@ -354,19 +354,19 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				// If every sample is complete, show analysis as complete.
 				every := true
 				for _, state := range states {
-					if state != "complete" {
+					if state != core.Complete {
 						every = false
 						break
 					}
 				}
 				if every && len(states) > 0 {
-					run.Analysis = "complete"
+					run.Analysis = core.Complete
 				}
 
 				// If any sample is failed, show analysis as failed.
 				for _, state := range states {
-					if state == "failed" {
-						run.Analysis = "failed"
+					if state == core.Failed {
+						run.Analysis = core.Failed
 						break
 					}
 				}
@@ -693,7 +693,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 			psinfo[k] = v
 		}
 		psstate, _ := pman.GetPipestanceState(container, pname, psid)
-		psinfo["state"] = psstate
+		psinfo["state"] = string(psstate)
 		psinfo["pname"] = pname
 		psinfo["psid"] = psid
 		psinfo["start"], _ = pman.GetPipestanceTimestamp(container, pname, psid)

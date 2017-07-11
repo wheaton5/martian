@@ -84,7 +84,7 @@ func GetNumCycles(runPath string) (int, error) {
 	}
 }
 
-func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAllocation, error) {
+func GetAllocation(psid string, invocation *core.InvocationData) (*PipestanceStorageAllocation, error) {
 	if invocation == nil {
 		err := &core.PipestanceSizeError{psid}
 		core.LogError(err, "storage", "getting allocation (nil, possibly malformed MRO): %s", psid)
@@ -95,7 +95,7 @@ func GetAllocation(psid string, invocation Invocation) (*PipestanceStorageAlloca
 		psid:   psid,
 		psname: psname}
 
-	invokeArgs := invocation["args"].(map[string]interface{})
+	invokeArgs := invocation.Args
 
 	var inputSize int64
 	var weightedSize float64

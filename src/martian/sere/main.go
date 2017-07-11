@@ -170,7 +170,7 @@ Options:
 
 	jobMode := "sge"
 	vdrMode := "rolling"
-	profileMode := "cpu"
+	profileMode := core.CpuProfile
 	stackVars := true
 	zip := true
 	skipPreflight := false
@@ -241,7 +241,7 @@ Options:
 		"maxmemgb":   strconv.Itoa(rt.JobManager.GetMaxMemGB()),
 		"invokepath": "",
 		"invokesrc":  "",
-		"mroprofile": profileMode,
+		"mroprofile": string(profileMode),
 		"mroport":    uiport,
 	}
 

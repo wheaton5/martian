@@ -26,7 +26,7 @@ type Submission struct {
 	Date     string              `json:"date"`
 	Name     string              `json:"name"`
 	Kind     string              `json:"kind"`
-	State    string              `json:"state"`
+	State    core.MetadataState  `json:"state"`
 	Fname    string              `json:"fname"`
 	Path     string              `json:"path"`
 	Pname    string              `json:"pname"`
@@ -122,7 +122,7 @@ func (self *SubmissionManager) loadSubmission(source, date, name string) *Submis
 	p := path.Join(self.filesPath, source, date, name)
 	fname := "none"
 	kind := "unknown"
-	state := "unknown"
+	state := core.MetadataState("unknown")
 	pname := ""
 	var summary interface{}
 
@@ -242,7 +242,7 @@ func (self *SubmissionManager) InventorySubmissions() {
 			line := ""
 			if s.Kind == "pipestance" {
 				line = fmt.Sprintf("%d. %s %s %s from %s@%s\n    http://%s/pipestance/%s/%s/%s\n",
-					i+1, strings.ToUpper(s.State), s.Kind, s.Name, user, domain, self.hostname, s.Source, s.Date, s.Name)
+					i+1, strings.ToUpper(string(s.State)), s.Kind, s.Name, user, domain, self.hostname, s.Source, s.Date, s.Name)
 			} else if s.Kind == "smallfile" {
 				line = fmt.Sprintf("%d. %s from %s@%s\n    http://%s/file/%s/%s/%s/%s\n",
 					i+1, s.Fname, user, domain, self.hostname, s.Source, s.Date, s.Name, s.Fname)
@@ -316,7 +316,7 @@ func (self *SubmissionManager) GetPipestance(container string, pname string, psi
 	return pipestance, true
 }
 
-func (self *SubmissionManager) GetPipestanceState(container string, pname string, psid string) string {
+func (self *SubmissionManager) GetPipestanceState(container string, pname string, psid string) core.MetadataState {
 	pipestance, ok := self.GetPipestance(container, pname, psid, true)
 	if !ok {
 		return "waiting"
@@ -367,7 +367,7 @@ func (self *SubmissionManager) GetPipestanceJobMode(container string, pname stri
 	return core.ParseJobMode(data)
 }
 
-func (self *SubmissionManager) GetPipestanceSerialization(container string, pname string, psid string, name string) (interface{}, bool) {
+func (self *SubmissionManager) GetPipestanceSerialization(container string, pname string, psid string, name core.MetadataFileName) (interface{}, bool) {
 	filesPath := self.makePipestancePath(container, pname, psid)
 	if ser, ok := self.rt.GetSerialization(filesPath, name); ok {
 		return ser, true

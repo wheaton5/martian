@@ -512,7 +512,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 			psinfo[k] = v
 		}
 		psstate, _ := pman.GetPipestanceState(container, pname, psid)
-		psinfo["state"] = psstate
+		psinfo["state"] = string(psstate)
 		psinfo["pname"] = pname
 		psinfo["psid"] = psid
 		psinfo["start"], _ = pman.GetPipestanceTimestamp(container, pname, psid)

@@ -22,10 +22,10 @@ import (
 )
 
 type SequencingRun struct {
-	Name         string `json:"name"`
-	Read1_length int    `json:"read1_length"`
-	Read2_length int    `json:"read2_length"`
-	Psstate      string `json:"psstate"`
+	Name         string             `json:"name"`
+	Read1_length int                `json:"read1_length"`
+	Read2_length int                `json:"read2_length"`
+	Psstate      core.MetadataState `json:"psstate"`
 }
 
 type User struct {
@@ -39,16 +39,16 @@ type SampleDef struct {
 }
 
 type Sample struct {
-	Id              int          `json:"id"`
-	Description     string       `json:"description"`
-	User            *User        `json:"user"`
-	Product         string       `json:"product"`
-	Sample_defs     []*SampleDef `json:"sample_defs"`
-	Pname           string       `json:"pname"`
-	Pscontainer     string       `json:"pscontainer"`
-	Psstate         string       `json:"psstate"`
-	Ready_to_invoke bool         `json:"ready_to_invoke"`
-	Callsrc_for_js  string       `json:"callsrc"`
+	Id              int                `json:"id"`
+	Description     string             `json:"description"`
+	User            *User              `json:"user"`
+	Product         string             `json:"product"`
+	Sample_defs     []*SampleDef       `json:"sample_defs"`
+	Pname           string             `json:"pname"`
+	Pscontainer     string             `json:"pscontainer"`
+	Psstate         core.MetadataState `json:"psstate"`
+	Ready_to_invoke bool               `json:"ready_to_invoke"`
+	Callsrc_for_js  string             `json:"callsrc"`
 }
 
 type BySampleId []*Sample

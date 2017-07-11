@@ -99,7 +99,7 @@ func runWebServer(uiport string, martianVersion string, sman *SubmissionManager)
 		psinfo := map[string]string{}
 		ser, _ := sman.GetPipestanceSerialization(container, pname, psid, "finalstate")
 		parts := strings.Split(container, "@")
-		psinfo["state"] = sman.GetPipestanceState(container, pname, psid)
+		psinfo["state"] = string(sman.GetPipestanceState(container, pname, psid))
 		jobmode, localcores, localmem := sman.GetPipestanceJobMode(container, pname, psid)
 		psinfo["jobmode"] = jobmode
 		psinfo["maxcores"] = localcores

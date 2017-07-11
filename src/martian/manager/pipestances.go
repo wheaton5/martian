@@ -839,7 +839,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 }
 
 func (self *PipestanceManager) writePipestanceToFailCoop(pkey string, stage string, preflight bool, summary string,
-	errlog string, kind string, errpaths []string, invocation interface{}) {
+	errlog string, kind core.MetadataFileName, errpaths []string, invocation interface{}) {
 	now := time.Now()
 	currentDatePath := path.Join(self.failCoopPath, now.Format("2006-01-02"))
 	if _, err := os.Stat(currentDatePath); err != nil {
@@ -920,7 +920,7 @@ func (self *PipestanceManager) GetAllocation(container string, pipeline string, 
 	if err != nil {
 		return nil, err
 	}
-	invocation, err := self.rt.BuildCallJSON(invokeSrc, argshimPath, mroPaths)
+	invocation, err := self.rt.BuildCallData(invokeSrc, argshimPath, mroPaths)
 	if err != nil {
 		return nil, err
 	}
@@ -1274,37 +1274,41 @@ func (self *PipestanceManager) unsetRetries(pkey string) {
 	}
 }
 
-func (self *PipestanceManager) getPipestanceState(container string, pipeline string, psid string) (string, bool) {
+func (self *PipestanceManager) getPipestanceState(container string, pipeline string, psid string) (core.MetadataState, bool) {
 	pkey := makePipestanceKey(container, pipeline, psid)
 	if self.PipestanceInStorageQueue(pkey) {
-		return "queued", true
+		return core.Queued, true
 	}
 	if _, ok := self.copying[pkey]; ok {
 		return "copying", true
 	}
 	if _, ok := self.completed[pkey]; ok {
-		return "complete", true
+		return core.Complete, true
 	}
 	if _, ok := self.failed[pkey]; ok {
-		return "failed", true
+		return core.Failed, true
 	}
 	if run, ok := self.running[pkey]; ok {
 		return run.GetState(), true
 	}
 	if _, ok := self.pending[pkey]; ok {
-		return "waiting", true
+		return core.ForkWaiting, true
 	}
-	return "", false
+	return core.Waiting, false
 }
 
-func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (string, bool) {
+func (self *PipestanceManager) GetPipestanceState(container string, pipeline string, psid string) (core.MetadataState, bool) {
 	self.mutex.Lock()
 	state, ok := self.getPipestanceState(container, pipeline, psid)
 	self.mutex.Unlock()
 	return state, ok
 }
 
-func (self *PipestanceManager) GetPipestanceSerialization(container string, pipeline string, psid string, name string) (interface{}, bool) {
+func (self *PipestanceManager) GetPipestanceSerialization(
+	container string,
+	pipeline string,
+	psid string,
+	name core.MetadataFileName) (interface{}, bool) {
 	psPath := self.makePipestancePath(container, pipeline, psid)
 	if ser, ok := self.rt.GetSerialization(psPath, name); ok {
 		return ser, true
@@ -1317,7 +1321,7 @@ func (self *PipestanceManager) GetPipestanceSerialization(container string, pipe
 	}
 
 	// Cache serialization if pipestance is complete
-	if state, _ := self.GetPipestanceState(container, pipeline, psid); state == "complete" {
+	if state, _ := self.GetPipestanceState(container, pipeline, psid); state == core.Complete {
 		pipestance.Immortalize()
 		if ser, ok := self.rt.GetSerialization(psPath, name); ok {
 			return ser, true

@@ -12,8 +12,6 @@ import (
 const CHROMIUM string = "chromium"
 const GEMCODE string = "gemcode"
 
-type Invocation map[string]interface{}
-
 type SampleDef struct {
 	bc_length      int
 	bc_in_read     int
@@ -199,17 +197,17 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 	return allPaths, nil
 }
 
-func InvocationFromMRO(source string, srcPath string, mroPaths []string) Invocation {
+func InvocationFromMRO(source string, srcPath string, mroPaths []string) *core.InvocationData {
 	rt := core.NewRuntime("local", "disable", "disable", core.GetVersion())
-	invocationJson, err := rt.BuildCallJSON(source, srcPath, mroPaths)
+	invocationData, err := rt.BuildCallData(source, srcPath, mroPaths)
 	if err != nil {
 		core.LogError(err, "storage", "Error getting MRO invocation: %s", srcPath)
 	}
-	return invocationJson
+	return invocationData
 }
 
-func FastqFilesFromInvocation(invocation Invocation) ([]string, error) {
-	args := invocation["args"].(map[string]interface{})
+func FastqFilesFromInvocation(invocation *core.InvocationData) ([]string, error) {
+	args := invocation.Args
 	if _, ok := args["sample_def"]; !ok {
 		psname := PipelineFromInvocation(invocation)
 		err := &core.PipestanceSizeError{psname}
@@ -233,6 +231,6 @@ func FastqFilesFromInvocation(invocation Invocation) ([]string, error) {
 	return allPaths, nil
 }
 
-func PipelineFromInvocation(invocation Invocation) string {
-	return invocation["call"].(string)
+func PipelineFromInvocation(invocation *core.InvocationData) string {
+	return invocation.Call
 }

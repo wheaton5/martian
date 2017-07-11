@@ -63,13 +63,13 @@ type Round struct {
 }
 
 type Test struct {
-	Name      string `json:"name"`
-	Category  string `json:"category"`
-	Id        string `json:"id"`
-	Container string `json:"container"`
-	Pipeline  string `json:"pipeline"`
-	Psid      string `json:"psid"`
-	State     string `json:"state"`
+	Name      string             `json:"name"`
+	Category  string             `json:"category"`
+	Id        string             `json:"id"`
+	Container string             `json:"container"`
+	Pipeline  string             `json:"pipeline"`
+	Psid      string             `json:"psid"`
+	State     core.MetadataState `json:"state"`
 }
 
 const timeFormat = "2006-01-02 15:04"
