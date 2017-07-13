@@ -38,7 +38,7 @@ $(PRIVATE_GOBINS): jobmanagers adapters
 
 # Target to pull latest martian public branch.
 latest-public:
-	cd $(MARTIAN_PUBLIC) && git pull origin master
+	cd $(MARTIAN_PUBLIC) && git pull origin master && git submodule update --init --recursive
 
 JOBMANAGER_PUBLIC=$(shell cd $(MARTIAN_PUBLIC)/jobmanagers && ls)
 
