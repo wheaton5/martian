@@ -43,6 +43,7 @@ type GraphPage struct {
 	Admin        bool
 	AdminStyle   bool
 	Release      bool
+	Auth         string
 }
 
 // Forms
