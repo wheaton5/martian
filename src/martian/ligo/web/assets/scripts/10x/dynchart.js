@@ -49,6 +49,12 @@ function main() {
 
     // this way the default view has a serialized url and the back button works properly
     window.history.replaceState({}, "", global_view_state.GetURL());
+
+    google.visualization.events.addListener(
+      global_table,
+      "select",
+      checkGlobalTableSelection
+    );
   });
   setup_project_dropdown();
 
@@ -57,6 +63,17 @@ function main() {
     global_view_state.render();
   };
 }
+
+const checkGlobalTableSelection = () => {
+  $(".js-nav-details").addClass("disabled");
+  $(".js-nav-compare").addClass("disabled");
+  const selection = global_table.getSelection();
+  if (selection.length === 1) {
+    $(".js-nav-details").removeClass("disabled");
+  } else if (selection.length === 2) {
+    $(".js-nav-compare").removeClass("disabled");
+  }
+};
 
 /*
  * This is a JSON front-end to help with error handling. We call a path and expect
@@ -444,6 +461,9 @@ ViewState.prototype.render = function() {
   $("#help").hide();
   $("#playground").hide();
   $("#vandv").hide();
+
+  $(".table_form").hide();
+  $(".vandv_form").hide();
   set_csv_download_url("");
 
   this.apply_view_bindings();
@@ -454,19 +474,23 @@ ViewState.prototype.render = function() {
     case "vandv":
       this.vandv_update();
       $("#vandv").show();
+      $(".vandv_form").show();
       break;
     case "compare":
       this.compare_update();
       $("#compare").show();
+      $(".table_form").show();
       break;
 
     case "details":
       $("#details").show();
+      $(".table_form").show();
       this.details_update();
       break;
 
     case "table":
       $("#table").show();
+      $(".table_form").show();
       this.table_update();
       break;
 
@@ -503,6 +527,7 @@ ViewState.prototype.render = function() {
   } else {
     set_permalink_url(null);
   }
+  checkGlobalTableSelection();
 };
 
 ViewState.prototype.update_playground = function() {

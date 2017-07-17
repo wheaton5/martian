@@ -1,25 +1,22 @@
- div#table
-     div.panel.panel-primary
-         div.panel-heading
-             .row
-                 .col-xs-3
-                     h2.panel-title(style="line-height:30px") Table view
-                 .col-xs-9
-                     form.form-inline
-                         .form-group.btn-group(role="group")
-                             button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('basic')") Basic
-                             button(type="button" class="btn btn-default btn-sm" onclick="changetablemode('metrics')") Metrics
-                         .checkbox
-                             | &nbsp;&nbsp;
-                             label
-                                 input#latestonly(type="checkbox") &nbsp;Latest official version only
+#table
+        .row
+            .col-xs-12.main-panel-button-wrapper
+                form.form-inline
+                    .form-group.btn-group(role="group")
+                        button(type="button" class="btn btn-default" onclick="changetablemode('basic')") Basic
+                        button(type="button" class="btn btn-default" onclick="changetablemode('metrics')") Metrics
+                    .checkbox
+                        | &nbsp;&nbsp;
+                        label
+                            input#latestonly(type="checkbox") &nbsp;Latest official version only
 
-                         .pagination-group.pull-right(class="btn-group" role="group")
-                             button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
-                                 span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
-                             button(type="button" class="btn btn-default btn-sm")
-                                 span#page
-                             button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
-                                 span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
-         div.panel-body.table-container
-             div.flex-table#table1
+                    .pull-right.btn-group(role="group")
+                        button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
+                            span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
+                        button(type="button" class="btn btn-default btn-sm")
+                            | Page&nbsp;
+                            span#page
+                        button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
+                            span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
+        .table-container
+            .flex-table#table1

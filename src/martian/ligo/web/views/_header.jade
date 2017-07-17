@@ -1,43 +1,27 @@
-nav.navbar.navbar-default
-  .container-fluid
-    .navbar-header
-      button.navbar-toggle.collapsed(type='button', data-toggle='collapse', data-target='.ligo--navbar-collapse', aria-expanded='false')
-        span.sr-only Toggle navigation
-        span.icon-bar
-        span.icon-bar
-        span.icon-bar
-      a.navbar-brand(href='#') Ligo
-
-    .ligo-navbar-collapse.collapse.navbar-collapse
-      ul.nav.navbar-nav
-        li
-          a(onclick="pickwindow('plot')") Plot
-        li
-          a(onclick="pickwindow('table')") Table
-        li
-          a(onclick="pickwindow('details')") Details
-        li
-          a(onclick="pickwindow('compare')") Compare
-        li
-          a(onclick="pickwindow('vandv')") Compare testgroups
-
-      ul.nav.navbar-nav.navbar-right
-        li.dropdown
-          a.dropdown-toggle(data-toggle="dropdown" href="#")
-            | Other Actions
-            span.caret
-          ul.dropdown-menu
-            li
-              a(onclick="pickwindow('playground')") Playground
-            li
-              a(onclick="pickwindow('help')") Help
-            li
-              a#myurl(href="#") Generate Permalink
-            li
-              a#csvlink(href="#") Download data as CSV
-
-        li.dropdown
-          a.dropdown-toggle(data-toggle="dropdown" href="#")
-            span#project_cur
-            span.caret
-          ul#projects_dropdown.dropdown-menu
+.left-nav.full-height.col-xs-2(style="background-image: url(https://c1.staticflickr.com/6/5173/5436446554_9244788c36_b.jpg)")
+  ul.nav.nav-pills.nav-stacked
+    li.logo Ligo
+    li.dropdown.project-dropdown
+      a.dropdown-toggle(data-toggle="dropdown" href="#")
+        span#project_cur
+        span.caret
+      ul#projects_dropdown.dropdown-menu
+    li
+      a(onclick="pickwindow('table')") Table
+    li.js-nav-details.disabled
+      a(onclick="pickwindow('details')") Details
+    li.js-nav-compare.disabled
+      a(onclick="pickwindow('compare')") Compare
+    li
+      a(onclick="pickwindow('vandv')") Compare testgroups
+    li
+      a(onclick="pickwindow('plot')") Plot
+    li
+      a(onclick="pickwindow('playground')") Playground
+    li
+      a(onclick="pickwindow('help')") Help
+    hr
+    li
+      a#myurl(href="#") Generate Permalink
+    li
+      a#csvlink(href="#") Download data as CSV

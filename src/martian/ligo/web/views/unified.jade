@@ -1,52 +1,52 @@
 doctype html
 
-html
+html.full-height
     head
         link(href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css", rel="stylesheet", integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u", crossorigin="anonymous")
+        link(href="https://fonts.googleapis.com/css?family=Open+Sans:400,700", rel="stylesheet")
         link(rel="stylesheet" href="/assets/stylesheets/10x/ligo.css")
 
-    body
-        include "_header.jade"
+    body.full-height
+        .container-fluid.full-height
+            .row.full-height
+                include "_header.jade"
+                .col-xs-10.full-height
+                    .row.full-height
+                        .col-xs-12
+                            form(onsubmit="generaluiupdate()")
+                                .table_form.flex-inline-form
+                                    .flex-inline-form-group(style="flex: 3")
+                                        label(for="where") Where
+                                        input#where.form-control(name="where" placeholder="Where (empty or a SQL where clause)")
+                                    .flex-inline-form-group
+                                        label(for="sampleid") Sample ID
+                                        input#where_sampleid.form-control(name="where_sampleid" placeholder="Sample Id")
+                                    .flex-inline-form-group
+                                        label(for="where_user") User
+                                        input#where_user.form-control(name="where_user" placeholder="User")
+                                .vandv_form
+                                    .form-group
+                                        label(for="oldtestgroup") Old testgroup
+                                        input#oldtestgroup.form-control(name="oldtestgroup" placeholder="123")
+                                    .form-group
+                                        label(for="newtestgroup") New testgroup
+                                        input#newtestgroup.form-control(name="newtestgroup" placeholder="456")
+                                    button.btn.btn-default(type="submit" style="display:none") Go
 
-        .container-fluid
-            .row
-                .col-xs-12
-                    form(onsubmit="generaluiupdate()")
-                        .form-inline
-                            .form-group
-                                label(for="where") Where (empty or a SQL where clause)
-                                input#where.form-control(style="width:800px" name="where" placeholder="Where (empty or a SQL where clause)")
-                        br
-                        .form-inline
-                            .form-group
-                                label(for="sampleid") Sample ID
-                                input#where_sampleid.form-control(name="where_sampleid" placeholder="sampleid")
-                            .form-group
-                                label(for="where_user") User
-                                input#where_user.form-control(name="where_user" placeholder="user")
-                            .form-group
-                                label(for="oldtestgroup") Old testgroup
-                                input#oldtestgroup.form-control(name="oldtestgroup" placeholder="123")
-                            .form-group
-                                label(for="newtestgroup") New testgroup
-                                input#newtestgroup.form-control(name="newtestgroup" placeholder="456")
-                            button.btn.btn-default(type="submit" style="display:none") Go
-                        br    
+                        .col-xs-12.main-panel.full-height
+                            .panel.panel-danger#errorbox.hidden
+                                div.panel-heading
+                                    h2.panel-title Error
+                                div.panel-body
+                                    p#errortext
 
-        .container-fluid
-            div.panel.panel-danger#errorbox.hidden
-                div.panel-heading
-                    h2.panel-title Error
-                div.panel-body
-                    p#errortext
-
-            include "_vandv.jade"
-            include "_details.jade"
-            include "_playground.jade"
-            include "_table.jade"
-            include "_compare.jade"
-            include "_plot.jade"
-            include "_help.jade"
+                            include "_vandv.jade"
+                            include "_details.jade"
+                            include "_playground.jade"
+                            include "_table.jade"
+                            include "_compare.jade"
+                            include "_plot.jade"
+                            include "_help.jade"
 
         script(src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous")
         script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js", integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa", crossorigin="anonymous")

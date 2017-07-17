@@ -1,3 +1,7 @@
+body {
+  font-family: 'Open Sans', sans-serif;
+}
+
 a {
   cursor: pointer;
 }
@@ -28,24 +32,13 @@ a {
 	height: 10px;
 }
 
-.input-field {
-	width: 850px;
-}
-
-.clear {
-	clear:both;
-}
-
-.pagination-group {
-	float: right;
-}
-
 .table-container {
     padding: 0;
-    height: calc(100vh - 260px);  /* emperically found px value to fit in viewport */
+    height: calc(100vh - 160px);  /* emperically found px value to fit in viewport */
     overflow: scroll;
     width: 100%;
 }
+
 .flex-table {
     padding: 0;
     width: max-content;
@@ -61,4 +54,97 @@ a {
 .flex-table ::-webkit-scrollbar-thumb {
     border-radius: 4px;
     background-color: rgba(0,0,0,.5);
+}
+
+.full-height {
+  height: 100%;
+}
+.container-full-height {
+  height: 100%;
+  min-height: 100%;
+}
+
+.left-nav {
+  border-right: 1px solid #ddd;
+  padding: 0;
+}
+.nav-stacked > li + li {  /* bootstrap override */
+  margin-top: 0;
+}
+.nav-pills > li > a {  /* bootstrap override */
+  color: rgba(255, 255, 255, 0.75);
+  border-radius: 0;
+}
+
+.nav-pills > li:hover > a,
+.nav .open > a,
+.nav .open > a:focus,
+.nav .open > a:hover {  /* bootstrap override */
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+
+.flex-inline-form {
+  display: flex;
+}
+.flex-inline-form-group {
+  flex: 1;
+  margin-right: 8px;
+}
+.flex-inline-form-group label {
+  font-size: 10px;
+}
+.flex-inline-form-group input {
+  border: none;
+  border-bottom: 1px solid #333;
+  border-radius: 0;
+  box-shadow: none;
+}
+.flex-inline-form-group input:focus {
+  box-shadow: none;
+}
+
+.table_form {
+  margin: 12px 0 20px;
+}
+
+.main-panel {
+  background-color: rgb(231, 234, 238);
+}
+
+.main-panel-button-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 66px;
+}
+
+.main-panel-button-wrapper > .form-inline {
+  width: 100%;
+}
+
+.main-panel-button-wrapper > h2 {
+  margin: 0;
+}
+
+.logo {
+  line-height: 90px;
+  color: #fff;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.75);
+}
+
+.project-dropdown {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.75);
+  line-height: 36px;
+}
+
+.flex-center {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

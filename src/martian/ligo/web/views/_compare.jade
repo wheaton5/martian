@@ -1,17 +1,14 @@
-div#compare
-    div.panel.panel-primary
-        div.panel-heading
-            .row
-                .col-xs-3
-                    h2.panel-title(style="line-height:30px")
-                        |Comparing test id&nbsp;
-                        span#compareid1
-                        | &nbsp;versus&nbsp;
-                        span#compareid2
-                .col-xs-9
-                    form.form-inline
-                        .form-group.btn-group(role="group")
-                            button(type="button" class="btn btn-default btn-sm" onclick="changecomparemode('project')") Project
-                            button(type="button" class="btn btn-default btn-sm" onclick="changecomparemode('all')") All
-        div.panel-body.table-container
-            div.flex-table#compare1
+#compare
+    .row
+        .col-xs-12.main-panel-button-wrapper
+            h2
+                | Comparing test id&nbsp;
+                span#compareid1
+                | versus&nbsp;
+                span#compareid2
+
+            .btn-group(role="group")
+                button.btn.btn-default.btn-sm(type="button" onclick="changecomparemode('project')") Project
+                button.btn.btn-default.btn-sm(type="button" onclick="changecomparemode('all')") All
+    .table-container
+        .flex-table#compare1
