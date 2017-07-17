@@ -1,0 +1,17 @@
+div#compare
+    div.panel.panel-primary
+        div.panel-heading
+            .row
+                .col-xs-3
+                    h2.panel-title(style="line-height:30px")
+                        |Comparing test id&nbsp;
+                        span#compareid1
+                        | &nbsp;versus&nbsp;
+                        span#compareid2
+                .col-xs-9
+                    form.form-inline
+                        .form-group.btn-group(role="group")
+                            button(type="button" class="btn btn-default btn-sm" onclick="changecomparemode('project')") Project
+                            button(type="button" class="btn btn-default btn-sm" onclick="changecomparemode('all')") All
+        div.panel-body.table-container
+            div.flex-table#compare1

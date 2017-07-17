@@ -1,0 +1,36 @@
+div#plot
+    div.panel.panel-primary
+        div.panel-heading
+            h2.panel-title Plot view
+        div.panel-body
+            form
+                table
+                    tr
+                        td.plot-table-td Sort By
+                        td.plot-table-td
+                            input#sortby.input-field(name="x" value="finishdate")
+                    tr
+                        td.plot-table-td X
+                        td.plot-table-td
+                            input#chartx.input-field(name="x" value="SHA")
+                    tr
+                        td.plot-table-td Y
+                        td.plot-table-td
+                            input#charty.input-field(name="y")
+                    tr
+                        td.plot-table-td
+                        td.plot-table-td
+                            div.btn-group
+                                button(class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false")  
+                                    span#chart_mode Chart style
+                                    span(class="caret")
+                                ul.dropdown-menu
+                                    li(onclick="update_chart_style('line')") line
+                                    li(onclick="update_chart_style('scatter')") scatter
+
+                br
+                button(type="button" class="btn btn-default" onclick="update()") Go
+            div(style="float:right;")
+                h2 Metrics I know about
+                div#list1(style="width:600px;height:500px")
+            div#plot1(style="width:800px;height:500px")

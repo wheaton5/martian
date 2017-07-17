@@ -1,0 +1,14 @@
+div#details
+    div.panel.panel-primary
+        div.panel-heading
+            .row
+                .col-xs-3
+                    h2.panel-title(style="line-height:30px")
+                        |Details for test id&nbsp;
+                        span#detailid
+                .col-sx-9
+                    div(class="btn-group" role="group")
+                        button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('project')") Project
+                        button(type="button" class="btn btn-default" class="btn-sm" onclick="changetablemode('everything')") Everything
+        div.panel-body.table-container
+                div.flex-table#details1
