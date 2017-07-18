@@ -77,6 +77,8 @@ a {
 }
 
 .nav-pills > li:hover > a,
+.nav > li > a:hover,
+.nav > li > a:focus,
 .nav .open > a,
 .nav .open > a:focus,
 .nav .open > a:hover {  /* bootstrap override */
@@ -94,7 +96,8 @@ a {
 .flex-inline-form-group label {
   font-size: 10px;
 }
-.flex-inline-form-group input {
+input, .flex-inline-form-group input {
+	width: 100%;
   border: none;
   border-bottom: 1px solid #333;
   border-radius: 0;

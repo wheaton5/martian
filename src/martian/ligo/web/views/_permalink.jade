@@ -1,0 +1,12 @@
+#permalink-modal.modal.fade(tabindex="-1", role="dialog", aria-labelledby="myModalLabel")
+  .modal-dialog.modal-sm(role="document")
+    .modal-content
+      .modal-header
+        button.close(type="button" data-dismiss="modal" aria-label="Close")
+          span(aria-hidden="true") &times;
+        h4.modal-title Permalink
+      .modal-body
+        .row
+          .col-xs-10.col-xs-offset-1
+            | Copy your permalink:
+            input#permalink-display(readonly="true")

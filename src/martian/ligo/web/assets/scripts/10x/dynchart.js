@@ -50,6 +50,7 @@ function main() {
     // this way the default view has a serialized url and the back button works properly
     window.history.replaceState({}, "", global_view_state.GetURL());
 
+    // listen on global_table selection to enable details/compare views
     google.visualization.events.addListener(
       global_table,
       "select",
@@ -62,7 +63,17 @@ function main() {
     global_view_state.ReconstituteFromURL(getParameterByName("params"));
     global_view_state.render();
   };
+  // listen on permalink modal to request the permalink for the url
+  $("#permalink-modal").on("show.bs.modal", permalinkModalShow);
+  $("#permalink-modal").on("click", () => $("#permalink-display").select());
 }
+
+const permalinkModalShow = () => {
+  const fetchPermalinkUrl = $("#myurl").data("fetchPermalinkUrl");
+  $.get({ url: fetchPermalinkUrl, dataType: "text" }).then(shortenedUrl => {
+    $("#permalink-display").val(shortenedUrl);
+  });
+};
 
 const checkGlobalTableSelection = () => {
   $(".js-nav-details").addClass("disabled");
@@ -1011,14 +1022,17 @@ function clear_error_box() {
 }
 
 function set_permalink_url(l) {
-  var link = document.getElementById("myurl");
+  var $link = $("#myurl");
   //link.text = "permalink"
 
   if (l) {
-    link.href = "http://t.fuzzplex.com/save?url=" + encodeURIComponent(l);
-    $(link).show();
+    $link.data(
+      "fetchPermalinkUrl",
+      "http://t.fuzzplex.com/save?url=" + encodeURIComponent(l)
+    );
+    $link.show();
   } else {
-    $(link).hide();
+    $link.hide();
   }
 }
 
