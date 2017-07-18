@@ -505,6 +505,27 @@ func (c *CoreConnection) GrabAllMetricsRaw(where WhereAble, pid int) ([]Datum, e
 	return result, nil
 }
 
+func (c *CoreConnection) GrabDistinctTestgroups() ([]string, error) {
+	query := "SELECT DISTINCT(testgroup) FROM test_reports WHERE testgroup <> '';"
+	rows, err := c.Q.Query(query)
+
+	if err != nil {
+		log.Printf("DATABASE QUERY FAILED: %v", err)
+		return nil, errors.New(fmt.Sprintf("Failed DB query: %v. Query was: %v", err, query))
+	}
+
+	var testgroups []string
+	for rows.Next() {
+		var testgroup string
+		if err := rows.Scan(&testgroup); err != nil {
+			log.Fatal(err)
+		}
+		testgroups = append(testgroups, testgroup)
+	}
+
+	return testgroups, nil
+}
+
 /*
  * Take an entire JSON structure and flatten it into a bunch of
  * {Path:.... Key:.... } objects.

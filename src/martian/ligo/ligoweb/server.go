@@ -97,6 +97,8 @@ func SetupServer(port int, db *ligolib.CoreConnection, webbase string, projectba
 	m.Post("/api/tmpproject", ls.UploadTempProject)
 	m.Get("/api/downloadproject", ls.DownloadProject)
 
+	m.Get("/api/ui/testgroup_typeahead", ls.TestgroupTypeahead)
+
 	/* Start it up! */
 	m.Run()
 }
@@ -508,4 +510,13 @@ func (s *LigoServer) DownloadProject(w http.ResponseWriter, r *http.Request) {
 	target_info_as_csv := string(ligolib.CSVFromTargets(project))
 
 	FormatResponse(map[string]interface{}{"project_def": project, "targets_csv": target_info_as_csv}, nil, w)
+}
+
+func (s *LigoServer) TestgroupTypeahead(w http.ResponseWriter, r *http.Request) {
+	testgroups, err := s.DB.GrabDistinctTestgroups()
+	if err != nil {
+		FormatResponse(nil, err, w)
+		return
+	}
+	FormatResponse(map[string]interface{}{"testgroups": testgroups}, nil, w)
 }
