@@ -477,6 +477,7 @@ ViewState.prototype.render = function() {
 
   $(".table_form").hide();
   $(".vandv_form").hide();
+  $(".js-main-panel").removeClass("full-height");
   set_csv_download_url("");
 
   this.apply_view_bindings();
@@ -524,10 +525,12 @@ ViewState.prototype.render = function() {
     case "playground":
       this.update_playground();
       $("#playground").show();
+      $(".js-main-panel").addClass("full-height");
       break;
 
     case "help":
       $("#help").show();
+      $(".js-main-panel").addClass("full-height");
       break;
   }
 

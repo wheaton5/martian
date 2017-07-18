@@ -34,7 +34,9 @@ a {
 
 .table-container {
     padding: 0;
-    height: calc(100vh - 160px);  /* emperically found px value to fit in viewport */
+    /* this wraps the table, whenever a table is show there's also a form and header
+     * those are always 66px and 89px respectively */
+    height: calc(100vh - 66px - 89px);
     overflow: scroll;
     width: 100%;
 }
@@ -108,6 +110,7 @@ input:not([type='checkbox']), .flex-inline-form-group input {
 }
 
 .table_form, .vandv_form {
+  background-color: #fff;
   margin: 12px 0 20px;
 }
 
