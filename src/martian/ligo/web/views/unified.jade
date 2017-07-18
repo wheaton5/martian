@@ -24,21 +24,22 @@ html.full-height
                                     .flex-inline-form-group
                                         label(for="where_user") User
                                         input#where_user.form-control(name="where_user" placeholder="User")
-                                .vandv_form
-                                    .form-group
+                                .vandv_form.flex-inline-form
+                                    .flex-inline-form-group
                                         label(for="oldtestgroup") Old testgroup
-                                        input#oldtestgroup.form-control(name="oldtestgroup" placeholder="123")
-                                    .form-group
+                                        input#oldtestgroup.form-control(name="oldtestgroup" placeholder="Old Testgroup Id or Where")
+                                    .flex-inline-form-group
                                         label(for="newtestgroup") New testgroup
-                                        input#newtestgroup.form-control(name="newtestgroup" placeholder="456")
+                                        input#newtestgroup.form-control(name="newtestgroup" placeholder="New Testgroup Id or Where")
                                     button.btn.btn-default(type="submit" style="display:none") Go
 
                         .col-xs-12.main-panel.full-height
-                            .panel.panel-danger#errorbox.hidden
+                            .panel.panel-danger#errorbox.hidden(style="margin-top: 12px")
                                 div.panel-heading
-                                    h2.panel-title Error
-                                div.panel-body
-                                    p#errortext
+                                    h2.panel-title
+                                        | Error -
+                                        = " "
+                                        span#errortext
 
                             include "_vandv.jade"
                             include "_details.jade"

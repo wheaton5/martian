@@ -96,7 +96,7 @@ a {
 .flex-inline-form-group label {
   font-size: 10px;
 }
-input, .flex-inline-form-group input {
+input:not([type='checkbox']), .flex-inline-form-group input {
 	width: 100%;
   border: none;
   border-bottom: 1px solid #333;
@@ -107,7 +107,7 @@ input, .flex-inline-form-group input {
   box-shadow: none;
 }
 
-.table_form {
+.table_form, .vandv_form {
   margin: 12px 0 20px;
 }
 
@@ -126,7 +126,7 @@ input, .flex-inline-form-group input {
   width: 100%;
 }
 
-.main-panel-button-wrapper > h2 {
+.main-panel-button-wrapper > h3 {
   margin: 0;
 }
 
