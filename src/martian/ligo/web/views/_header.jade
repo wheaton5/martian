@@ -1,4 +1,4 @@
-.left-nav.full-height.col-xs-2(style="background-image: url(https://c1.staticflickr.com/6/5173/5436446554_9244788c36_b.jpg)")
+.left-nav.full-height.col-xs-2
   ul.nav.nav-pills.nav-stacked
     li.logo Ligo
     li.dropdown.project-dropdown
@@ -6,19 +6,19 @@
         span#project_cur
         span.caret
       ul#projects_dropdown.dropdown-menu
-    li
+    li.js-nav-table
       a(onclick="pickwindow('table')") Table
     li.js-nav-details.disabled
       a(onclick="pickwindow('details')") Details
     li.js-nav-compare.disabled
       a(onclick="pickwindow('compare')") Compare
-    li
+    li.js-nav-vandv
       a(onclick="pickwindow('vandv')") Compare testgroups
-    li
+    li.js-nav-plot
       a(onclick="pickwindow('plot')") Plot
-    li
+    li.js-nav-playground
       a(onclick="pickwindow('playground')") Playground
-    li
+    li.js-nav-help
       a(onclick="pickwindow('help')") Help
     hr
     li

@@ -478,6 +478,7 @@ ViewState.prototype.render = function() {
   $(".table_form").hide();
   $(".vandv_form").hide();
   $(".js-main-panel").removeClass("full-height");
+  $(".left-nav li.active").map((index, el) => $(el).removeClass("active"));
   set_csv_download_url("");
 
   this.apply_view_bindings();
@@ -489,23 +490,27 @@ ViewState.prototype.render = function() {
       this.vandv_update();
       $("#vandv").show();
       $(".vandv_form").show();
+      $(".js-nav-vandv").addClass("active");
       break;
     case "compare":
       this.compare_update();
       $("#compare").show();
       $(".table_form").show();
+      $(".js-nav-compare").addClass("active");
       break;
 
     case "details":
+      this.details_update();
       $("#details").show();
       $(".table_form").show();
-      this.details_update();
+      $(".js-nav-details").addClass("active");
       break;
 
     case "table":
+      this.table_update();
       $("#table").show();
       $(".table_form").show();
-      this.table_update();
+      $(".js-nav-table").addClass("active");
       break;
 
     case "plot":
@@ -520,17 +525,20 @@ ViewState.prototype.render = function() {
 
       this.chart_update();
       $("#plot").show();
+      $(".js-nav-plot").addClass("active");
       break;
 
     case "playground":
       this.update_playground();
       $("#playground").show();
       $(".js-main-panel").addClass("full-height");
+      $(".js-nav-playground").addClass("active");
       break;
 
     case "help":
       $("#help").show();
       $(".js-main-panel").addClass("full-height");
+      $(".js-nav-help").addClass("active");
       break;
   }
 
