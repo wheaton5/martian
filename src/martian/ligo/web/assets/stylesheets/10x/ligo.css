@@ -154,3 +154,8 @@ input:not([type='checkbox']), .flex-inline-form-group input {
   align-items: center;
   justify-content: center;
 }
+
+.full-viewport-scroll {
+  height: 100vh;
+  overflow: scroll;
+}
