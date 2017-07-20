@@ -49,6 +49,13 @@ function main() {
 
     // this way the default view has a serialized url and the back button works properly
     window.history.replaceState({}, "", global_view_state.GetURL());
+
+    // listen on global_table selection to enable details/compare views
+    google.visualization.events.addListener(
+      global_table,
+      "select",
+      checkGlobalTableSelection
+    );
   });
   setup_project_dropdown();
 
@@ -56,7 +63,28 @@ function main() {
     global_view_state.ReconstituteFromURL(getParameterByName("params"));
     global_view_state.render();
   };
+  // listen on permalink modal to request the permalink for the url
+  $("#permalink-modal").on("show.bs.modal", permalinkModalShow);
+  $("#permalink-modal").on("click", () => $("#permalink-display").select());
 }
+
+const permalinkModalShow = () => {
+  const fetchPermalinkUrl = $("#myurl").data("fetchPermalinkUrl");
+  $.get({ url: fetchPermalinkUrl, dataType: "text" }).then(shortenedUrl => {
+    $("#permalink-display").val(shortenedUrl);
+  });
+};
+
+const checkGlobalTableSelection = () => {
+  $(".js-nav-details").addClass("disabled");
+  $(".js-nav-compare").addClass("disabled");
+  const selection = global_table.getSelection();
+  if (selection.length === 1) {
+    $(".js-nav-details").removeClass("disabled");
+  } else if (selection.length === 2) {
+    $(".js-nav-compare").removeClass("disabled");
+  }
+};
 
 /*
  * This is a JSON front-end to help with error handling. We call a path and expect
@@ -385,7 +413,9 @@ var model_view_bindings = [
   { model: "where_sampleid", element: "#where_sampleid", method: "val" },
   { model: "where_user", element: "#where_user", method: "val" },
   { model: "old_testgroup", element: "#oldtestgroup", method: "val" },
-  { model: "new_testgroup", element: "#newtestgroup", method: "val" }
+  { model: "old_testgroup", element: "#oldtestgroup_header", method: "text" },
+  { model: "new_testgroup", element: "#newtestgroup", method: "val" },
+  { model: "new_testgroup", element: "#newtestgroup_header", method: "text" }
 ];
 
 /* Copy the view binding from the DOM into ViewState. 
@@ -444,6 +474,11 @@ ViewState.prototype.render = function() {
   $("#help").hide();
   $("#playground").hide();
   $("#vandv").hide();
+
+  $(".table_form").hide();
+  $(".vandv_form").hide();
+  $(".js-main-panel").removeClass("full-height");
+  $(".left-nav li.active").map((index, el) => $(el).removeClass("active"));
   set_csv_download_url("");
 
   this.apply_view_bindings();
@@ -454,20 +489,28 @@ ViewState.prototype.render = function() {
     case "vandv":
       this.vandv_update();
       $("#vandv").show();
+      $(".vandv_form").show();
+      $(".js-nav-vandv").addClass("active");
       break;
     case "compare":
       this.compare_update();
       $("#compare").show();
+      $(".table_form").show();
+      $(".js-nav-compare").addClass("active");
       break;
 
     case "details":
-      $("#details").show();
       this.details_update();
+      $("#details").show();
+      $(".table_form").show();
+      $(".js-nav-details").addClass("active");
       break;
 
     case "table":
-      $("#table").show();
       this.table_update();
+      $("#table").show();
+      $(".table_form").show();
+      $(".js-nav-table").addClass("active");
       break;
 
     case "plot":
@@ -482,15 +525,20 @@ ViewState.prototype.render = function() {
 
       this.chart_update();
       $("#plot").show();
+      $(".js-nav-plot").addClass("active");
       break;
 
     case "playground":
       this.update_playground();
       $("#playground").show();
+      $(".js-main-panel").addClass("full-height");
+      $(".js-nav-playground").addClass("active");
       break;
 
     case "help":
       $("#help").show();
+      $(".js-main-panel").addClass("full-height");
+      $(".js-nav-help").addClass("active");
       break;
   }
 
@@ -503,6 +551,7 @@ ViewState.prototype.render = function() {
   } else {
     set_permalink_url(null);
   }
+  checkGlobalTableSelection();
 };
 
 ViewState.prototype.update_playground = function() {
@@ -986,14 +1035,17 @@ function clear_error_box() {
 }
 
 function set_permalink_url(l) {
-  var link = document.getElementById("myurl");
+  var $link = $("#myurl");
   //link.text = "permalink"
 
   if (l) {
-    link.href = "http://t.fuzzplex.com/save?url=" + encodeURIComponent(l);
-    $(link).show();
+    $link.data(
+      "fetchPermalinkUrl",
+      "http://t.fuzzplex.com/save?url=" + encodeURIComponent(l)
+    );
+    $link.show();
   } else {
-    $(link).hide();
+    $link.hide();
   }
 }
 

@@ -1,0 +1,22 @@
+#table
+        .row
+            .col-xs-12.main-panel-button-wrapper
+                form.form-inline
+                    .form-group.btn-group(role="group")
+                        button(type="button" class="btn btn-default" onclick="changetablemode('basic')") Basic
+                        button(type="button" class="btn btn-default" onclick="changetablemode('metrics')") Metrics
+                    .checkbox
+                        | &nbsp;&nbsp;
+                        label
+                            input#latestonly(type="checkbox") &nbsp;Latest official version only
+
+                    .pull-right.btn-group(role="group")
+                        button(type="button" class="btn btn-default btn-sm" onclick="changepage(-1)")
+                            span(class="glyphicon glyphicon-chevron-left" aria-hidden="true")
+                        button(type="button" class="btn btn-default btn-sm")
+                            | Page&nbsp;
+                            span#page
+                        button(type="button" class="btn btn-default btn-sm" onclick="changepage(1)")
+                            span(class="glyphicon glyphicon-chevron-right" aria-hidden="true")
+        .table-container
+            .flex-table#table1

@@ -1,0 +1,14 @@
+#compare
+    .row
+        .col-xs-12.main-panel-button-wrapper
+            h3
+                | Comparing test id&nbsp;
+                span#compareid1
+                | versus&nbsp;
+                span#compareid2
+
+            .btn-group(role="group")
+                button.btn.btn-default.btn-sm(type="button" onclick="changecomparemode('project')") Project
+                button.btn.btn-default.btn-sm(type="button" onclick="changecomparemode('all')") All
+    .table-container
+        .flex-table#compare1

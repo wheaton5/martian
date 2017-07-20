@@ -1,0 +1,32 @@
+#playground.full-viewport-scroll
+    h2 Playground
+    .alert.alert-danger
+        | The 'playground' is for exploratory and temporary work on
+        | project definitions. Nothing you do here is saved to disk.
+        | When you are done, check in any changes you want to ligo via git.
+    span Project definition (JSON)
+    textarea#project_def.form-control
+    br
+    span Metric Targets (CSV)
+    textarea#targets_csv.form-control(wrap="soft")
+    br
+    button.btn.btn-primary.btn-lg.btn-block(type="button" onclick="updateprojecttextarea()") Update
+    hr
+    h2#new-metrics Get your projects out of the playground!
+    p
+        a(href="https://github.com/10XDev/martian/new/master/src/martian/ligo/web/metrics", target="_blank") Click here to visit git and check in your project and targets files.
+    p
+        | An easy way to commit new metrics into this repo
+        | to add a file on a branch using the Github page.
+        | Copy the above json you created and
+        | Github and paste it into the text area.  Enter
+        | a commit message describing the metric and click
+        | the radio button to "Create a new branch and
+        | start a pull request". Submit the file, then
+        | contact someone with Ligo repo access to merge
+        | your pull request.
+    p
+        | You can also edit existing files using the
+        | Github interface by click the pencil when
+        | viewing a file on Github and then creating
+        | a pull request with your changes.
