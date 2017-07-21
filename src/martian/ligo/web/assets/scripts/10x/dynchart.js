@@ -413,9 +413,20 @@ var model_view_bindings = [
   { model: "where_sampleid", element: "#where_sampleid", method: "val" },
   { model: "where_user", element: "#where_user", method: "val" },
   { model: "old_testgroup", element: "#oldtestgroup", method: "val" },
-  { model: "old_testgroup", element: "#oldtestgroup_header", method: "text" },
   { model: "new_testgroup", element: "#newtestgroup", method: "val" },
-  { model: "new_testgroup", element: "#newtestgroup_header", method: "text" }
+  {
+    model: "old_testgroup",
+    element: "#oldtestgroup_header",
+    method: "text",
+    writeonly: true
+  },
+  { model: "new_testgroup", element: "#newtestgroup", method: "val" },
+  {
+    model: "new_testgroup",
+    element: "#newtestgroup_header",
+    method: "text",
+    writeonly: true
+  }
 ];
 
 /* Copy the view binding from the DOM into ViewState. 
