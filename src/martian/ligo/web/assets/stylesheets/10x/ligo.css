@@ -100,9 +100,14 @@ a {
 .flex-inline-form {
   display: flex;
 }
+
+.flex-inline-form .awesomplete,
 .flex-inline-form-group {
   flex: 1;
   margin-right: 8px;
+}
+.flex-inline-form .awesomplete {
+  display: block;
 }
 .flex-inline-form-group label {
   font-size: 10px;
