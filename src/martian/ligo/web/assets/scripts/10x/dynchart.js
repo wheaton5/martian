@@ -63,10 +63,30 @@ function main() {
     global_view_state.ReconstituteFromURL(getParameterByName("params"));
     global_view_state.render();
   };
+
+  $(document).ready(() => bindListeners());
+}
+
+const bindListeners = () => {
   // listen on permalink modal to request the permalink for the url
   $("#permalink-modal").on("show.bs.modal", permalinkModalShow);
   $("#permalink-modal").on("click", () => $("#permalink-display").select());
-}
+
+  // setup typeaheads
+  // we might have to limit chars here or make it dynamically request from server
+  // when this typeahead gets too large, otherwise loading everything right now
+  // is simple and works when there aren't too many testgroups currently
+  $.getJSON("/api/ui/testgroup_typeahead").then(data => {
+    new Awesomplete(document.querySelector("#oldtestgroup"), {
+      list: data.STUFF.testgroups,
+      minChars: 0
+    });
+    new Awesomplete(document.querySelector("#newtestgroup"), {
+      list: data.STUFF.testgroups,
+      minChars: 0
+    });
+  });
+};
 
 const permalinkModalShow = () => {
   const fetchPermalinkUrl = $("#myurl").data("fetchPermalinkUrl");
@@ -420,7 +440,6 @@ var model_view_bindings = [
     method: "text",
     writeonly: true
   },
-  { model: "new_testgroup", element: "#newtestgroup", method: "val" },
   {
     model: "new_testgroup",
     element: "#newtestgroup_header",
@@ -464,9 +483,9 @@ ViewState.prototype.apply_view_bindings = function() {
     }
 
     /* Because javascript and html and jquery are all horrible!
-		 * there's no consistent mechanism that can handle text and
-		 * element properties......
-		 */
+       * there's no consistent mechanism that can handle text and
+       * element properties......
+       */
     if (b.prop) {
       $(b.element).prop(b.prop, this[b.model]);
     }
@@ -1084,4 +1103,5 @@ function getParameterByName(name, url) {
   if (!results[2]) return "";
   return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
+
 main();
