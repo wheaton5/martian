@@ -89,7 +89,7 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 	auth := zego.Auth{self.user + "/token", self.apitoken, self.domain}
 
 	// Search for tickets with attachments
-	resource, err := auth.Search("type:ticket+has_attachment:true")
+	resource, err := auth.Search("type:ticket+has_attachment:true+status<closed")
 	if err != nil {
 		core.LogError(err, "zendesk", "Search failed")
 		return []Downloadable{}
@@ -103,9 +103,30 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 	core.LogInfo("zendesk", "Search returned %d tickets", results.Count)
 
 	// Iterate over all returned objects
-	downloadables := []Downloadable{}
+	downloadables := self.getPipestances(results.Results, auth)
+	for results.NextPage != "" {
+		resource, err := auth.NextSearchPage(results.NextPage)
+		if err != nil {
+			core.LogError(err, "zendesk", "Search failed")
+			return downloadables
+		}
+		results = &zego.Search_Results_Tickets{}
+		err = json.Unmarshal([]byte(resource.Raw), results)
+		if err != nil {
+			core.LogError(err, "zendesk", "Failed to deserialize search results.")
+			return downloadables
+		}
 
-	for _, t := range results.Results {
+		downloadables = append(downloadables, self.getPipestances(results.Results, auth)...)
+	}
+
+	core.LogInfo("zendesk", "Search returned %d attachments", len(downloadables))
+	return downloadables
+}
+
+func (self *ZendeskDownloadSource) getPipestances(results []*zego.Ticket, auth zego.Auth) []Downloadable {
+	downloadables := []Downloadable{}
+	for _, t := range results {
 		ticket_id := strconv.FormatUint(t.Id, 10)
 
 		// Get user info for this ticket's requester ID
@@ -154,6 +175,5 @@ func (self *ZendeskDownloadSource) Enumerate() []Downloadable {
 			}
 		}
 	}
-	core.LogInfo("zendesk", "Search returned %d attachments", len(downloadables))
 	return downloadables
 }
