@@ -9,6 +9,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"martian/core"
 	"net/http"
@@ -31,6 +32,7 @@ type Downloadable interface {
 	Key() string
 	Modified() time.Time
 	Download(dstPath string)
+	Ticket() string
 }
 
 type Download struct {
@@ -176,7 +178,9 @@ func extractPlaintext(d *Download, dstPath string) error {
 	return nil
 }
 
-func (self *DownloadManager) download() {
+func (self *DownloadManager) download() map[string][]string {
+	ticketlessPipestances := make(map[string][]string)
+
 	// Iterate over all registered sources
 	for _, source := range self.sources {
 
@@ -196,11 +200,12 @@ func (self *DownloadManager) download() {
 				continue
 			}
 			defer fd.Close()
-			var magic []byte
-			magic = make([]byte, 512)
+			magic := make([]byte, 512)
 			if _, err = fd.Read(magic); err != nil {
-				core.LogError(err, "dwnload", "    Failed to read downloaded file")
-				continue
+				if err != io.EOF {
+					core.LogError(err, "dwnload", "    Failed to read downloaded file %s", dstPath)
+					continue
+				}
 			}
 			mimeType := http.DetectContentType(magic)
 
@@ -210,6 +215,11 @@ func (self *DownloadManager) download() {
 				core.LogInfo("dwnload", "    Pipestance, untaring")
 				if err := extractPipestance(d, dstPath); err != nil {
 					continue
+				}
+				if downloadable.Ticket() == "" {
+					email := fmt.Sprintf("%s@%s", d.user, d.domain)
+					pipes, _ := ticketlessPipestances[email]
+					ticketlessPipestances[email] = append(pipes, d.path)
 				}
 			} else {
 				if strings.HasPrefix(mimeType, "text/plain") {
@@ -222,24 +232,38 @@ func (self *DownloadManager) download() {
 				}
 			}
 			meta := SubmissionMetadata{
-				Time: downloadable.Modified(),
+				Time:   downloadable.Modified(),
+				Ticket: downloadable.Ticket(),
 			}
 			if bytes, err := json.Marshal(&meta); err != nil {
-				ioutil.WriteFile(path.Join(d.path, SubmissionMetadataFilename), bytes, 0555)
+				if err := ioutil.WriteFile(path.Join(d.path, SubmissionMetadataFilename), bytes, 0444); err != nil {
+					core.LogError(err, "dwnload", "Failed to write metadata.")
+				}
+			} else {
+				core.LogError(err, "dwnload", "Failed to marshal metadata.")
 			}
 
 			// Success! Remove the temporary downloaded file
 			os.Remove(dstPath)
 		}
 	}
+	return ticketlessPipestances
 }
 
 func (self *DownloadManager) StartDownloadLoop() {
 	go func() {
 		for {
-			self.download()
+			ticketlessPipestances := self.download()
 			self.sman.InventorySubmissions()
+			self.GenerateTickets(ticketlessPipestances)
 			time.Sleep(time.Minute * time.Duration(self.downloadIntervalMin))
 		}
 	}()
+}
+
+func (self *DownloadManager) GenerateTickets(emails map[string][]string) {
+	for email, pipestances := range emails {
+		core.LogInfo("dwnload", "Would generate a ticket for %d pipestances for %s.  Skipping until everything is debugged.",
+			len(pipestances), email)
+	}
 }

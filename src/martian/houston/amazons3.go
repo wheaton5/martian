@@ -36,11 +36,15 @@ func (self *AmazonS3Downloadable) Modified() time.Time {
 	return *self.object.LastModified
 }
 
+func (self *AmazonS3Downloadable) Ticket() string {
+	return ""
+}
+
 func (self *AmazonS3Downloadable) Download(dstPath string) {
 	// Setup the local file
 	fd, err := os.Create(dstPath)
 	if err != nil {
-		core.LogError(err, "amzons3", "    Could not create file for download")
+		core.LogError(err, "amzons3", "    Could not create file %s for download", dstPath)
 		return
 	}
 	defer fd.Close()
@@ -49,7 +53,8 @@ func (self *AmazonS3Downloadable) Download(dstPath string) {
 	numBytes, err := s3manager.NewDownloader(self.sess).Download(fd,
 		&s3.GetObjectInput{Bucket: &self.bucket, Key: self.object.Key})
 	if err != nil {
-		core.LogError(err, "amzons3", "    Download failed")
+		core.LogError(err, "amzons3", "    Download failed for bucket %s key %s",
+			self.bucket, *self.object.Key)
 		return
 	}
 	core.LogInfo("amzons3", "    Downloaded %s", humanize.Bytes(uint64(numBytes)))

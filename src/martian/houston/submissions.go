@@ -37,7 +37,8 @@ type Submission struct {
 const SubmissionMetadataFilename = "10x_csi_metadata.json"
 
 type SubmissionMetadata struct {
-	Time time.Time `json:"time"`
+	Time   time.Time `json:"time"`
+	Ticket string    `json:"ticket_id"`
 }
 
 // Sorting support for Submission

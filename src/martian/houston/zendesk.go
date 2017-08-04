@@ -22,10 +22,12 @@ import (
 )
 
 type ZendeskDownloadable struct {
-	key  string
-	url  string
-	size uint64
-	time time.Time
+	key    string
+	url    string
+	size   uint64
+	time   time.Time
+	ticket string
+	user   string
 }
 
 func (self *ZendeskDownloadable) Size() uint64 {
@@ -40,11 +42,19 @@ func (self *ZendeskDownloadable) Modified() time.Time {
 	return self.time
 }
 
+func (self *ZendeskDownloadable) Ticket() string {
+	return self.ticket
+}
+
+func (self *ZendeskDownloadable) User() string {
+	return self.user
+}
+
 func (self *ZendeskDownloadable) Download(dstPath string) {
 	// Setup the local file
 	fd, err := os.Create(dstPath)
 	if err != nil {
-		core.LogError(err, "zendesk", "    Could not create file for download")
+		core.LogError(err, "zendesk", "    Could not create file %s for download", dstPath)
 		return
 	}
 	defer fd.Close()
@@ -170,7 +180,14 @@ func (self *ZendeskDownloadSource) getPipestances(results []*zego.Ticket, auth z
 					key := fmt.Sprintf("%04d-%02d-%02d-%s-%s-%s", y, m, d, email, id, a.FileName)
 					url := a.ContentURL
 					size := uint64(a.Size)
-					downloadables = append(downloadables, &ZendeskDownloadable{key: key, url: url, size: size, time: godate})
+					downloadables = append(downloadables, &ZendeskDownloadable{
+						key:    key,
+						url:    url,
+						size:   size,
+						time:   godate,
+						ticket: ticket_id,
+						user:   email,
+					})
 				}
 			}
 		}
