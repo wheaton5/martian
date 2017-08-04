@@ -235,7 +235,7 @@ func (self *DownloadManager) download() map[string][]string {
 				Time:   downloadable.Modified(),
 				Ticket: downloadable.Ticket(),
 			}
-			if bytes, err := json.Marshal(&meta); err != nil {
+			if bytes, err := json.Marshal(&meta); err == nil {
 				if err := ioutil.WriteFile(path.Join(d.path, SubmissionMetadataFilename), bytes, 0444); err != nil {
 					core.LogError(err, "dwnload", "Failed to write metadata.")
 				}
