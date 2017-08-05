@@ -4,7 +4,7 @@
 # Build a Go package with git version embedding.
 #
 
-PUBLIC_GOBINS=mrc mrf mrg mrp mrs mrt_helper mrjob
+PUBLIC_GOBINS=mrc mrf mrg mrp mrs mrt_helper mrjob mrstat
 PRIVATE_GOBINS=marsoc mre mrv kepler sere houston redstone rsincoming websoc ligo/ligo_server ligo/ligo_uploader
 GOBINS=$(PUBLIC_GOBINS) $(PRIVATE_GOBINS)
 GOTESTS=$(addprefix test-, $(GOBINS) core)
@@ -106,7 +106,7 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-martian: mrc mre mrf mrg mrp mrjob mrs mrt mrt_helper ligo/ligo_uploader redstone web tools sake-strip sake-martian-strip
+sake-martian: mrc mre mrf mrg mrp mrjob mrs mrstat mrt mrt_helper ligo/ligo_uploader redstone web tools sake-strip sake-martian-strip
 
 sake-test-martian: test
 
