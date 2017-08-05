@@ -204,7 +204,7 @@ Options:
     --version           Show version.`
 	martianVersion := core.GetVersion()
 	opts, _ := docopt.Parse(doc, nil, true, martianVersion, false)
-	core.Println("MARSOC - %s\n", martianVersion)
+	core.Println("MARSOC - %s (built with Go %s)\n", martianVersion, runtime.Version())
 	core.LogInfo("cmdline", strings.Join(os.Args, " "))
 
 	if martianFlags := os.Getenv("MROFLAGS"); len(martianFlags) > 0 {
