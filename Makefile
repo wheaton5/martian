@@ -4,7 +4,7 @@
 # Build a Go package with git version embedding.
 #
 
-PUBLIC_GOBINS=mrc mrf mrg mrp mrs mrt_helper
+PUBLIC_GOBINS=mrc mrf mrg mrp mrs mrt_helper mrjob
 PRIVATE_GOBINS=marsoc mre mrv kepler sere houston redstone rsincoming websoc ligo/ligo_server ligo/ligo_uploader
 GOBINS=$(PUBLIC_GOBINS) $(PRIVATE_GOBINS)
 GOTESTS=$(addprefix test-, $(GOBINS) core)
