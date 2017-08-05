@@ -106,7 +106,7 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-martian: mrc mre mrf mrg mrp mrs mrt mrt_helper ligo/ligo_uploader redstone web tools sake-strip sake-martian-strip
+sake-martian: mrc mre mrf mrg mrp mrjob mrs mrt mrt_helper ligo/ligo_uploader redstone web tools sake-strip sake-martian-strip
 
 sake-test-martian: test
 
@@ -115,7 +115,7 @@ sake-martian-cs: sake-martian sake-martian-cs-strip
 
 sake-test-martian-cs: test
 
-sake-marsoc: marsoc mrc mrp martian_web marsoc_web sake-strip
+sake-marsoc: marsoc mrc mrp mrjob martian_web marsoc_web sake-strip
 
 sake-test-marsoc: test
 
