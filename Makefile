@@ -12,7 +12,7 @@ VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
 GO_FLAGS=-ldflags "-X martian/core.__VERSION__='$(VERSION)' -X martian/core.__RELEASE__='$(RELEASE)'"
 
-MARTIAN_PUBLIC=src/github.com/10XDev/martian-public
+MARTIAN_PUBLIC=src/vendor/github.com/10XDev/martian-public
 
 export GOPATH=$(shell pwd):$(abspath $(MARTIAN_PUBLIC))
 
