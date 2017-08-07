@@ -323,12 +323,12 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 				// Get the state of the BCL_PROCESSOR_PD pipeline for this run.
 				run.Preprocess = nil
 				if state, ok := pman.GetPipestanceState(run.Fcid, "BCL_PROCESSOR_PD", run.Fcid); ok {
-					run.Preprocess = state
+					run.Preprocess = &state
 				}
 
 				// If BCL_PROCESSOR_PD is not complete yet, neither is ANALYZER_PD.
 				run.Analysis = nil
-				if run.Preprocess != "complete" {
+				if *run.Preprocess != core.Complete {
 					return
 				}
 
@@ -340,7 +340,8 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 
 				// Gather the states of ANALYZER_PD for each sample.
 				states := make([]core.MetadataState, 0, len(samples))
-				run.Analysis = core.Running
+				runningState := core.Running
+				run.Analysis = &runningState
 				for _, sample := range samples {
 					state, ok := pman.GetPipestanceState(run.Fcid, packages.GetPipelineForSample(sample), strconv.Itoa(sample.Id))
 					if ok {
@@ -361,13 +362,15 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 					}
 				}
 				if every && len(states) > 0 {
-					run.Analysis = core.Complete
+					completeState := core.Complete
+					run.Analysis = &completeState
 				}
 
 				// If any sample is failed, show analysis as failed.
 				for _, state := range states {
+					failedState := core.Failed
 					if state == core.Failed {
-						run.Analysis = core.Failed
+						run.Analysis = &failedState
 						break
 					}
 				}

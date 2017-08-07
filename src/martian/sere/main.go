@@ -21,22 +21,22 @@ import (
 
 func sendNotificationMail(programName string, mailer *manager.Mailer, notices []*manager.PipestanceNotification) {
 	results := []string{}
-	worstState := "complete"
+	worstState := core.Complete
 	for _, notice := range notices {
 		testName := notice.Psid
 
 		url := fmt.Sprintf("%s.fuzzplex.com/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname,
 			notice.Psid)
 		result := fmt.Sprintf("Test '%s' is %s (http://%s)",
-			testName, strings.ToUpper(notice.State), url)
+			testName, strings.ToUpper(string(notice.State)), url)
 		results = append(results, result)
-		if notice.State == "failed" {
+		if notice.State == core.Failed {
 			worstState = notice.State
 			results = append(results, fmt.Sprintf("    %s: %s", notice.Stage, notice.Summary))
 		}
 	}
 
-	subj := fmt.Sprintf("Tests %s! (%s)", worstState, programName)
+	subj := fmt.Sprintf("Tests %v! (%s)", worstState, programName)
 	body := strings.Join(results, "\n")
 
 	users := []string{}

@@ -35,7 +35,7 @@ type PipestanceInventoryFunc func(string, string, string, string, string, *sync.
 
 type PipestanceNotification struct {
 	Name      string
-	State     string
+	State     core.MetadataState
 	Container string
 	Pname     string
 	Psid      string

@@ -25,21 +25,21 @@ const RUN_TOUCH_TIMEOUT = 1         // 1 hour
 const RUN_INACTIVE_TIMEOUT = 2 * 24 // 2 days
 
 type Run struct {
-	Path         string      `json:"path"`
-	Fname        string      `json:"-"`
-	Fdate        string      `json:"fdate"`
-	SeqcerName   string      `json:"seqcerName"`
-	InstrId      string      `json:"instrId"`
-	Num          int         `json:"num"`
-	Fcid         string      `json:"fcid"`
-	StartTime    string      `json:"startTime"`
-	CompleteTime string      `json:"completeTime"`
-	TouchTime    string      `json:"touchTime"`
-	State        string      `json:"state"`
-	Callsrc      interface{} `json:"callsrc"`
-	Preprocess   interface{} `json:"preprocess"`
-	Analysis     interface{} `json:"analysis"`
-	RunInfoXml   *XMLRunInfo `json:"runinfoxml"`
+	Path         string              `json:"path"`
+	Fname        string              `json:"-"`
+	Fdate        string              `json:"fdate"`
+	SeqcerName   string              `json:"seqcerName"`
+	InstrId      string              `json:"instrId"`
+	Num          int                 `json:"num"`
+	Fcid         string              `json:"fcid"`
+	StartTime    string              `json:"startTime"`
+	CompleteTime string              `json:"completeTime"`
+	TouchTime    string              `json:"touchTime"`
+	State        core.MetadataState  `json:"state"`
+	Callsrc      interface{}         `json:"callsrc"`
+	Preprocess   *core.MetadataState `json:"preprocess"`
+	Analysis     *core.MetadataState `json:"analysis"`
+	RunInfoXml   *XMLRunInfo         `json:"runinfoxml"`
 }
 
 type SequencerNotification struct {

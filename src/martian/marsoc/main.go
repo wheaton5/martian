@@ -24,21 +24,21 @@ import (
 func sendNotificationMail(users []string, mailer *manager.Mailer, notices []*manager.PipestanceNotification) {
 	// Build summary of the notices.
 	results := []string{}
-	worstState := "complete"
+	worstState := core.Complete
 	psids := []string{}
 	var vdrsize uint64
 	for _, notice := range notices {
 		psids = append(psids, notice.Psid)
 		var url string
-		if notice.State == "complete" {
+		if notice.State == core.Complete {
 			url = fmt.Sprintf("lena.fuzzplex.com/seq_results/sample%strim10/", notice.Psid)
 		} else {
 			url = fmt.Sprintf("%s.fuzzplex.com/pipestance/%s/%s/%s", mailer.InstanceName, notice.Container, notice.Pname, notice.Psid)
 		}
-		result := fmt.Sprintf("    %s of %s/%s is %s (http://%s)", notice.Pname, notice.Container, notice.Psid, strings.ToUpper(notice.State), url)
+		result := fmt.Sprintf("    %s of %s/%s is %s (http://%s)", notice.Pname, notice.Container, notice.Psid, strings.ToUpper(string(notice.State)), url)
 		results = append(results, notice.Name, result)
 		vdrsize += notice.Vdrsize
-		if notice.State == "failed" {
+		if notice.State == core.Failed {
 			worstState = notice.State
 			results = append(results, fmt.Sprintf("    %s: %s", notice.Stage, notice.Summary))
 		}
@@ -46,12 +46,12 @@ func sendNotificationMail(users []string, mailer *manager.Mailer, notices []*man
 
 	// Compose the email.
 	body := ""
-	if worstState == "complete" {
+	if worstState == core.Complete {
 		body = fmt.Sprintf("Hey Preppie,\n\nI totally nailed all your analysis!\n\n%s\n\nLena might take up to an hour to show your results.\n\nBtw I also saved you %s with VDR. Show me love!", strings.Join(results, "\n"), humanize.Bytes(vdrsize))
 	} else {
 		body = fmt.Sprintf("Hey Preppie,\n\nSome of your analysis failed!\n\n%s\n\nDon't feel bad, you'll get 'em next time!", strings.Join(results, "\n"))
 	}
-	subj := fmt.Sprintf("Analysis runs %s! (%s)", worstState, strings.Join(psids, ", "))
+	subj := fmt.Sprintf("Analysis runs %v! (%s)", worstState, strings.Join(psids, ", "))
 	mailer.Sendmail(users, subj, body)
 }
 
