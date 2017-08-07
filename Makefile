@@ -40,7 +40,7 @@ $(PRIVATE_GOBINS): jobmanagers adapters
 latest-public:
 	cd $(MARTIAN_PUBLIC) && git pull origin master && git submodule update --init --recursive
 
-JOBMANAGER_PUBLIC=$(shell cd $(MARTIAN_PUBLIC)/jobmanagers && ls)
+JOBMANAGER_PUBLIC=$(shell unset CDPATH && cd $(MARTIAN_PUBLIC)/jobmanagers && ls)
 
 jobmanagers/%: $(MARTIAN_PUBLIC)/jobmanagers/%
 	install $< $@
