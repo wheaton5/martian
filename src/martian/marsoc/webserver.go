@@ -328,7 +328,7 @@ func runWebServer(uiport string, instanceName string, martianVersion string, rt 
 
 				// If BCL_PROCESSOR_PD is not complete yet, neither is ANALYZER_PD.
 				run.Analysis = nil
-				if *run.Preprocess != core.Complete {
+				if run.Preprocess == nil || *run.Preprocess != core.Complete {
 					return
 				}
 
