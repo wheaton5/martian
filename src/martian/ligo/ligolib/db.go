@@ -448,7 +448,7 @@ func (c *CoreConnection) GrabRecords(where WhereAble, table string, outtype inte
 	rows, err := c.Q.Query(query)
 
 	if err != nil {
-		log.Printf("Failed to execute SQL: %v. Error: %v", err)
+		log.Printf("Failed to execute SQL: %v. Error: %v", query, err)
 		return []ReportRecord{}, err
 	}
 
