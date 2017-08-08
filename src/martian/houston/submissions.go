@@ -168,9 +168,16 @@ func (self *SubmissionManager) loadSubmission(source, date, name string) *Submis
 
 		fileInfos, _ := ioutil.ReadDir(p)
 		if len(fileInfos) > 0 {
-			fname = fileInfos[0].Name()
-			if fname != SubmissionMetadataFilename {
-				if fileInfos[0].Size() < SMALLFILE_THRESHOLD {
+			var size int64
+			for _, fileInfo := range fileInfos {
+				if fileInfo.Name() != SubmissionMetadataFilename {
+					fname = fileInfo.Name()
+					size = fileInfo.Size()
+					break
+				}
+			}
+			if fname != "none" {
+				if size < SMALLFILE_THRESHOLD {
 					kind = "smallfile"
 				}
 			}
