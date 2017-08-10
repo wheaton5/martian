@@ -141,8 +141,11 @@ func (self *ZendeskDownloadSource) getPipestances(results []*zego.Ticket, auth z
 
 		// Get user info for this ticket's requester ID
 		user, err := auth.ShowUser(fmt.Sprint(t.RequesterId))
-		if err != nil || user == nil || user.User == nil {
+		if err != nil {
 			core.LogError(err, "zendesk", "Failed to find user %d", t.RequesterId)
+			continue
+		} else if user == nil || user.User == nil {
+			core.LogInfo("zendesk", "Failed to find user %d", t.RequesterId)
 			continue
 		}
 
