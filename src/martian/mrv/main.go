@@ -41,7 +41,7 @@ func extractBugidFromBranch(branch string) string {
 
 type Directory struct {
 	startPort int
-	pstances  map[string]map[string]string
+	pstances  map[string]map[string]interface{}
 	config    map[string]interface{}
 	mutex     sync.Mutex
 }
@@ -50,11 +50,11 @@ func NewDirectory(startPort int, config interface{}) *Directory {
 	self := &Directory{}
 	self.startPort = startPort
 	self.config = config.(map[string]interface{})
-	self.pstances = map[string]map[string]string{}
+	self.pstances = make(map[string]map[string]interface{})
 	return self
 }
 
-func (self *Directory) register(info map[string]string) string {
+func (self *Directory) register(info map[string]interface{}) string {
 	// Pick first available port starting from 5600.
 	self.mutex.Lock()
 	i := self.startPort
@@ -81,7 +81,7 @@ func (self *Directory) getConfig() map[string]interface{} {
 	return self.config
 }
 
-func (self *Directory) getSortedPipestances() []map[string]string {
+func (self *Directory) getSortedPipestances() []map[string]interface{} {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 
@@ -90,18 +90,20 @@ func (self *Directory) getSortedPipestances() []map[string]string {
 		sortedPorts = append(sortedPorts, port)
 	}
 	sort.Strings(sortedPorts)
-	sortedPstances := []map[string]string{}
+	sortedPstances := make([]map[string]interface{}, 0, len(sortedPorts))
 	for _, port := range sortedPorts {
 		sortedPstances = append(sortedPstances, self.pstances[port])
 	}
 	return sortedPstances
 }
 
-func (self *Directory) upsert(port string, info map[string]string) {
+func (self *Directory) upsert(port string, info map[string]interface{}) {
 	//fmt.Printf("upsert %s\n", port)
 	self.mutex.Lock()
 	info["port"] = port
-	info["mrobug_id"] = extractBugidFromBranch(info["mrobranch"])
+	if branch, ok := info["mrobranch"].(string); ok {
+		info["mrobug_id"] = extractBugidFromBranch(branch)
+	}
 	self.pstances[port] = info
 	self.mutex.Unlock()
 }
@@ -121,7 +123,7 @@ func (self *Directory) probe(hostname string, port string, wg *sync.WaitGroup) {
 		if content, err := ioutil.ReadAll(res.Body); err == nil {
 			//fmt.Printf("%d %s\n", res.StatusCode, string(content))
 			if res.StatusCode == 200 {
-				var info map[string]string
+				var info map[string]interface{}
 				if err := json.Unmarshal(content, &info); err == nil {
 					self.upsert(port, info)
 					return
@@ -130,7 +132,7 @@ func (self *Directory) probe(hostname string, port string, wg *sync.WaitGroup) {
 				// For old mrp's that don't have get-info, we still
 				// want to consume the port so we don't give out a
 				// used port to new mrp's.
-				self.upsert(port, map[string]string{})
+				self.upsert(port, map[string]interface{}{})
 				return
 			}
 		}
@@ -140,7 +142,7 @@ func (self *Directory) probe(hostname string, port string, wg *sync.WaitGroup) {
 
 func (self *Directory) reprobe() {
 	self.mutex.Lock()
-	pstances := map[string]map[string]string{}
+	pstances := make(map[string]map[string]interface{}, len(self.pstances))
 	for port, pstance := range self.pstances {
 		pstances[port] = pstance
 	}
@@ -148,8 +150,12 @@ func (self *Directory) reprobe() {
 
 	var wg sync.WaitGroup
 	for port, pstance := range pstances {
-		wg.Add(1)
-		go self.probe(pstance["hostname"], port, &wg)
+		if host, ok := pstance["hostname"].(string); ok {
+			wg.Add(1)
+			go self.probe(host, port, &wg)
+		} else {
+			self.remove(port)
+		}
 	}
 	wg.Wait()
 }

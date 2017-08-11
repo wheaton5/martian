@@ -82,7 +82,7 @@ func runWebServer(uiport string, dir *Directory) {
 	app.Post("/register", func(req *http.Request, p martini.Params) string {
 		// Copy info block from the HTTP form.
 		req.ParseForm()
-		info := map[string]string{}
+		info := make(map[string]interface{}, len(req.Form))
 		for k, v := range req.Form {
 			info[k] = v[0]
 		}
