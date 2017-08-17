@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"martian/core"
+	"martian/util"
 	"os"
 	"path"
 	"path/filepath"
@@ -55,14 +55,14 @@ type PackageJsonEnv struct {
 func NewPackage(packagePath string, debug bool) *Package {
 	self := &Package{}
 	self.Name, self.Target, self.BuildDate, self.ArgshimPath, self.MroPaths, self.Envs, _ = VerifyPackage(packagePath)
-	self.MroVersion, _ = core.GetMroVersion(self.MroPaths)
+	self.MroVersion, _ = util.GetMroVersion(self.MroPaths)
 	self.Argshim = NewArgShim(self.ArgshimPath, self.Envs, debug)
 	return self
 }
 
 func (self *Package) IsDirty() bool {
 	mroVersion := strings.TrimPrefix(self.MroVersion, self.Name+"-")
-	core.PrintInfo("package", "%s mroVersion: %s", self.Name, mroVersion)
+	util.PrintInfo("package", "%s mroVersion: %s", self.Name, mroVersion)
 	parts := strings.Split(mroVersion, ".")
 
 	if len(parts) != versionParts {
@@ -85,28 +85,28 @@ func (self *Package) RestartArgShim() {
 func VerifyPackage(packagePath string) (string, string, string, string, []string, map[string]string, error) {
 	packageFile := path.Join(packagePath, "marsoc.json")
 	if _, err := os.Stat(packageFile); os.IsNotExist(err) {
-		core.PrintInfo("package", "Package config file %s does not exist.", packageFile)
+		util.PrintInfo("package", "Package config file %s does not exist.", packageFile)
 		return "", "", "", "", nil, nil, err
 	}
 	bytes, _ := ioutil.ReadFile(packageFile)
 
 	var packageJson *PackageJson
 	if err := json.Unmarshal(bytes, &packageJson); err != nil {
-		core.PrintInfo("package", "Package config file %s does not contain valid JSON.", packageFile)
+		util.PrintInfo("package", "Package config file %s does not contain valid JSON.", packageFile)
 		return "", "", "", "", nil, nil, err
 	}
 
 	argshimPath := path.Join(packagePath, packageJson.ArgshimPath)
 	if _, err := os.Stat(argshimPath); err != nil {
-		core.PrintInfo("package", "Package argshim file %s does not exist.", argshimPath)
+		util.PrintInfo("package", "Package argshim file %s does not exist.", argshimPath)
 		return "", "", "", "", nil, nil, err
 	}
 
 	mroPaths := []string{}
-	for _, mroPath := range core.ParseMroPath(packageJson.MroPath) {
+	for _, mroPath := range util.ParseMroPath(packageJson.MroPath) {
 		mroPath := path.Join(packagePath, mroPath)
 		if _, err := os.Stat(mroPath); err != nil {
-			core.PrintInfo("package", "Package mro path %s does not exist.", mroPath)
+			util.PrintInfo("package", "Package mro path %s does not exist.", mroPath)
 			return "", "", "", "", nil, nil, err
 		}
 		mroPaths = append(mroPaths, mroPath)
@@ -131,14 +131,14 @@ func VerifyPackage(packagePath string) (string, string, string, string, []string
 			if envJson.Wildcard {
 				matches, err := filepath.Glob(value)
 				if err != nil {
-					core.PrintInfo("package", "Could not expand path prepend wildcard %s.", value)
+					util.PrintInfo("package", "Could not expand path prepend wildcard %s.", value)
 					return "", "", "", "", nil, nil, err
 				}
 				if len(matches) == 0 {
-					core.PrintInfo("package", "%s did not find any files.", value)
+					util.PrintInfo("package", "%s did not find any files.", value)
 				} else {
 					if len(matches) > 1 {
-						core.PrintInfo("package", "%s found %d matches.  Using %s.",
+						util.PrintInfo("package", "%s found %d matches.  Using %s.",
 							value, len(matches), matches[len(matches)-1])
 					}
 					value = matches[len(matches)-1]
@@ -155,8 +155,8 @@ func VerifyPackage(packagePath string) (string, string, string, string, []string
 		case "string":
 			break
 		default:
-			core.PrintInfo("package", "Unsupported env variable type %s.", envJson.Type)
-			return "", "", "", "", nil, nil, &core.MartianError{fmt.Sprintf(
+			util.PrintInfo("package", "Unsupported env variable type %s.", envJson.Type)
+			return "", "", "", "", nil, nil, &util.MartianError{fmt.Sprintf(
 				"Unsupported env variable type %s.", envJson.Type)}
 		}
 		envs[key] = value
@@ -169,15 +169,15 @@ func GoRefreshPackageVersions(packages []*Package, mutex *sync.Mutex) {
 	go func() {
 		for {
 			for _, p := range packages {
-				mroVersion, err := core.GetMroVersion(p.MroPaths)
+				mroVersion, err := util.GetMroVersion(p.MroPaths)
 				if err != nil {
-					core.LogError(err, "package", "Failed to get package %s version", p.Name)
+					util.LogError(err, "package", "Failed to get package %s version", p.Name)
 					continue
 				}
 
 				if p.MroVersion != mroVersion {
 					p.RestartArgShim()
-					core.LogInfo("package", "Restarted package %s argshim for version %s",
+					util.LogInfo("package", "Restarted package %s argshim for version %s",
 						p.Name, mroVersion)
 				}
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"martian/core"
+	"martian/util"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -139,7 +140,7 @@ func BclPathsFromRunPath(runPath string) ([]string, error) {
 	if !strings.HasPrefix(runPath, "/") {
 		absPath, err := filepath.Abs(runPath)
 		if err != nil {
-			core.LogError(err, "storage", "can't get abs path of bcl run_path")
+			util.LogError(err, "storage", "can't get abs path of bcl run_path")
 			return allPaths, err
 		}
 		runPath = absPath
@@ -147,7 +148,7 @@ func BclPathsFromRunPath(runPath string) ([]string, error) {
 	if path, err := filepath.EvalSymlinks(runPath); err == nil {
 		runPath = path
 	} else {
-		core.LogError(err, "storage", "eval symlinks doesn't work")
+		util.LogError(err, "storage", "eval symlinks doesn't work")
 		return allPaths, err
 	}
 	return SequencerBclPaths(runPath), nil
@@ -159,14 +160,14 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 	if !strings.HasPrefix(readPath, "/") {
 		absPath, err := filepath.Abs(readPath)
 		if err != nil {
-			core.LogError(err, "storage", "Error getting absolute path: %s", readPath)
+			util.LogError(err, "storage", "Error getting absolute path: %s", readPath)
 			return allPaths, err
 		}
 		readPath = absPath
 	}
 	readPath, err := filepath.EvalSymlinks(sampleDef.read_path)
 	if err != nil {
-		core.LogError(err, "storage", "Error evaluating symlink: %s", sampleDef.read_path)
+		util.LogError(err, "storage", "Error evaluating symlink: %s", sampleDef.read_path)
 		return allPaths, err
 	}
 	sampleOligos := []string{}
@@ -178,7 +179,7 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 		} else if ok, _ := regexp.MatchString("[ACGNT]{8}", sampleIndex); ok {
 			sampleOligos = append(sampleOligos, sampleIndex)
 		} else {
-			core.LogError(errors.New("Unknown sample index"), "storage", "Unknown sample index: %s", sampleIndex)
+			util.LogError(errors.New("Unknown sample index"), "storage", "Unknown sample index: %s", sampleIndex)
 			return nil, &core.PipestanceSizeError{fmt.Sprintf("Unknown sample index: %s", sampleIndex)}
 		}
 	}
@@ -198,10 +199,10 @@ func FastqPathsFromSampleDef(sampleDef *SampleDef) ([]string, error) {
 }
 
 func InvocationFromMRO(source string, srcPath string, mroPaths []string) *core.InvocationData {
-	rt := core.NewRuntime("local", "disable", "disable", core.GetVersion())
+	rt := core.NewRuntime("local", "disable", "disable", util.GetVersion())
 	invocationData, err := rt.BuildCallData(source, srcPath, mroPaths)
 	if err != nil {
-		core.LogError(err, "storage", "Error getting MRO invocation: %s", srcPath)
+		util.LogError(err, "storage", "Error getting MRO invocation: %s", srcPath)
 	}
 	return invocationData
 }
@@ -211,7 +212,7 @@ func FastqFilesFromInvocation(invocation *core.InvocationData) ([]string, error)
 	if _, ok := args["sample_def"]; !ok {
 		psname := PipelineFromInvocation(invocation)
 		err := &core.PipestanceSizeError{psname}
-		core.LogError(err, "storage", "Pipeline without sample def: %s", psname)
+		util.LogError(err, "storage", "Pipeline without sample def: %s", psname)
 		return nil, err
 	}
 	sampleDefsJson := args["sample_def"].([]interface{})

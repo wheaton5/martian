@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"martian/core"
+	"martian/util"
 	"os"
 	"os/exec"
 	"os/user"
@@ -103,7 +104,7 @@ func NewPipestanceQueueRecord(pkey string, size int64, src string, tags []string
 		Name:      pkey,
 		InvokeSrc: src,
 		Tags:      recordTags,
-		Timestamp: core.Timestamp(),
+		Timestamp: util.Timestamp(),
 		Size:      size}
 }
 
@@ -152,7 +153,7 @@ func parsePipestanceKey(pkey string) (string, string, string) {
 func writeJson(fpath string, object interface{}) {
 	bytes, _ := json.MarshalIndent(object, "", "    ")
 	if err := ioutil.WriteFile(fpath, bytes, 0644); err != nil {
-		core.LogError(err, "pipeman", "Could not write JSON file %s.", fpath)
+		util.LogError(err, "pipeman", "Could not write JSON file %s.", fpath)
 	}
 }
 
@@ -232,20 +233,20 @@ func (self *PipestanceManager) GetAutoInvoke() bool {
 }
 
 func (self *PipestanceManager) SetAutoInvoke(autoInvoke bool) {
-	core.LogInfo("pipeman", "Setting autoinvoke = %v", autoInvoke)
+	util.LogInfo("pipeman", "Setting autoinvoke = %v", autoInvoke)
 	self.autoInvoke = autoInvoke
 }
 
 func (self *PipestanceManager) EnableRunLoop() {
 	if self.runLoop == false {
-		core.LogInfo("pipeman", "Enabling run loop.")
+		util.LogInfo("pipeman", "Enabling run loop.")
 	}
 	self.runLoop = true
 }
 
 func (self *PipestanceManager) DisableRunLoop() {
 	if self.runLoop == true {
-		core.LogInfo("pipeman", "Disabling run loop.")
+		util.LogInfo("pipeman", "Disabling run loop.")
 	}
 	self.runLoop = false
 }
@@ -285,13 +286,13 @@ func (self *PipestanceManager) LoadPipestances() {
 func (self *PipestanceManager) loadCache() error {
 	bytes, err := ioutil.ReadFile(self.cachePath)
 	if err != nil {
-		core.LogInfo("pipeman", "Could not read cache file %s.", self.cachePath)
+		util.LogInfo("pipeman", "Could not read cache file %s.", self.cachePath)
 		return err
 	}
 
 	var cache map[string]map[string]bool
 	if err := json.Unmarshal(bytes, &cache); err != nil {
-		core.LogError(err, "pipeman", "Could not parse JSON in cache file %s.", self.cachePath)
+		util.LogError(err, "pipeman", "Could not parse JSON in cache file %s.", self.cachePath)
 		return err
 	}
 
@@ -329,10 +330,10 @@ func (self *PipestanceManager) loadCache() error {
 		}
 		wg.Wait()
 	}
-	core.LogInfo("pipeman", "%d completed pipestances loaded from cache.", len(self.completed))
-	core.LogInfo("pipeman", "%d failed pipestances loaded from cache.", len(self.failed))
-	core.LogInfo("pipeman", "%d copying pipestances loaded from cache.", len(self.copying))
-	core.LogInfo("pipeman", "%d running pipestances loaded from cache.", len(self.running))
+	util.LogInfo("pipeman", "%d completed pipestances loaded from cache.", len(self.completed))
+	util.LogInfo("pipeman", "%d failed pipestances loaded from cache.", len(self.failed))
+	util.LogInfo("pipeman", "%d copying pipestances loaded from cache.", len(self.copying))
+	util.LogInfo("pipeman", "%d running pipestances loaded from cache.", len(self.running))
 
 	return nil
 }
@@ -340,7 +341,7 @@ func (self *PipestanceManager) loadCache() error {
 func (self *PipestanceManager) loadStorageCache() error {
 	bytes, err := ioutil.ReadFile(self.storageQueuePath)
 	if err != nil {
-		core.LogInfo("storage", "Could not read cache file %s.", self.storageQueue)
+		util.LogInfo("storage", "Could not read cache file %s.", self.storageQueue)
 	}
 
 	var cache []*PipestanceQueueRecord
@@ -350,7 +351,7 @@ func (self *PipestanceManager) loadStorageCache() error {
 	}
 
 	for _, entry := range cache {
-		core.LogInfo("storage", "Loaded pipestance onto queue: %s", entry.Name)
+		util.LogInfo("storage", "Loaded pipestance onto queue: %s", entry.Name)
 		self.storageQueue = append(self.storageQueue, entry)
 	}
 	return nil
@@ -377,7 +378,7 @@ func (self *PipestanceManager) loadPipestance(pkey string) {
 		// 2. _invocation will no longer parse due to changes in MRO definitions.
 		// 3. Runtime exited uncleanly and pipestances have _lock files which need to be removed.
 		// Consider the pipestance failed.
-		core.LogError(err, "pipeman", "Failed to reattach to pipestance %s", pkey)
+		util.LogError(err, "pipeman", "Failed to reattach to pipestance %s", pkey)
 		self.mutex.Lock()
 		self.failed[pkey] = true
 		self.mutex.Unlock()
@@ -392,7 +393,7 @@ func (self *PipestanceManager) loadPipestance(pkey string) {
 
 	pipestance.LoadMetadata()
 
-	core.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto run list.", pkey)
+	util.LogInfo("pipeman", "%s is not cached as completed or failed, so pushing onto run list.", pkey)
 	self.mutex.Lock()
 	self.running[pkey] = pipestance
 	self.setRetries(pkey)
@@ -450,7 +451,7 @@ func (self *PipestanceManager) traversePipestancesPaths(pipestancesPaths []strin
 func (self *PipestanceManager) inventoryPipestances() {
 	// Look for pipestances that are not marked as completed, reattach to them
 	// and put them in the run list.
-	core.LogInfo("pipeman", "Begin pipestance inventory.")
+	util.LogInfo("pipeman", "Begin pipestance inventory.")
 
 	self.traversePipestancesPaths(self.paths,
 		func(pipestancesPath string, container string, pipeline string, psid string, mroVersion string, wg *sync.WaitGroup) {
@@ -482,7 +483,7 @@ func (self *PipestanceManager) inventoryPipestances() {
 	self.mutex.Lock()
 	self.writeCache()
 	self.mutex.Unlock()
-	core.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
+	util.LogInfo("pipeman", "%d pipestances inventoried.", pscount)
 }
 
 func (self *PipestanceManager) cleanScratchPaths() {
@@ -502,7 +503,7 @@ func (self *PipestanceManager) cleanScratchPaths() {
 			state, ok := self.GetPipestanceState(container, pipeline, psid)
 			if !ok || state == "failed" {
 				if err := self.WipePipestance(container, pipeline, psid); err != nil {
-					core.LogError(err, "pipeman", "Failed to wipe pipestance %s", pkey)
+					util.LogError(err, "pipeman", "Failed to wipe pipestance %s", pkey)
 				}
 			}
 		}
@@ -663,7 +664,7 @@ func logProcessProgress(pkey string, label string, start time.Time) time.Time {
 	now := time.Now()
 	// use this daisy-chain pattern if you want to see the interval between
 	// labels, not time since begining of cycle/goroutine
-	//core.LogInfo("piperun", "%s|%s: %v", label, pkey, now.Sub(start).String())
+	//util.LogInfo("piperun", "%s|%s: %v", label, pkey, now.Sub(start).String())
 	return now
 }
 
@@ -677,7 +678,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 		running[pkey] = pipestance
 	}
 	self.mutex.Unlock()
-	//core.LogInfo("piperun", "--start cycle (length %d)--", len(running))
+	//util.LogInfo("piperun", "--start cycle (length %d)--", len(running))
 
 	// Concurrently step all pipestances in the run list copy.
 	var wg sync.WaitGroup
@@ -687,7 +688,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 		go func(pkey string, pipestance *core.Pipestance, wg *sync.WaitGroup) {
 			startTime := time.Now()
 			var interval time.Time
-			//core.LogInfo("piperun", "StartProcess|%s", pkey)
+			//util.LogInfo("piperun", "StartProcess|%s", pkey)
 			pipestance.RefreshState()
 
 			state := pipestance.GetState()
@@ -695,11 +696,11 @@ func (self *PipestanceManager) processRunningPipestances() {
 			if state == "complete" {
 				// If pipestance is done, remove from run list, mark it in the
 				// cache as completed, and flush the cache.
-				core.LogInfo("pipeman", "Complete and removing from run list: %s.", pkey)
+				util.LogInfo("pipeman", "Complete and removing from run list: %s.", pkey)
 
 				// VDR Kill
 				killReport := pipestance.VDRKill()
-				core.LogInfo("pipeman", "VDR killed %d files, %s from %s.", killReport.Count, humanize.Bytes(killReport.Size), pkey)
+				util.LogInfo("pipeman", "VDR killed %d files, %s from %s.", killReport.Count, humanize.Bytes(killReport.Size), pkey)
 
 				// Unlock.
 				pipestance.Unlock()
@@ -754,9 +755,9 @@ func (self *PipestanceManager) processRunningPipestances() {
 						self.retriesRemaining[pkey] = retries - 1
 						self.mutex.Unlock()
 						if log == "" {
-							core.LogInfo("pipeman", "Failed and retrying: %s.", pkey)
+							util.LogInfo("pipeman", "Failed and retrying: %s.", pkey)
 						} else {
-							core.LogInfo("pipeman", "Failed and retrying: %s.\n\nError log:\n%s",
+							util.LogInfo("pipeman", "Failed and retrying: %s.\n\nError log:\n%s",
 								pkey, log)
 						}
 
@@ -766,7 +767,7 @@ func (self *PipestanceManager) processRunningPipestances() {
 				if !canRetry {
 					// If pipestance is failed, remove from run list, mark it in the
 					// cache as failed, and flush the cache.
-					core.LogInfo("pipeman", "Failed and removing from run list: %s.", pkey)
+					util.LogInfo("pipeman", "Failed and removing from run list: %s.", pkey)
 
 					// Unlock.
 					pipestance.Unlock()
@@ -896,11 +897,11 @@ func (self *PipestanceManager) getScratchPath() (string, error) {
 		}
 		i += 1
 	}
-	return "", &core.MartianError{fmt.Sprintf("Pipestance scratch paths %s are full.", strings.Join(self.scratchPaths, ", "))}
+	return "", &util.MartianError{fmt.Sprintf("Pipestance scratch paths %s are full.", strings.Join(self.scratchPaths, ", "))}
 }
 
 func (self *PipestanceManager) sendStorageQueueError(pkey string, event string, err error) {
-	core.LogError(err, "storage", "%s: %s", pkey, event)
+	util.LogError(err, "storage", "%s: %s", pkey, event)
 	self.mailer.Sendmail(
 		[]string{},
 		fmt.Sprintf("Storage Queue Error: %s", pkey),
@@ -934,7 +935,7 @@ func (self *PipestanceManager) GetAllocation(container string, pipeline string, 
 
 func (self *PipestanceManager) Enqueue(container string, pipeline string, psid string, src string, tags []string, pkg string) error {
 	if state, ok := self.GetPipestanceState(container, pipeline, psid); ok {
-		core.LogInfo("storage", "Pipestance already tracked: %s (%s)",
+		util.LogInfo("storage", "Pipestance already tracked: %s (%s)",
 			makePipestanceKey(container, pipeline, psid), state)
 		return &core.PipestanceExistsError{psid}
 	}
@@ -946,7 +947,7 @@ func (self *PipestanceManager) Enqueue(container string, pipeline string, psid s
 	}
 	pkey := makePipestanceKey(container, pipeline, psid)
 	queueRecord := NewPipestanceQueueRecord(pkey, alloc.weightedSize, src, tags, pkg)
-	core.LogInfo("storage", "Enqueued pipestance: %s (%d bytes)", pkey, alloc.weightedSize)
+	util.LogInfo("storage", "Enqueued pipestance: %s (%d bytes)", pkey, alloc.weightedSize)
 	self.storageMutex.Lock()
 	self.storageQueue = append(self.storageQueue, queueRecord)
 	self.writeStorageCache()
@@ -970,7 +971,7 @@ func (self *PipestanceManager) PipestanceInStorageQueue(pkey string) bool {
 //
 func (self *PipestanceManager) allocateLoadedPipestance(pkey string) {
 	if _, ok := self.storageMap[pkey]; ok {
-		core.LogInfo("storage", "loaded pipestance already accounted for: %s", pkey)
+		util.LogInfo("storage", "loaded pipestance already accounted for: %s", pkey)
 		return
 	}
 	container, pipeline, psid := parsePipestanceKey(pkey)
@@ -989,7 +990,7 @@ func (self *PipestanceManager) allocateLoadedPipestance(pkey string) {
 	if !ok {
 		state = "not ok"
 	}
-	core.LogInfo("storage", "Counting loaded pipestance: %s (%d bytes, %d remaining, %s)",
+	util.LogInfo("storage", "Counting loaded pipestance: %s (%d bytes, %d remaining, %s)",
 		pkey, alloc.weightedSize, self.storageMaxBytes-self.storageAllocBytes, state)
 	self.storageMap[pkey] = alloc.weightedSize
 	self.storageMutex.Unlock()
@@ -1003,7 +1004,7 @@ func (self *PipestanceManager) deallocateLoadedPipestance(pkey string) {
 	if size, ok := self.storageMap[pkey]; ok {
 		self.storageAllocBytes -= size
 		delete(self.storageMap, pkey)
-		core.LogInfo("storage", "Freed pipestance: %s (%d bytes, %d remaining)", pkey, size, self.storageMaxBytes-self.storageAllocBytes)
+		util.LogInfo("storage", "Freed pipestance: %s (%d bytes, %d remaining)", pkey, size, self.storageMaxBytes-self.storageAllocBytes)
 	}
 	self.storageMutex.Unlock()
 }
@@ -1018,9 +1019,9 @@ func (self *PipestanceManager) processEnqueuedPipestances() {
 		// storageMaxBytes == STORAGE_UNLIMITED_BYTES: signal that the queue is disabled
 		if self.storageMaxBytes == STORAGE_UNLIMITED_BYTES || (self.storageAllocBytes+pipestance.Size <= self.storageMaxBytes) {
 			if _, ok := self.storageMap[pipestance.Name]; ok {
-				core.LogInfo("storage", "pipestance already counted against cap, will be removed from queue: %s", pipestance.Name)
+				util.LogInfo("storage", "pipestance already counted against cap, will be removed from queue: %s", pipestance.Name)
 			} else {
-				core.LogInfo("storage", "Cleared for takeoff: %s (%d bytes, %d remaining)",
+				util.LogInfo("storage", "Cleared for takeoff: %s (%d bytes, %d remaining)",
 					pipestance.Name, pipestance.Size, self.storageMaxBytes-self.storageAllocBytes)
 				self.Invoke(pipestance)
 			}
@@ -1044,7 +1045,7 @@ func (self *PipestanceManager) processEnqueuedPipestances() {
 func (self *PipestanceManager) allocatePipestanceStorageUnsafe(stance *PipestanceQueueRecord) {
 	self.storageAllocBytes += stance.Size
 	self.storageMap[stance.Name] = stance.Size
-	core.LogInfo("storage", "Storage reserved: %s (%d bytes, %d remaining)",
+	util.LogInfo("storage", "Storage reserved: %s (%d bytes, %d remaining)",
 		stance.Name, stance.Size, self.storageMaxBytes-self.storageAllocBytes)
 }
 
@@ -1074,7 +1075,7 @@ func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
 	}
 	self.pending[pkey] = true
 	self.mutex.Unlock()
-	core.LogInfo("pipeman", "Instantiating and pushed to pending list: %s.", pkey)
+	util.LogInfo("pipeman", "Instantiating and pushed to pending list: %s.", pkey)
 
 	psDir := path.Join(self.writePath, container, pipeline, psid)
 	mroVersionPath := getFilenameWithSuffix(psDir, mroVersion)
@@ -1115,7 +1116,7 @@ func (self *PipestanceManager) Invoke(stance *PipestanceQueueRecord) error {
 
 	pipestance.LoadMetadata()
 
-	core.LogInfo("pipeman", "Finished instantiating and pushing to run list: %s.", pkey)
+	util.LogInfo("pipeman", "Finished instantiating and pushing to run list: %s.", pkey)
 	self.mutex.Lock()
 	delete(self.pending, pkey)
 	self.running[pkey] = pipestance
@@ -1151,7 +1152,7 @@ func (self *PipestanceManager) KillPipestance(container string, pipeline string,
 
 	fqname := core.MakeFQName(pipeline, psid)
 	if output, err := deleteJobs(fqname); err != nil {
-		core.LogError(err, "pipeman", "qdel for pipestance %s failed: %s", pkey, string(output))
+		util.LogError(err, "pipeman", "qdel for pipestance %s failed: %s", pkey, string(output))
 		// If qdel failed because jobs didn't exist, we ignore the error since local stages
 		// could be running.
 		user, _ := user.Current()
@@ -1193,14 +1194,14 @@ func (self *PipestanceManager) WipePipestance(container string, pipeline string,
 
 	for _, scratchPath := range self.scratchPaths {
 		if strings.HasPrefix(hardPsPath, scratchPath) {
-			core.LogInfo("pipeman", "Wiping pipestance: %s.", pkey)
+			util.LogInfo("pipeman", "Wiping pipestance: %s.", pkey)
 			go func() {
 				os.Remove(headPath)
 				os.Remove(aggregatePsPath)
 				os.Remove(psPath)
 				os.RemoveAll(hardPsPath)
 
-				core.LogInfo("pipeman", "Finished wiping pipestance: %s.", pkey)
+				util.LogInfo("pipeman", "Finished wiping pipestance: %s.", pkey)
 				self.mutex.Lock()
 				delete(self.pending, pkey)
 				self.writeCache()
@@ -1233,7 +1234,7 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 	delete(self.failed, pkey)
 	self.pending[pkey] = true
 	self.mutex.Unlock()
-	core.LogInfo("pipeman", "Unfailing and pushed to pending list: %s.", pkey)
+	util.LogInfo("pipeman", "Unfailing and pushed to pending list: %s.", pkey)
 
 	readOnly := false
 	pipestance, ok := self.GetPipestance(container, pipeline, psid, readOnly)
@@ -1252,7 +1253,7 @@ func (self *PipestanceManager) UnfailPipestance(container string, pipeline strin
 		return err
 	}
 
-	core.LogInfo("pipeman", "Finished unfailing and pushing to run list: %s.", pkey)
+	util.LogInfo("pipeman", "Finished unfailing and pushing to run list: %s.", pkey)
 	self.mutex.Lock()
 	delete(self.pending, pkey)
 	self.running[pkey] = pipestance
@@ -1357,7 +1358,7 @@ func (self *PipestanceManager) GetPipestance(container string, pipeline string, 
 	psPath := self.makePipestancePath(container, pipeline, psid)
 	pipestance, err := self.ReattachToPipestance(container, pipeline, psid, psPath, readOnly)
 	if err != nil {
-		core.LogError(err, "pipeman", "Failed to reattach to pipestance %s", pkey)
+		util.LogError(err, "pipeman", "Failed to reattach to pipestance %s", pkey)
 		return nil, false
 	}
 

@@ -3,6 +3,7 @@ package manager
 import (
 	"encoding/xml"
 	"martian/core"
+	"martian/util"
 	"math"
 	"os"
 	"path"
@@ -87,7 +88,7 @@ func GetNumCycles(runPath string) (int, error) {
 func GetAllocation(psid string, invocation *core.InvocationData) (*PipestanceStorageAllocation, error) {
 	if invocation == nil {
 		err := &core.PipestanceSizeError{psid}
-		core.LogError(err, "storage", "getting allocation (nil, possibly malformed MRO): %s", psid)
+		util.LogError(err, "storage", "getting allocation (nil, possibly malformed MRO): %s", psid)
 		return nil, err
 	}
 	psname := PipelineFromInvocation(invocation)

@@ -5,7 +5,7 @@ package manager
 
 import (
 	"fmt"
-	"martian/core"
+	"martian/util"
 	"os"
 	"path"
 	"path/filepath"
@@ -109,7 +109,7 @@ func InputSizeTotal(paths []string) int64 {
 		if fileInfo, err := os.Stat(path); err == nil {
 			size += fileInfo.Size()
 		} else {
-			core.LogError(err, "storage", "Could not read file for size: %s", path)
+			util.LogError(err, "storage", "Could not read file for size: %s", path)
 		}
 	}
 	return size

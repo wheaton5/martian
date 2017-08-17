@@ -48,7 +48,7 @@ func TestFastqFilesFromInvocation(t *testing.T) {
 	sourcePath := getTestMROPath("test_wgs.mro")
 	mroPaths := []string{}
 	//if value := os.Getenv("MROPATH"); len(value) > 0 {
-	//	mroPaths = core.ParseMroPath(value)
+	//	mroPaths = util.ParseMroPath(value)
 	//}
 	var paths []string
 	if source, err := ioutil.ReadFile(sourcePath); err != nil {

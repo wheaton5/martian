@@ -5,12 +5,14 @@
 #
 
 PUBLIC_GOBINS=mrc mrf mrg mrp mrs mrt_helper mrjob mrstat
-PRIVATE_GOBINS=marsoc mre mrv kepler sere houston redstone rsincoming websoc ligo/ligo_server ligo/ligo_uploader
+PRIVATE_GOBINS=marsoc mre mrv kepler sere houston redstone rsincoming websoc ligo_server ligo_uploader
 GOBINS=$(PUBLIC_GOBINS) $(PRIVATE_GOBINS)
-GOTESTS=$(addprefix test-, $(GOBINS) core)
+GOLIBTESTS=$(addprefix test-, core util syntax adapter)
+GOBINTESTS=$(addprefix test-, $(GOBINS))
+GOTESTS=$(GOLIBTESTS) $(GOBINTESTS)
 VERSION=$(shell git describe --tags --always --dirty)
 RELEASE=false
-GO_FLAGS=-ldflags "-X martian/core.__VERSION__='$(VERSION)' -X martian/core.__RELEASE__='$(RELEASE)'"
+GO_FLAGS=-ldflags "-X martian/util.__VERSION__='$(VERSION)' -X martian/util.__RELEASE__='$(RELEASE)'"
 
 MARTIAN_PUBLIC=src/vendor/github.com/10XDev/martian-public
 
@@ -20,7 +22,7 @@ export GOPATH=$(shell pwd):$(abspath $(MARTIAN_PUBLIC))
 
 # Default rule to make it easier to git pull deploy for now.
 # Remove this when we switch to package deployment.
-marsoc-deploy: marsoc mrjob ligo/ligo_uploader
+marsoc-deploy: marsoc mrjob ligo_uploader
 
 #
 # Targets for development builds.
@@ -31,10 +33,10 @@ grammar:
 	make -C $(MARTIAN_PUBLIC) grammar
 
 $(PUBLIC_GOBINS): jobmanagers adapters
-	go install $(GO_FLAGS) martian/$@ && install -D $(MARTIAN_PUBLIC)/bin/$@ bin/$@
+	go install $(GO_FLAGS) martian/cmd/$@ && install -D $(MARTIAN_PUBLIC)/bin/$@ bin/$@
 
 $(PRIVATE_GOBINS): jobmanagers adapters
-	go install $(GO_FLAGS) martian/$@
+	go install $(GO_FLAGS) martian/cmd/$@
 
 # Target to pull latest martian public branch.
 latest-public:
@@ -85,8 +87,11 @@ web: martian_web marsoc_web houston_web kepler_web sere_web
 mrt: mrt_helper
 	install scripts/mrt bin/mrt
 
-$(GOTESTS): test-%:
+$(GOLIBTESTS): test-%:
 	go test -v martian/$*
+
+$(GOBINTESTS): test-%:
+	go test -v martian/cmd/$*
 
 test: $(GOTESTS)
 
@@ -106,7 +111,7 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-martian: mrc mre mrf mrg mrp mrjob mrs mrstat mrt mrt_helper ligo/ligo_uploader redstone web tools sake-strip sake-martian-strip
+sake-martian: mrc mre mrf mrg mrp mrjob mrs mrstat mrt mrt_helper ligo_uploader redstone web tools sake-strip sake-martian-strip
 
 sake-test-martian: test
 

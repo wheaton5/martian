@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"martian/core"
+	"martian/util"
 	"os"
 	"os/exec"
 	"strings"
@@ -52,7 +53,7 @@ func NewArgShim(argshimPath string, envs map[string]string, debug bool) *ArgShim
 
 func (self *ArgShim) start() {
 	self.cmd = exec.Command(self.cmdPath)
-	self.cmd.Env = core.MergeEnv(self.envs)
+	self.cmd.Env = util.MergeEnv(self.envs)
 	self.stdin, _ = self.cmd.StdinPipe()
 	self.writer = bufio.NewWriterSize(self.stdin, 1000000)
 	self.stdout, _ = self.cmd.StdoutPipe()
@@ -67,7 +68,7 @@ func (self *ArgShim) Kill() {
 
 	pid := self.cmd.Process.Pid
 	if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
-		core.LogError(err, "argshim", "Failed to kill argshim process with PID %d", pid)
+		util.LogError(err, "argshim", "Failed to kill argshim process with PID %d", pid)
 	}
 	self.cmd.Wait()
 }
@@ -120,7 +121,7 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 	line, err := self.readAll()
 	self.mutex.Unlock()
 	if err != nil {
-		core.LogInfo("argshim", "Failed to read argshim %s output", self.cmdPath)
+		util.LogInfo("argshim", "Failed to read argshim %s output", self.cmdPath)
 		return nil, err
 	}
 	if self.debug {
@@ -132,7 +133,7 @@ func (self *ArgShim) invoke(function string, arguments []interface{}) (interface
 	var v interface{}
 	if err := dec.Decode(&v); err != nil {
 		msg := fmt.Sprintf("Failed to convert argshim %s output to JSON: %s", self.cmdPath, line)
-		core.LogError(err, "argshim", msg)
+		util.LogError(err, "argshim", msg)
 		return nil, errors.New(msg)
 	}
 	return v, nil
@@ -189,7 +190,7 @@ func (self *ArgShim) buildCallSource(rt *core.Runtime, shimout map[string]interf
 	}
 	sweepargs := []string{}
 	if sweeplist, ok := shimout["sweepargs"].([]interface{}); ok {
-		sweepargs = core.ArrayToString(sweeplist)
+		sweepargs = util.ArrayToString(sweeplist)
 	}
 	incpath := fmt.Sprintf("%s.mro", strings.ToLower(pipeline))
 	src, _ := rt.BuildCallSource([]string{incpath}, pipeline, args, sweepargs, mroPaths)
