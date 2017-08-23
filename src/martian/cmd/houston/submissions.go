@@ -388,7 +388,9 @@ func (self *SubmissionManager) GetPipestanceSerialization(container string, pnam
 	}
 
 	// Cache serialization of pipestance
-	pipestance.Immortalize()
+	if err := pipestance.Immortalize(); err != nil {
+		util.LogError(err, "submngr", "Failed to immortalize in %s", filesPath)
+	}
 	if ser, ok := self.rt.GetSerialization(filesPath, name); ok {
 		return ser, true
 	}
