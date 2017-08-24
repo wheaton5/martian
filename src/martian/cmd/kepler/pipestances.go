@@ -230,7 +230,7 @@ func (self *PipestanceManager) writePerf(psPath string) error {
 		}
 
 		util.EnterCriticalSection()
-		pipestance.Immortalize()
+		pipestance.Immortalize(true)
 		util.ExitCriticalSection()
 	}
 	return nil
