@@ -140,8 +140,12 @@ func (self *SubmissionManager) loadSubmission(source, date, name string) *Submis
 		if ok {
 			// get pipeline name out of serialized pipestance
 			serialJson := serial.([]interface{})
-			topLevel := serialJson[0].(*core.NodeInfo)
-			pname = topLevel.Name
+			if topLevel, ok := serialJson[0].(*core.NodeInfo); ok {
+				pname = topLevel.Name
+			} else {
+				topLevelMap := serialJson[0].(map[string]interface{})
+				pname = topLevelMap["name"].(string)
+			}
 		}
 		util.LogInfo("submngr", "    Finished immortalizing")
 
