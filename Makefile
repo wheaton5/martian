@@ -58,16 +58,16 @@ adapters: $(ADAPTER_SRCS)
 
 MARTIAN_WEB_PUBLIC=$(shell cd $(MARTIAN_PUBLIC) && find web/martian -type f)
 
-web/martian/%: $(MARTIAN_PUBLIC)/web/martian/%
-	install -D $< $@
+MARTIAN_WEB_PRIVATE=web/mrv/client/editor.coffee web/mrv/client/editor.js \
+					web/mrv/client/mrv.coffee web/mrv/client/mrv.js \
+					web/mrv/res/css/editor.css \
+					web/mrv/templates/editor.html web/mrv/templates/editor.jade \
+					web/mrv/templates/mrv.html web/mrv/templates/mrv.jade
 
-MARTIAN_WEB_PRIVATE=web/martian/client/editor.coffee web/martian/client/editor.js \
-					web/martian/client/mrv.coffee web/martian/client/mrv.js \
-					web/martian/res/css/editor.css \
-					web/martian/templates/editor.html web/martian/templates/editor.jade \
-					web/martian/templates/mrv.html web/martian/templates/mrv.jade
+martian_web: $(MARTIAN_WEB_PUBLIC)
+	(cd web/martian && npm install --no-save && gulp)
 
-martian_web: $(MARTIAN_WEB_PUBLIC) $(MARTIAN_WEB_PRIVATE)
+mrv_web: martian_web $(MARTIAN_WEB_PRIVATE)
 	(cd web/martian && npm install --no-save && gulp)
 
 marsoc_web: martian_web
@@ -82,7 +82,7 @@ kepler_web: martian_web
 sere_web: martian_web
 	(cd web/sere && npm install --no-save && gulp)
 
-web: martian_web marsoc_web houston_web kepler_web sere_web
+web: martian_web mrv_web marsoc_web houston_web kepler_web sere_web
 
 mrt: mrt_helper
 	install scripts/mrt bin/mrt
@@ -111,7 +111,7 @@ ifdef SAKE_VERSION
 VERSION=$(SAKE_VERSION)
 endif
 
-sake-martian: mrc mre mrf mrg mrp mrjob mrs mrstat mrt mrt_helper ligo_uploader redstone web tools sake-strip sake-martian-strip
+sake-martian: mrc mre mrf mrg mrp mrjob mrs mrstat mrt mrt_helper ligo_uploader redstone martian_web tools sake-strip sake-martian-strip
 
 sake-test-martian: test
 
@@ -120,16 +120,23 @@ sake-martian-cs: sake-martian sake-martian-cs-strip
 
 sake-test-martian-cs: test
 
-sake-marsoc: marsoc mrc mrp mrjob martian_web marsoc_web sake-strip
+sake-marsoc: marsoc mrc mrp mrjob marsoc_web sake-strip
 
 sake-test-marsoc: test
 
 sake-strip:
+	# Move martian web files out of src.
+	rm -f web/martian
+	mv $(MARTIAN_PUBLIC)/web/martian web/martian
+
 	# Strip web dev files.
 	rm -f web/*/gulpfile.js
 	rm -f web/*/package.json
 	rm -f web/*/client/*.coffee
 	rm -f web/*/templates/*.jade
+	rm -f web/*/templates/*.pug
+	rm -f web/*/package-lock.json
+	rm -rf web/*/node_modules
 
 	# Remove build intermediates and dev-only files.
 	rm -rf pkg
@@ -137,23 +144,24 @@ sake-strip:
 	rm -rf scripts
 	rm -rf test
 	rm -f Makefile
-	rm -f README.md
 	rm -f bin/goyacc
 	rm -f .travis.*
 	rm -rf $(YACC_SRC)
+	find -type f -name .gitignore -delete
+	find -type f -name README.md -delete
 
 sake-martian-strip:
 	# Strip marsoc.
 	rm -rf web/marsoc
+	rm -rf web/mrv
 	rm -rf web/kepler
 	rm -rf web/sere
 	rm -rf web/houston
+	rm -rf web/martian/client
+	rm -rf web/martian/res
+	rm -rf web/martian/build
 
 sake-martian-cs-strip:
-	# Remove mrv assets.
-	rm web/martian/client/mrv.js
-	rm web/martian/templates/mrv.html
-
 	# Remove pd job templates.
 	rm -f jobmanagers/*.template
 
@@ -168,3 +176,7 @@ sake-martian-cs-strip:
 
 	# Remove mrg
 	rm -f bin/mrg
+
+	#Remove any other binaries which may have been created.
+	rm -f bin/marsoc bin/mre bin/mrv bin/kepler bin/sere \
+	      bin/houston bin/rsincoming bin/websoc bin/ligo_server

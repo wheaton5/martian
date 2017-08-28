@@ -44,7 +44,9 @@ func runWebServer(uiport string, rt *core.Runtime, mroPaths []string) {
 	r := martini.NewRouter()
 	m.Use(martini.Recovery())
 	m.Use(martini.Static(util.RelPath("../web/martian/res"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(util.RelPath("../web/mrv/res"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.Use(martini.Static(util.RelPath("../web/martian/client"), martini.StaticOptions{"", true, "index.html", nil}))
+	m.Use(martini.Static(util.RelPath("../web/mrv/client"), martini.StaticOptions{"", true, "index.html", nil}))
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
 	app := &martini.ClassicMartini{m, r}
@@ -54,7 +56,7 @@ func runWebServer(uiport string, rt *core.Runtime, mroPaths []string) {
 	// Page renderers.
 	//=========================================================================
 	app.Get("/", func() string {
-		return util.Render("web/martian/templates", "editor.html",
+		return util.Render("web/mrv/templates", "editor.html",
 			&MainPage{
 				MroPaths: mroPaths,
 			})
